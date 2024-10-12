@@ -1,8 +1,9 @@
 import os
 import numpy as np
 from typing import NamedTuple
-from .utils import focal2fov
-from .colmap_loader import (
+
+from gaussian_splatting.utils import focal2fov
+from .loader import (
     read_extrinsics_text, read_extrinsics_binary,
     read_intrinsics_text, read_intrinsics_binary,
     qvec2rotmat
@@ -37,7 +38,7 @@ class ColmapCameras:
             cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
             cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
             cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
-        for idx, key in enumerate(cam_extrinsics):
+        for _, key in enumerate(cam_extrinsics):
             extr = cam_extrinsics[key]
             intr = cam_intrinsics[extr.camera_id]
             height = intr.height
@@ -65,3 +66,9 @@ class ColmapCameras:
                 image_path=image_path
             ))
         return cameras
+
+    def __len__(self):
+        return len(self.cameras)
+
+    def __getitem__(self, idx):
+        return self.cameras[idx]

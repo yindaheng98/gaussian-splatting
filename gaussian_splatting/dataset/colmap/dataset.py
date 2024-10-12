@@ -2,7 +2,11 @@ import os
 import numpy as np
 from typing import NamedTuple
 
-from gaussian_splatting.utils import focal2fov
+import torch
+
+from gaussian_splatting import Camera
+from gaussian_splatting.dataset import CameraDataset
+from gaussian_splatting.utils import focal2fov, getProjectionMatrix, getWorld2View2
 from .utils import (
     read_extrinsics_text, read_extrinsics_binary,
     read_intrinsics_text, read_intrinsics_binary,
@@ -20,7 +24,7 @@ class ColmapCamera(NamedTuple):
     image_path: str
 
 
-class ColmapCameras:
+class ColmapCameraReader:
     def __init__(self, colmap_folder):
         self.colmap_folder = colmap_folder
         self.cameras = self._read_cameras()
@@ -72,3 +76,37 @@ class ColmapCameras:
 
     def __getitem__(self, idx):
         return self.cameras[idx]
+
+
+def ColmapCamera2DatasetCamera(colmap_camera: ColmapCamera, device="cuda"):
+    zfar = 100.0
+    znear = 0.01
+    trans = np.array([0.0, 0.0, 0.0])
+    scale = 1.0
+    R = colmap_camera.R
+    T = colmap_camera.T
+    FoVx = colmap_camera.FoVx
+    FoVy = colmap_camera.FoVy
+    world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale), device=device).transpose(0, 1)
+    projection_matrix = torch.tensor(getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy), device=device).transpose(0, 1)
+    full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
+    camera_center = world_view_transform.inverse()[3, :3]
+    return Camera(
+        image_height=colmap_camera.image_height,
+        image_width=colmap_camera.image_width,
+        world_view_transform=world_view_transform,
+        projection_matrix=projection_matrix,
+        full_proj_transform=full_proj_transform,
+        camera_center=camera_center,
+        image_path=colmap_camera.image_path
+    )
+
+
+class ColmapCameraDataset(ColmapCameraReader, CameraDataset):
+
+    def to(self, device):
+        self.device_cameras = [ColmapCamera2DatasetCamera(cam, device=device) for cam in self.cameras]
+        return self
+
+    def __getitem__(self, idx):
+        return self.device_cameras[idx]

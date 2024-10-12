@@ -45,7 +45,7 @@ def getProjectionMatrix(znear, zfar, fovX, fovY):
     right = tanHalfFovX * znear
     left = -right
 
-    P = torch.zeros(4, 4)
+    P = np.zeros((4, 4))
 
     z_sign = 1.0
 

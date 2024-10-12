@@ -3,7 +3,7 @@ import numpy as np
 from typing import NamedTuple
 
 from gaussian_splatting.utils import focal2fov
-from .loader import (
+from .utils import (
     read_extrinsics_text, read_extrinsics_binary,
     read_intrinsics_text, read_intrinsics_binary,
     qvec2rotmat

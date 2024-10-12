@@ -27,6 +27,9 @@ simpleknn_sources = [
 
 package_dir = {
     'gaussian_splatting': 'gaussian_splatting',
+    'gaussian_splatting.utils': 'gaussian_splatting/utils',
+    'gaussian_splatting.dataset': 'gaussian_splatting/dataset',
+    'gaussian_splatting.dataset.colmap': 'gaussian_splatting/dataset/colmap',
     'gaussian_splatting.diff_gaussian_rasterization': 'submodules/diff-gaussian-rasterization/diff_gaussian_rasterization',
     'gaussian_splatting.simple_knn': 'submodules/simple-knn/simple_knn',
 }

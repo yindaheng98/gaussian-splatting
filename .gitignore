@@ -1,4 +1,5 @@
 data
+output
 *.dist-info
 
 # Byte-compiled / optimized / DLL files

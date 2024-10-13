@@ -19,10 +19,10 @@
             ]
         },
         {
-            "name": "render",
+            "name": "render test",
             "type": "debugpy",
             "request": "launch",
-            "program": "render.py",
+            "program": "render_test.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [

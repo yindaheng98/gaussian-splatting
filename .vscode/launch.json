@@ -18,5 +18,21 @@
                 "output/truck",
             ]
         },
+        {
+            "name": "render",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "render.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-m",
+                "output/truck",
+                "--iteration",
+                "30000",
+                "--resolution",
+                "1"
+            ]
+        },
     ]
 }

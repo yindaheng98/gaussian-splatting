@@ -9,7 +9,6 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
-import torch
 import math
 import numpy as np
 
@@ -56,7 +55,7 @@ def getProjectionMatrix(znear, zfar, fovX, fovY):
     P[3, 2] = z_sign
     P[2, 2] = z_sign * zfar / (zfar - znear)
     P[2, 3] = -(zfar * znear) / (zfar - znear)
-    return P
+    return np.float32(P)
 
 
 def fov2focal(fov, pixels):

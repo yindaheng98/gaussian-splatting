@@ -19,7 +19,8 @@ class Camera(NamedTuple):
     world_view_transform: torch.Tensor
     full_proj_transform: torch.Tensor
     camera_center: torch.Tensor
-    bg_color: list[float] = [1., 1., 1.]
+    bg_color: list[float] = [0., 0., 0.]
+    ground_truth_image: torch.Tensor = None
 
 
 class GaussianModel(nn.Module):

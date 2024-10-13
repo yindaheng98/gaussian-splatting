@@ -21,9 +21,10 @@ from argparse import ArgumentParser
 from arguments import ModelParams, PipelineParams, get_combined_args
 from gaussian_renderer import GaussianModel as OldGaussianModel
 from gaussian_splatting import GaussianModel, Camera
+from gaussian_splatting.dataset import ColmapCameraDataset
 
 
-def render_set(model_path, name, iteration, views, gaussians, new_gaussians, pipeline, background, train_test_exp):
+def render_set(model_path, name, iteration, views, gaussians, new_gaussians, new_dataset, pipeline, background, train_test_exp):
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
     gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
 
@@ -48,6 +49,13 @@ def render_set(model_path, name, iteration, views, gaussians, new_gaussians, pip
         out = new_gaussians(camera)
         difference = torch.abs(out["render"] - rendering)
         print("difference", difference.sum())
+        new_view = new_dataset[idx]
+        new_gt = new_view.ground_truth_image
+        difference = torch.abs(new_gt - gt)
+        print("difference", difference.sum())
+        out = new_gaussians(new_view)
+        difference = torch.abs(out["render"] - rendering)
+        print("difference", difference.sum())
 
 
 def render_sets(dataset: ModelParams, iteration: int, pipeline: PipelineParams, skip_train: bool, skip_test: bool):
@@ -56,15 +64,16 @@ def render_sets(dataset: ModelParams, iteration: int, pipeline: PipelineParams, 
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
         new_gaussians = GaussianModel(dataset.sh_degree)
         new_gaussians.load_ply(os.path.join(dataset.model_path, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"))
+        new_dataset = ColmapCameraDataset(dataset.source_path)
 
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
         if not skip_train:
-            render_set(dataset.model_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, new_gaussians, pipeline, background, dataset.train_test_exp)
+            render_set(dataset.model_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, new_gaussians, new_dataset, pipeline, background, dataset.train_test_exp)
 
         if not skip_test:
-            render_set(dataset.model_path, "test", scene.loaded_iter, scene.getTestCameras(), gaussians, new_gaussians, pipeline, background, dataset.train_test_exp)
+            render_set(dataset.model_path, "test", scene.loaded_iter, scene.getTestCameras(), gaussians, new_gaussians, new_dataset, pipeline, background, dataset.train_test_exp)
 
 
 if __name__ == "__main__":

@@ -3,10 +3,11 @@ import numpy as np
 from typing import NamedTuple
 
 import torch
+from PIL import Image
 
 from gaussian_splatting import Camera
 from gaussian_splatting.dataset import CameraDataset
-from gaussian_splatting.utils import focal2fov, getProjectionMatrix, getWorld2View2
+from gaussian_splatting.utils import focal2fov, getProjectionMatrix, getWorld2View2, PILtoTorch
 from .utils import (
     read_extrinsics_text, read_extrinsics_binary,
     read_intrinsics_text, read_intrinsics_binary,
@@ -91,18 +92,27 @@ def ColmapCamera2DatasetCamera(colmap_camera: ColmapCamera, device="cuda"):
     projection_matrix = torch.tensor(getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy), device=device).transpose(0, 1)
     full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
     camera_center = world_view_transform.inverse()[3, :3]
+    pil_image = Image.open(colmap_camera.image_path)
+    torch_image = PILtoTorch(pil_image)
+    gt_image = torch_image[:3, ...].clamp(0.0, 1.0).to(device)
+    image_height = gt_image.shape[1]
+    image_width = gt_image.shape[2]
     return Camera(
-        image_height=colmap_camera.image_height,
-        image_width=colmap_camera.image_width,
+        # image_height=colmap_camera.image_height, # colmap_camera.image_height is read from cameras.bin, maybe dfferent from the actual image size
+        # image_width=colmap_camera.image_width, # colmap_camera.image_width is read from cameras.bin, maybe dfferent from the actual image size
+        image_height=image_height, image_width=image_width,
+        FoVx=FoVx, FoVy=FoVy,
         world_view_transform=world_view_transform,
-        projection_matrix=projection_matrix,
         full_proj_transform=full_proj_transform,
         camera_center=camera_center,
-        image_path=colmap_camera.image_path
+        ground_truth_image=gt_image
     )
 
 
 class ColmapCameraDataset(ColmapCameraReader, CameraDataset):
+    def __init__(self, colmap_folder, device="cuda"):
+        super().__init__(colmap_folder)
+        self.to(device)
 
     def to(self, device):
         self.device_cameras = [ColmapCamera2DatasetCamera(cam, device=device) for cam in self.cameras]

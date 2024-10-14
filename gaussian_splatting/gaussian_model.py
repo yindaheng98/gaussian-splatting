@@ -164,7 +164,7 @@ class GaussianModel(nn.Module):
         assert points.shape[0] == colors.shape[0]
         assert points.shape[1] == colors.shape[1] == 3
         device = self._xyz.device
-        points, colors = points.to(device), colors.to(device)
+        points, colors = points.type(torch.float32).to(device), colors.type(torch.float32).to(device)
         fused_point_cloud = points
         fused_color = RGB2SH(colors)
         features = torch.zeros((points.shape[0], 3, (self.sh_degree + 1) ** 2), dtype=torch.float32, device=device)

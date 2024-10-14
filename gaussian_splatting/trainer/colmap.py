@@ -103,4 +103,4 @@ class ColmapTrainer(Trainer):
                 xyz, rgb, _ = read_points3D_text(init_path)
             case _:
                 raise ValueError(f"Unsupported file extension: {ext}")
-        self.model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb))
+        model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb))

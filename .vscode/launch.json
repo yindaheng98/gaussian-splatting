@@ -19,6 +19,22 @@
             ]
         },
         {
+            "name": "render",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "render.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-s",
+                "data/truck",
+                "-d",
+                "output/truck",
+                "-i",
+                "30000",
+            ]
+        },
+        {
             "name": "render test",
             "type": "debugpy",
             "request": "launch",

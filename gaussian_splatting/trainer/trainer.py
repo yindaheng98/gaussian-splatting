@@ -11,7 +11,7 @@ from gaussian_splatting.utils import l1_loss, ssim
 class AbstractTrainer(ABC):
 
     @abstractmethod
-    def train_step(self, camera: Camera):
+    def step(self, camera: Camera):
         pass
 
     def train_epoch(self, cameras: CameraDataset, current_epoch: int, total_epochs: int):
@@ -49,9 +49,8 @@ class Trainer(AbstractTrainer):
         ]
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
         self.lambda_dssim = lambda_dssim
-        self.step = 0
 
-    def train_step(self, camera: Camera):
+    def step(self, camera: Camera):
         out = self.model(camera)
         render = out["render"]
         gt = camera.ground_truth_image
@@ -59,4 +58,4 @@ class Trainer(AbstractTrainer):
         ssim_value = ssim(render, gt)
         loss = (1.0 - self.lambda_dssim) * Ll1 + self.lambda_dssim * (1.0 - ssim_value)
         loss.backward()
-        return loss
+        return loss, out, gt

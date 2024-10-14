@@ -133,9 +133,24 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         loss.backward()
 
+        camera = Camera(
+            image_height=viewpoint_cam.image_height,
+            image_width=viewpoint_cam.image_width,
+            FoVx=viewpoint_cam.FoVx,
+            FoVy=viewpoint_cam.FoVy,
+            world_view_transform=viewpoint_cam.world_view_transform,
+            full_proj_transform=viewpoint_cam.full_proj_transform,
+            camera_center=viewpoint_cam.camera_center,
+            bg_color=background,
+            ground_truth_image=gt_image,
+        )
+        new_loss, new_render_pkg, new_gt_image = trainer.step(camera)
+
         iter_end.record()
 
         with torch.no_grad():
+            print("loss diff", loss.item() - new_loss.item())
+            print("render diff", torch.abs(image - new_render_pkg["render"]).max())
             # Progress bar
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             ema_Ll1depth_for_log = 0.4 * Ll1depth + 0.6 * ema_Ll1depth_for_log

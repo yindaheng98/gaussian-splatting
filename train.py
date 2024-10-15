@@ -12,6 +12,7 @@
 import os
 import torch
 from random import randint
+from gaussian_splatting.dataset.colmap.dataset import ColmapCameraDataset
 from gaussian_splatting.trainer.colmap import ColmapTrainer
 from utils.loss_utils import l1_loss, ssim
 from gaussian_renderer import render, network_gui
@@ -58,9 +59,11 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     scene = Scene(dataset, gaussians)
     gaussians.training_setup(opt)
     new_gaussians = NewGaussianModel(dataset.sh_degree).to("cuda")
+    new_dataset = ColmapCameraDataset(dataset.source_path)
     trainer = ColmapTrainer(
         new_gaussians,
         os.path.join(dataset.source_path, "sparse/0/points3D.bin"),
+        dataset=new_dataset,
         densify_from_iter=opt.densify_from_iter,
         densify_until_iter=opt.densify_until_iter,
         densification_interval=opt.densification_interval,
@@ -201,6 +204,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 gaussians.exposure_optimizer.zero_grad(set_to_none=True)
                 gaussians.optimizer.step()
                 gaussians.optimizer.zero_grad(set_to_none=True)
+                compute_difference(gaussians, new_gaussians)
 
             if (iteration in checkpoint_iterations):
                 print("\n[ITER {}] Saving Checkpoint".format(iteration))

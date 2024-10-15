@@ -31,13 +31,13 @@ class AbstractTrainer(ABC):
 class Trainer(AbstractTrainer):
     def __init__(
             self, model: GaussianModel,
+            spatial_lr_scale: float,
             position_lr_init=0.00016,
             feature_lr=0.0025,
             opacity_lr=0.025,
             scaling_lr=0.005,
             rotation_lr=0.001,
             lambda_dssim=0.2,
-            spatial_lr_scale=0,
     ):
         super().__init__()
         self.model = model

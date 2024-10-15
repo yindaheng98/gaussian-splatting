@@ -4,6 +4,8 @@ import numpy as np
 import torch
 
 from gaussian_splatting import GaussianModel
+from gaussian_splatting.dataset.colmap import ColmapCameraDataset
+from gaussian_splatting.utils import getWorld2View2
 from .trainer import DensificationTrainer
 
 
@@ -92,8 +94,32 @@ def read_points3D_binary(path_to_model_file):
     return xyzs, rgbs, errors
 
 
+def getNerfppNorm(dataset: ColmapCameraDataset):
+    def get_center_and_diag(cam_centers):
+        cam_centers = np.hstack(cam_centers)
+        avg_cam_center = np.mean(cam_centers, axis=1, keepdims=True)
+        center = avg_cam_center
+        dist = np.linalg.norm(cam_centers - center, axis=0, keepdims=True)
+        diagonal = np.max(dist)
+        return center.flatten(), diagonal
+
+    cam_centers = []
+
+    for cam in dataset.cameras:
+        W2C = getWorld2View2(cam.R, cam.T)
+        C2W = np.linalg.inv(W2C)
+        cam_centers.append(C2W[:3, 3:4])
+
+    center, diagonal = get_center_and_diag(cam_centers)
+    radius = diagonal * 1.1
+
+    translate = -center
+
+    return {"translate": translate, "radius": radius}
+
+
 class ColmapTrainer(DensificationTrainer):
-    def __init__(self, model: GaussianModel, init_path: str, *args, **kwargs):
+    def __init__(self, model: GaussianModel, init_path: str, dataset: ColmapCameraDataset, *args, **kwargs):
         ext = os.path.splitext(init_path)[1]
         match ext:
             case ".bin":
@@ -103,4 +129,6 @@ class ColmapTrainer(DensificationTrainer):
             case _:
                 raise ValueError(f"Unsupported file extension: {ext}")
         model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
-        super().__init__(model, *args, **kwargs)
+        nerf_normalization = getNerfppNorm(dataset)
+        spatial_lr_scale = nerf_normalization["radius"]
+        super().__init__(model, spatial_lr_scale=spatial_lr_scale, *args, **kwargs)

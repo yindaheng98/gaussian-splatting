@@ -44,7 +44,8 @@ class GaussianModel(nn.Module):
 
     def __init__(self, sh_degree, device="cuda"):
         super(GaussianModel, self).__init__()
-        self.sh_degree = sh_degree
+        self.active_sh_degree = sh_degree
+        self.max_sh_degree = sh_degree
         self._xyz = torch.empty(0)
         self._features_dc = torch.empty(0)
         self._features_rest = torch.empty(0)
@@ -120,7 +121,7 @@ class GaussianModel(nn.Module):
             scale_modifier=self.scale_modifier,
             viewmatrix=viewpoint_camera.world_view_transform,
             projmatrix=viewpoint_camera.full_proj_transform,
-            sh_degree=self.sh_degree,
+            sh_degree=self.active_sh_degree,
             campos=viewpoint_camera.camera_center,
             prefiltered=False,
             debug=self.debug,
@@ -167,7 +168,7 @@ class GaussianModel(nn.Module):
         points, colors = points.type(torch.float32).to(device), colors.type(torch.float32).to(device)
         fused_point_cloud = points
         fused_color = RGB2SH(colors)
-        features = torch.zeros((points.shape[0], 3, (self.sh_degree + 1) ** 2), dtype=torch.float32, device=device)
+        features = torch.zeros((points.shape[0], 3, (self.max_sh_degree + 1) ** 2), dtype=torch.float32, device=device)
         features[:, :3, 0] = fused_color
         features[:, 3:, 1:] = 0.0
 
@@ -231,12 +232,12 @@ class GaussianModel(nn.Module):
 
         extra_f_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("f_rest_")]
         extra_f_names = sorted(extra_f_names, key=lambda x: int(x.split('_')[-1]))
-        assert len(extra_f_names) == 3*(self.sh_degree + 1) ** 2 - 3
+        assert len(extra_f_names) == 3*(self.max_sh_degree + 1) ** 2 - 3
         features_extra = np.zeros((xyz.shape[0], len(extra_f_names)))
         for idx, attr_name in enumerate(extra_f_names):
             features_extra[:, idx] = np.asarray(plydata.elements[0][attr_name])
         # Reshape (P,F*SH_coeffs) to (P, F, SH_coeffs except DC)
-        features_extra = features_extra.reshape((features_extra.shape[0], 3, (self.sh_degree + 1) ** 2 - 1))
+        features_extra = features_extra.reshape((features_extra.shape[0], 3, (self.max_sh_degree + 1) ** 2 - 1))
 
         scale_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("scale_")]
         scale_names = sorted(scale_names, key=lambda x: int(x.split('_')[-1]))

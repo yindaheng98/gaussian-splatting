@@ -34,22 +34,22 @@ except ImportError:
 
 def compute_difference(gaussians: GaussianModel, new_gaussians: NewGaussianModel):
     with torch.no_grad():
-        diff_xyz = torch.abs(gaussians._xyz - new_gaussians._xyz).max()
-        diff_features_dc = torch.abs(gaussians._features_dc - new_gaussians._features_dc).max()
-        diff_features_rest = torch.abs(gaussians._features_rest - new_gaussians._features_rest).max()
-        diff_scaling = torch.abs(gaussians._scaling - new_gaussians._scaling).max()
-        diff_rotation = torch.abs(gaussians._rotation - new_gaussians._rotation).max()
-        diff_opacity = torch.abs(gaussians._opacity - new_gaussians._opacity).max()
-        print("Differences: ", diff_xyz, diff_features_dc, diff_features_rest, diff_scaling, diff_rotation, diff_opacity)
+        diff_xyz = torch.abs(gaussians._xyz - new_gaussians._xyz).max().item()
+        diff_features_dc = torch.abs(gaussians._features_dc - new_gaussians._features_dc).max().item()
+        diff_features_rest = torch.abs(gaussians._features_rest - new_gaussians._features_rest).max().item()
+        diff_scaling = torch.abs(gaussians._scaling - new_gaussians._scaling).max().item()
+        diff_rotation = torch.abs(gaussians._rotation - new_gaussians._rotation).max().item()
+        diff_opacity = torch.abs(gaussians._opacity - new_gaussians._opacity).max().item()
+        print("Differences params: ", diff_xyz, diff_features_dc, diff_features_rest, diff_scaling, diff_rotation, diff_opacity)
 
 
 def compute_difference_densification_stats(gaussians: GaussianModel, new_gaussians: ColmapTrainer):
     densifier = new_gaussians.densifier
     with torch.no_grad():
-        diff_max_radii2D = torch.abs(gaussians.max_radii2D - densifier.max_radii2D).max()
-        diff_xyz_gradient_accum = torch.abs(gaussians.xyz_gradient_accum - densifier.xyz_gradient_accum).max()
-        diff_denom = torch.abs(gaussians.denom - densifier.denom).max()
-        print("Differences: ", diff_max_radii2D, diff_xyz_gradient_accum, diff_denom)
+        diff_max_radii2D = torch.abs(gaussians.max_radii2D - densifier.max_radii2D).max().item()
+        diff_xyz_gradient_accum = torch.abs(gaussians.xyz_gradient_accum - densifier.xyz_gradient_accum).max().item()
+        diff_denom = torch.abs(gaussians.denom - densifier.denom).max().item()
+        print("Differences stats: ", diff_max_radii2D, diff_xyz_gradient_accum, diff_denom)
 
 
 def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
@@ -153,6 +153,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         loss.backward()
 
+        compute_difference(gaussians, new_gaussians)
         camera = Camera(
             image_height=viewpoint_cam.image_height,
             image_width=viewpoint_cam.image_width,

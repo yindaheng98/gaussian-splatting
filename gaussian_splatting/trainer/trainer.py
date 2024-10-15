@@ -21,8 +21,24 @@ class AbstractTrainer(ABC):
             self.model.active_sh_degree += 1
 
     @abstractmethod
-    def step(self, camera: Camera):
+    def loss(self, out: dict, gt):
         pass
+
+    def forward_backward(self, camera: Camera):
+        out = self.model(camera)
+        gt = camera.ground_truth_image
+        loss = self.loss(out, gt)
+        loss.backward()
+        return loss, out, gt
+
+    @abstractmethod
+    def optim_step(self):
+        pass
+
+    def step(self, camera: Camera):
+        loss, out, gt = self.forward_backward(camera)
+        self.optim_step()
+        return loss, out, gt
 
     @abstractmethod
     def update_learning_rate(self, step: int):
@@ -72,17 +88,16 @@ class Trainer(AbstractTrainer):
             max_steps=position_lr_max_steps,
         )
 
-    def step(self, camera: Camera):
-        out = self.model(camera)
+    def loss(self, out: dict, gt):
         render = out["render"]
-        gt = camera.ground_truth_image
         Ll1 = l1_loss(render, gt)
         ssim_value = ssim(render, gt)
         loss = (1.0 - self.lambda_dssim) * Ll1 + self.lambda_dssim * (1.0 - ssim_value)
-        loss.backward()
+        return loss
+
+    def optim_step(self):
         self.optimizer.step()
-        self.optimizer.zero_grad()
-        return loss, out, gt
+        self.optimizer.zero_grad(set_to_none=True)
 
     def update_learning_rate(self, step: int):
         for param_group in self.optimizer.param_groups:
@@ -114,9 +129,9 @@ class DensificationTrainer(Trainer):
         self.densifier = Densifier(model)
 
     def step(self, camera):
-        self.curr_step += 1
-        loss, out, gt = super().step(camera)
+        loss, out, gt = self.forward_backward(camera)
         render, viewspace_points, visibility_filter, radii = out["render"], out["viewspace_points"], out["visibility_filter"], out["radii"]
         if self.curr_step < self.densify_until_iter:
             self.densifier.update_densification_stats(radii, viewspace_points, visibility_filter)
+        self.optim_step()
         return loss, out, gt

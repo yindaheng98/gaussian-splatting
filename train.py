@@ -42,6 +42,15 @@ def compute_difference(gaussians: GaussianModel, new_gaussians: NewGaussianModel
         print("Differences: ", diff_xyz, diff_features_dc, diff_features_rest, diff_scaling, diff_rotation, diff_opacity)
 
 
+def compute_difference_densification_stats(gaussians: GaussianModel, new_gaussians: ColmapTrainer):
+    densifier = new_gaussians.densifier
+    with torch.no_grad():
+        diff_max_radii2D = torch.abs(gaussians.max_radii2D - densifier.max_radii2D).max()
+        diff_xyz_gradient_accum = torch.abs(gaussians.xyz_gradient_accum - densifier.xyz_gradient_accum).max()
+        diff_denom = torch.abs(gaussians.denom - densifier.denom).max()
+        print("Differences: ", diff_max_radii2D, diff_xyz_gradient_accum, diff_denom)
+
+
 def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
     first_iter = 0
     tb_writer = prepare_output_and_logger(dataset)
@@ -49,7 +58,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     scene = Scene(dataset, gaussians)
     gaussians.training_setup(opt)
     new_gaussians = NewGaussianModel(dataset.sh_degree).to("cuda")
-    trainer = ColmapTrainer(new_gaussians, os.path.join(dataset.source_path, "sparse/0/points3D.bin"))
+    trainer = ColmapTrainer(
+        new_gaussians,
+        os.path.join(dataset.source_path, "sparse/0/points3D.bin"),
+        densify_from_iter=opt.densify_from_iter,
+        densify_until_iter=opt.densify_until_iter,
+        densification_interval=opt.densification_interval,
+    )
     compute_difference(gaussians, new_gaussians)
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
@@ -172,7 +187,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 # Keep track of max radii in image-space for pruning
                 gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
                 gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
-
+                compute_difference_densification_stats(gaussians, trainer)
                 if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
                     size_threshold = 20 if iteration > opt.opacity_reset_interval else None
                     gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)

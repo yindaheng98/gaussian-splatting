@@ -7,6 +7,8 @@ from gaussian_splatting import GaussianModel, Camera
 from gaussian_splatting.dataset import CameraDataset
 from gaussian_splatting.utils import l1_loss, ssim
 
+from .densifier import Densifier
+
 
 class AbstractTrainer(ABC):
 
@@ -58,4 +60,34 @@ class Trainer(AbstractTrainer):
         ssim_value = ssim(render, gt)
         loss = (1.0 - self.lambda_dssim) * Ll1 + self.lambda_dssim * (1.0 - ssim_value)
         loss.backward()
+        return loss, out, gt
+
+
+class DensificationTrainer(Trainer):
+    def __init__(
+            self, model: GaussianModel,
+            densify_from_iter: int,
+            densify_until_iter: int,
+            densification_interval: int,
+            grad_threshold=0.1,
+            percent_dense=0.1,
+            scene_extent=1.0,
+            *args, **kwargs
+    ):
+        super().__init__(model, *args, **kwargs)
+        self.densify_from_iter = densify_from_iter
+        self.densify_until_iter = densify_until_iter
+        self.densification_interval = densification_interval
+        self.grad_threshold = grad_threshold
+        self.percent_dense = percent_dense
+        self.scene_extent = scene_extent
+        self.curr_step = 0
+        self.densifier = Densifier(model)
+
+    def step(self, camera):
+        self.curr_step += 1
+        loss, out, gt = super().step(camera)
+        render, viewspace_points, visibility_filter, radii = out["render"], out["viewspace_points"], out["visibility_filter"], out["radii"]
+        if self.curr_step < self.densify_until_iter:
+            self.densifier.update_densification_stats(radii, viewspace_points, visibility_filter)
         return loss, out, gt

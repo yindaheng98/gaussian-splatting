@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from gaussian_splatting import GaussianModel
-from .trainer import Trainer
+from .trainer import DensificationTrainer
 
 
 def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="<"):
@@ -92,9 +92,8 @@ def read_points3D_binary(path_to_model_file):
     return xyzs, rgbs, errors
 
 
-class ColmapTrainer(Trainer):
-    def __init__(self, model: GaussianModel, init_path: str):
-        super().__init__(model)
+class ColmapTrainer(DensificationTrainer):
+    def __init__(self, model: GaussianModel, init_path: str, *args, **kwargs):
         ext = os.path.splitext(init_path)[1]
         match ext:
             case ".bin":
@@ -104,3 +103,4 @@ class ColmapTrainer(Trainer):
             case _:
                 raise ValueError(f"Unsupported file extension: {ext}")
         model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
+        super().__init__(model, *args, **kwargs)

@@ -11,6 +11,14 @@ from .densifier import Densifier
 
 
 class AbstractTrainer(ABC):
+    def __init__(self, model: GaussianModel):
+        super().__init__()
+        self.model = model
+        self.model.active_sh_degree = 0
+
+    def oneupSHdegree(self):
+        if self.model.active_sh_degree < self.model.max_sh_degree:
+            self.model.active_sh_degree += 1
 
     @abstractmethod
     def step(self, camera: Camera):
@@ -23,7 +31,7 @@ class AbstractTrainer(ABC):
     def train_epoch(self, cameras: CameraDataset, current_epoch: int, total_epochs: int):
         pbar = tqdm(cameras, desc=f"Epoch {current_epoch}/{total_epochs}")
         for camera in pbar:
-            loss = self.train_step(camera)
+            loss = self.step(camera)
             if loss is not None:
                 pbar.set_postfix(loss=loss.item())
 
@@ -46,8 +54,7 @@ class Trainer(AbstractTrainer):
             scaling_lr=0.005,
             rotation_lr=0.001,
     ):
-        super().__init__()
-        self.model = model
+        super().__init__(model)
         self.lambda_dssim = lambda_dssim
         l = [
             {'params': [model._xyz], 'lr': position_lr_init * spatial_lr_scale, "name": "xyz"},

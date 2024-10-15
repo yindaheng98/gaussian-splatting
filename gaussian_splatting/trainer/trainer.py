@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from gaussian_splatting import GaussianModel, Camera
 from gaussian_splatting.dataset import CameraDataset
-from gaussian_splatting.utils import l1_loss, ssim
+from gaussian_splatting.utils import l1_loss, ssim, get_expon_lr_func
 
 from .densifier import Densifier
 
@@ -14,6 +14,10 @@ class AbstractTrainer(ABC):
 
     @abstractmethod
     def step(self, camera: Camera):
+        pass
+
+    @abstractmethod
+    def update_learning_rate(self, step: int):
         pass
 
     def train_epoch(self, cameras: CameraDataset, current_epoch: int, total_epochs: int):
@@ -32,15 +36,19 @@ class Trainer(AbstractTrainer):
     def __init__(
             self, model: GaussianModel,
             spatial_lr_scale: float,
+            lambda_dssim=0.2,
             position_lr_init=0.00016,
+            position_lr_final=0.0000016,
+            position_lr_delay_mult=0.01,
+            position_lr_max_steps=30_000,
             feature_lr=0.0025,
             opacity_lr=0.025,
             scaling_lr=0.005,
             rotation_lr=0.001,
-            lambda_dssim=0.2,
     ):
         super().__init__()
         self.model = model
+        self.lambda_dssim = lambda_dssim
         l = [
             {'params': [model._xyz], 'lr': position_lr_init * spatial_lr_scale, "name": "xyz"},
             {'params': [model._features_dc], 'lr': feature_lr, "name": "f_dc"},
@@ -50,7 +58,12 @@ class Trainer(AbstractTrainer):
             {'params': [model._rotation], 'lr': rotation_lr, "name": "rotation"}
         ]
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
-        self.lambda_dssim = lambda_dssim
+        self.xyz_scheduler_args = get_expon_lr_func(
+            lr_init=position_lr_init*spatial_lr_scale,
+            lr_final=position_lr_final*spatial_lr_scale,
+            lr_delay_mult=position_lr_delay_mult,
+            max_steps=position_lr_max_steps,
+        )
 
     def step(self, camera: Camera):
         out = self.model(camera)
@@ -60,7 +73,16 @@ class Trainer(AbstractTrainer):
         ssim_value = ssim(render, gt)
         loss = (1.0 - self.lambda_dssim) * Ll1 + self.lambda_dssim * (1.0 - ssim_value)
         loss.backward()
+        self.optimizer.step()
+        self.optimizer.zero_grad()
         return loss, out, gt
+
+    def update_learning_rate(self, step: int):
+        for param_group in self.optimizer.param_groups:
+            if param_group["name"] == "xyz":
+                lr = self.xyz_scheduler_args(step)
+                param_group['lr'] = lr
+                return lr
 
 
 class DensificationTrainer(Trainer):

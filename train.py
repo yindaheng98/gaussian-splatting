@@ -53,6 +53,25 @@ def compute_difference_grad(gaussians: GaussianModel, new_gaussians: NewGaussian
     print("Differences grads: ", diff_xyz, diff_features_dc, diff_features_rest, diff_scaling, diff_rotation, diff_opacity)
 
 
+def sync_grad(gaussians: GaussianModel, new_gaussians: NewGaussianModel):
+    new_gaussians._xyz.grad[:] = gaussians._xyz.grad
+    new_gaussians._features_dc.grad[:] = gaussians._features_dc.grad
+    new_gaussians._features_rest.grad[:] = gaussians._features_rest.grad
+    new_gaussians._scaling.grad[:] = gaussians._scaling.grad
+    new_gaussians._rotation.grad[:] = gaussians._rotation.grad
+    new_gaussians._opacity.grad[:] = gaussians._opacity.grad
+
+
+def compute_difference_optim(optim: torch.optim.Optimizer, new_optim: torch.optim.Optimizer):
+    record = ''
+    for param_group in optim.param_groups:
+        for new_param_group in new_optim.param_groups:
+            if param_group["name"] == new_param_group["name"]:
+                diff_lr = param_group["lr"] - new_param_group["lr"]
+                record += f"{param_group['name']} lr: {diff_lr} "
+    print("Differences lr: ", record)
+
+
 def compute_difference_densification_stats(gaussians: GaussianModel, new_gaussians: ColmapTrainer):
     densifier = new_gaussians.densifier
     with torch.no_grad():
@@ -118,6 +137,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         gaussians.update_learning_rate(iteration)
         trainer.update_learning_rate(iteration)
+        compute_difference_optim(gaussians.optimizer, trainer.optimizer)
 
         # Every 1000 its we increase the levels of SH up to a maximum degree
         if iteration % 1000 == 0:
@@ -172,11 +192,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             world_view_transform=viewpoint_cam.world_view_transform,
             full_proj_transform=viewpoint_cam.full_proj_transform,
             camera_center=viewpoint_cam.camera_center,
-            bg_color=background,
+            bg_color=bg,
             ground_truth_image=gt_image,
         )
         new_loss, new_out, new_gt = trainer.forward_backward(camera)
         compute_difference_grad(gaussians, new_gaussians)
+        # sync_grad(gaussians, new_gaussians)
+        # compute_difference_grad(gaussians, new_gaussians)
 
         iter_end.record()
 
@@ -216,8 +238,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
             # Optimizer step
             if iteration < opt.iterations:
-                gaussians.exposure_optimizer.step()
-                gaussians.exposure_optimizer.zero_grad(set_to_none=True)
+                # gaussians.exposure_optimizer.step()
+                # gaussians.exposure_optimizer.zero_grad(set_to_none=True)
                 gaussians.optimizer.step()
                 gaussians.optimizer.zero_grad(set_to_none=True)
                 compute_difference(gaussians, new_gaussians)

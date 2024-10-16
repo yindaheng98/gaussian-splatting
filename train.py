@@ -31,8 +31,10 @@ try:
 except ImportError:
     TENSORBOARD_FOUND = False
 
+
 def print(*args, **kwargs):
     pass
+
 
 def compute_difference(gaussians: GaussianModel, new_gaussians: NewGaussianModel):
     with torch.no_grad():
@@ -81,6 +83,7 @@ def sync_params(gaussians: GaussianModel, new_gaussians: NewGaussianModel):
     new_gaussians._scaling[:] = gaussians._scaling
     new_gaussians._rotation[:] = gaussians._rotation
     new_gaussians._opacity[:] = gaussians._opacity
+
 
 def compute_difference_optim(optim: torch.optim.Optimizer, new_optim: torch.optim.Optimizer):
     record = ''
@@ -213,7 +216,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             world_view_transform=viewpoint_cam.world_view_transform,
             full_proj_transform=viewpoint_cam.full_proj_transform,
             camera_center=viewpoint_cam.camera_center,
-            exposure=torch.eye(3, 4).to("cuda"),
             bg_color=bg,
             ground_truth_image=gt_image,
         )

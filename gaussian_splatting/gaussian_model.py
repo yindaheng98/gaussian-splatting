@@ -19,7 +19,7 @@ class Camera(NamedTuple):
     world_view_transform: torch.Tensor
     full_proj_transform: torch.Tensor
     camera_center: torch.Tensor
-    exposure: torch.Tensor = torch.eye(3, 4)
+    def postprocess(self, x): return x
     bg_color: list[float] = torch.tensor([0., 0., 0.])
     ground_truth_image: torch.Tensor = None
 
@@ -149,8 +149,7 @@ class GaussianModel(nn.Module):
             scales=scales,
             rotations=rotations,
             cov3D_precomp=None)
-        exposure = viewpoint_camera.exposure
-        rendered_image = torch.matmul(rendered_image.permute(1, 2, 0), exposure[:3, :3]).permute(2, 0, 1) + exposure[:3, 3,   None, None]
+        rendered_image = viewpoint_camera.postprocess(rendered_image)
 
         # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
         # They will be excluded from value updates used in the splitting criteria.

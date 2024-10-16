@@ -1,8 +1,8 @@
 from abc import abstractmethod
 from typing import List, NamedTuple
 from gaussian_splatting import Camera
+import torch
 from torch.utils.data import Dataset
-import numpy as np
 
 
 class RawCamera(NamedTuple):
@@ -10,8 +10,8 @@ class RawCamera(NamedTuple):
     image_width: int
     FoVx: float
     FoVy: float
-    R: np.array
-    T: np.array
+    R: torch.Tensor
+    T: torch.Tensor
     image_path: str
 
 

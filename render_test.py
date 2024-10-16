@@ -48,14 +48,17 @@ def render_set(model_path, name, iteration, views, gaussians, new_gaussians, new
         )
         out = new_gaussians(camera)
         difference = torch.abs(out["render"] - rendering)
-        print("difference", difference.sum())
+        print("difference", difference.max())
         new_view = new_dataset[idx]
         new_gt = new_view.ground_truth_image
         difference = torch.abs(new_gt - gt)
-        print("difference", difference.sum())
+        print("difference", difference.max())
         out = new_gaussians(new_view)
         difference = torch.abs(out["render"] - rendering)
-        print("difference", difference.sum())
+        print("difference", difference.max())
+        print("difference", camera.world_view_transform - new_view.world_view_transform)
+        print("difference", camera.full_proj_transform - new_view.full_proj_transform)
+        print("difference", camera.camera_center - new_view.camera_center)
 
 
 def render_sets(dataset: ModelParams, iteration: int, pipeline: PipelineParams, skip_train: bool, skip_test: bool):

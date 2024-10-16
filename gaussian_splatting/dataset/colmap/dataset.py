@@ -48,10 +48,9 @@ def read_colmap_cameras(colmap_folder):
 
         image_path = os.path.join(os.path.join(path, "images"), extr.name)
         cameras.append(RawCamera(
-            image_height=height,
-            image_width=width,
-            R=R, T=T, FoVx=FovX,
-            FoVy=FovY,
+            image_height=height, image_width=width,
+            R=torch.from_numpy(R), T=torch.from_numpy(T),
+            FoVy=FovY, FoVx=FovX,
             image_path=image_path
         ))
     return cameras
@@ -66,7 +65,7 @@ def parse_RawCamera(colmap_camera: RawCamera, device="cuda"):
     T = colmap_camera.T
     FoVx = colmap_camera.FoVx
     FoVy = colmap_camera.FoVy
-    world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale), device=device).transpose(0, 1)
+    world_view_transform = torch.tensor(getWorld2View2(R.numpy(), T.numpy(), trans, scale), device=device).transpose(0, 1)
     projection_matrix = torch.tensor(getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy), device=device).transpose(0, 1)
     full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
     camera_center = world_view_transform.inverse()[3, :3]

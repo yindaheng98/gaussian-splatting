@@ -161,7 +161,7 @@ class Densifier:
         return optimizable_tensors
 
     def reset_opacity(self):
-        opacities_new = self.model.inverse_opacity_activation(torch.min(self.get_opacity, torch.ones_like(self.get_opacity)*0.01))
+        opacities_new = self.model.inverse_opacity_activation(torch.min(self.model.get_opacity, torch.ones_like(self.model.get_opacity)*0.01))
         optimizable_tensors = self.replace_tensor_to_optimizer(opacities_new, "opacity")
         self.model._opacity = optimizable_tensors["opacity"]
 

@@ -43,6 +43,16 @@ def compute_difference(gaussians: GaussianModel, new_gaussians: NewGaussianModel
         print("Differences params: ", diff_xyz, diff_features_dc, diff_features_rest, diff_scaling, diff_rotation, diff_opacity)
 
 
+def compute_difference_out(out, new_out):
+    with torch.no_grad():
+        diff_render = torch.abs(out["render"] - new_out["render"]).max().item()
+        diff_viewspace_points = torch.abs(out["viewspace_points"] - new_out["viewspace_points"]).max().item()
+        diff_visibility_filter = torch.abs(out["visibility_filter"] - new_out["visibility_filter"]).max().item()
+        diff_radii = torch.abs(out["radii"] - new_out["radii"]).max().item()
+        diff_depth = torch.abs(out["depth"] - new_out["depth"]).max().item()
+        print("Differences out: ", diff_render, diff_viewspace_points, diff_visibility_filter, diff_radii, diff_depth)
+
+
 def compute_difference_grad(gaussians: GaussianModel, new_gaussians: NewGaussianModel):
     diff_xyz = torch.abs(gaussians._xyz.grad - new_gaussians._xyz.grad).max().item()
     diff_features_dc = torch.abs(gaussians._features_dc.grad - new_gaussians._features_dc.grad).max().item()
@@ -197,14 +207,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         )
         new_loss, new_out, new_gt = trainer.forward_backward(camera)
         compute_difference_grad(gaussians, new_gaussians)
-        sync_grad(gaussians, new_gaussians) # we can verify that the wrong gradients are the cause of difference
+        sync_grad(gaussians, new_gaussians)  # we can verify that the wrong gradients are the cause of difference
         compute_difference_grad(gaussians, new_gaussians)
 
         iter_end.record()
 
         with torch.no_grad():
             print("loss diff", loss.item() - new_loss.item())
-            print("render diff", torch.abs(image - new_out["render"]).max())
+            compute_difference_out(render_pkg, new_out)
             # Progress bar
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             ema_Ll1depth_for_log = 0.4 * Ll1depth + 0.6 * ema_Ll1depth_for_log

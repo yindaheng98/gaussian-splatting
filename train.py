@@ -43,6 +43,16 @@ def compute_difference(gaussians: GaussianModel, new_gaussians: NewGaussianModel
         print("Differences params: ", diff_xyz, diff_features_dc, diff_features_rest, diff_scaling, diff_rotation, diff_opacity)
 
 
+def compute_difference_grad(gaussians: GaussianModel, new_gaussians: NewGaussianModel):
+    diff_xyz = torch.abs(gaussians._xyz.grad - new_gaussians._xyz.grad).max().item()
+    diff_features_dc = torch.abs(gaussians._features_dc.grad - new_gaussians._features_dc.grad).max().item()
+    diff_features_rest = torch.abs(gaussians._features_rest.grad - new_gaussians._features_rest.grad).max().item()
+    diff_scaling = torch.abs(gaussians._scaling.grad - new_gaussians._scaling.grad).max().item()
+    diff_rotation = torch.abs(gaussians._rotation.grad - new_gaussians._rotation.grad).max().item()
+    diff_opacity = torch.abs(gaussians._opacity.grad - new_gaussians._opacity.grad).max().item()
+    print("Differences grads: ", diff_xyz, diff_features_dc, diff_features_rest, diff_scaling, diff_rotation, diff_opacity)
+
+
 def compute_difference_densification_stats(gaussians: GaussianModel, new_gaussians: ColmapTrainer):
     densifier = new_gaussians.densifier
     with torch.no_grad():
@@ -165,13 +175,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             bg_color=background,
             ground_truth_image=gt_image,
         )
-        new_loss, new_render_pkg, new_gt_image = trainer.step(camera)
+        new_loss, new_out, new_gt = trainer.forward_backward(camera)
+        compute_difference_grad(gaussians, new_gaussians)
 
         iter_end.record()
 
         with torch.no_grad():
             print("loss diff", loss.item() - new_loss.item())
-            print("render diff", torch.abs(image - new_render_pkg["render"]).max())
+            print("render diff", torch.abs(image - new_out["render"]).max())
             # Progress bar
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             ema_Ll1depth_for_log = 0.4 * Ll1depth + 0.6 * ema_Ll1depth_for_log
@@ -188,18 +199,20 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
 
+            compute_difference_densification_stats(gaussians, trainer)
+            trainer.update_densification_stats(new_out)
             # Densification
             if iteration < opt.densify_until_iter:
                 # Keep track of max radii in image-space for pruning
                 gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
                 gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
-                compute_difference_densification_stats(gaussians, trainer)
                 if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
                     size_threshold = 20 if iteration > opt.opacity_reset_interval else None
                     gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
 
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
+            compute_difference_densification_stats(gaussians, trainer)
 
             # Optimizer step
             if iteration < opt.iterations:

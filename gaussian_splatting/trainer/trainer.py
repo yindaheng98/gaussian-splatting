@@ -128,6 +128,11 @@ class DensificationTrainer(Trainer):
         self.curr_step = 0
         self.densifier = Densifier(model)
 
+    def update_densification_stats(self, out):
+        render, viewspace_points, visibility_filter, radii = out["render"], out["viewspace_points"], out["visibility_filter"], out["radii"]
+        if self.curr_step < self.densify_until_iter:
+            self.densifier.update_densification_stats(radii, viewspace_points, visibility_filter)
+
     def step(self, camera):
         loss, out, gt = self.forward_backward(camera)
         render, viewspace_points, visibility_filter, radii = out["render"], out["viewspace_points"], out["visibility_filter"], out["radii"]

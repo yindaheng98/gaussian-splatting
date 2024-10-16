@@ -197,8 +197,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         )
         new_loss, new_out, new_gt = trainer.forward_backward(camera)
         compute_difference_grad(gaussians, new_gaussians)
-        # sync_grad(gaussians, new_gaussians)
-        # compute_difference_grad(gaussians, new_gaussians)
+        sync_grad(gaussians, new_gaussians) # we can verify that the wrong gradients are the cause of difference
+        compute_difference_grad(gaussians, new_gaussians)
 
         iter_end.record()
 
@@ -242,6 +242,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 # gaussians.exposure_optimizer.zero_grad(set_to_none=True)
                 gaussians.optimizer.step()
                 gaussians.optimizer.zero_grad(set_to_none=True)
+                trainer.optim_step()
                 compute_difference(gaussians, new_gaussians)
 
             if (iteration in checkpoint_iterations):

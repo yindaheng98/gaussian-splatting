@@ -109,14 +109,14 @@ def ColmapCamera2DatasetCamera(colmap_camera: ColmapCamera, device="cuda"):
     )
 
 
-class ColmapCameraDataset(ColmapCameraReader, CameraDataset):
+class ColmapCameraDataset(CameraDataset):
     def __init__(self, colmap_folder, device="cuda"):
-        super().__init__(colmap_folder)
-        self.to(device)
+        self.reader = ColmapCameraReader(colmap_folder)
+        super().__init__([ColmapCamera2DatasetCamera(cam, device=device) for cam in self.reader.cameras])
 
     def to(self, device):
-        self.device_cameras = [ColmapCamera2DatasetCamera(cam, device=device) for cam in self.cameras]
+        self.cameras = [ColmapCamera2DatasetCamera(cam, device=device) for cam in self.reader.cameras]
         return self
 
     def __getitem__(self, idx):
-        return self.device_cameras[idx]
+        return self.cameras[idx]

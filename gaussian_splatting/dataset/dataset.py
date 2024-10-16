@@ -1,11 +1,17 @@
+from abc import abstractmethod
+from typing import List
 from gaussian_splatting import Camera
 from torch.utils.data import Dataset
 
 
 class CameraDataset(Dataset):
 
-    def to(self, device) -> 'CameraDataset':
-        raise NotImplementedError("Subclasses of CameraDataset should implement to(device).")
+    def __init__(self, cameras: List[Camera]):
+        self.cameras = cameras
 
-    def __getitem__(self, idx) -> Camera:
-        raise NotImplementedError("Subclasses of CameraDataset should implement __getitem__.")
+    @abstractmethod
+    def to(self, device) -> 'CameraDataset':
+        pass
+
+    def __len__(self):
+        return len(self.cameras)

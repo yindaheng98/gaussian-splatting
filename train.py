@@ -232,6 +232,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 scene.save(iteration)
 
             compute_difference_densification_stats(gaussians, trainer)
+            new_out["viewspace_points"].grad[:] = viewspace_point_tensor.grad[:]  # sync grad
             trainer.update_densification_stats(new_out)
             # Densification
             if iteration < opt.densify_until_iter:

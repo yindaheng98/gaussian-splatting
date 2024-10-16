@@ -16,6 +16,10 @@
                 "data/truck",
                 "--model_path",
                 "output/truck",
+                "--densify_from_iter",
+                "10",
+                "--densification_interval".
+                "1"
             ]
         },
         {

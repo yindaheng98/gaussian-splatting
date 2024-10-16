@@ -113,7 +113,8 @@ class DensificationTrainer(Trainer):
             densify_from_iter: int,
             densify_until_iter: int,
             densification_interval: int,
-            grad_threshold=0.1,
+            opacity_reset_interval: int,
+            densify_grad_threshold=0.1,
             percent_dense=0.1,
             scene_extent=1.0,
             *args, **kwargs
@@ -122,11 +123,12 @@ class DensificationTrainer(Trainer):
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
         self.densification_interval = densification_interval
-        self.grad_threshold = grad_threshold
+        self.opacity_reset_interval = opacity_reset_interval
+        self.densify_grad_threshold = densify_grad_threshold
         self.percent_dense = percent_dense
         self.scene_extent = scene_extent
         self.curr_step = 0
-        self.densifier = Densifier(model)
+        self.densifier = Densifier(model, self.optimizer)
 
     def update_densification_stats(self, out):
         render, viewspace_points, visibility_filter, radii = out["render"], out["viewspace_points"], out["visibility_filter"], out["radii"]
@@ -138,5 +140,10 @@ class DensificationTrainer(Trainer):
         render, viewspace_points, visibility_filter, radii = out["render"], out["viewspace_points"], out["visibility_filter"], out["radii"]
         if self.curr_step < self.densify_until_iter:
             self.densifier.update_densification_stats(radii, viewspace_points, visibility_filter)
+        if self.curr_step >= self.densify_from_iter and self.curr_step % self.densification_interval == 0:
+            size_threshold = 20 if self.curr_step > self.opacity_reset_interval else None
+            self.densifier.densify_and_prune(self.densify_grad_threshold, 0.005, self.scene_extent, size_threshold)
+        if self.curr_step % self.opacity_reset_interval == 0:
+            self.densifier.reset_opacity()
         self.optim_step()
         return loss, out, gt

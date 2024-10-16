@@ -72,6 +72,14 @@ def sync_grad(gaussians: GaussianModel, new_gaussians: NewGaussianModel):
     new_gaussians._opacity.grad[:] = gaussians._opacity.grad
 
 
+def sync_params(gaussians: GaussianModel, new_gaussians: NewGaussianModel):
+    new_gaussians._xyz[:] = gaussians._xyz
+    new_gaussians._features_dc[:] = gaussians._features_dc
+    new_gaussians._features_rest[:] = gaussians._features_rest
+    new_gaussians._scaling[:] = gaussians._scaling
+    new_gaussians._rotation[:] = gaussians._rotation
+    new_gaussians._opacity[:] = gaussians._opacity
+
 def compute_difference_optim(optim: torch.optim.Optimizer, new_optim: torch.optim.Optimizer):
     record = ''
     for param_group in optim.param_groups:
@@ -106,6 +114,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         densify_from_iter=opt.densify_from_iter,
         densify_until_iter=opt.densify_until_iter,
         densification_interval=opt.densification_interval,
+        opacity_reset_interval=opt.opacity_reset_interval,
     )
     compute_difference(gaussians, new_gaussians)
     if checkpoint:
@@ -240,12 +249,16 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
                 gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
                 if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
+                    compute_difference_densification_stats(gaussians, trainer)
                     size_threshold = 20 if iteration > opt.opacity_reset_interval else None
                     gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
-
+                    trainer.densifier.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
+                    compute_difference(gaussians, new_gaussians)
+                    compute_difference_densification_stats(gaussians, trainer)
+                    sync_params(gaussians, new_gaussians)
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
-            compute_difference_densification_stats(gaussians, trainer)
+                    trainer.densifier.reset_opacity()
 
             # Optimizer step
             if iteration < opt.iterations:

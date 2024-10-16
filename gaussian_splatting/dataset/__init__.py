@@ -1,2 +1,2 @@
-from .dataset import CameraDataset
+from .dataset import CameraDataset, RawCamera
 from .colmap import ColmapCameraDataset

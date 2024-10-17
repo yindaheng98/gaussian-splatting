@@ -21,7 +21,7 @@ from argparse import ArgumentParser
 from arguments import ModelParams, PipelineParams, get_combined_args
 from gaussian_renderer import GaussianModel as OldGaussianModel
 from gaussian_splatting import GaussianModel, Camera
-from gaussian_splatting.dataset import ColmapCameraDataset
+from gaussian_splatting.dataset.colmap import ColmapCameraDataset
 
 
 def render_set(model_path, name, iteration, views, gaussians, new_gaussians, new_dataset, pipeline, background, train_test_exp):

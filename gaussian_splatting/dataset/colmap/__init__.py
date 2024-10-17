@@ -1,1 +1,1 @@
-from .dataset import ColmapCameraDataset
+from .dataset import ColmapCameraDataset, ColmapTrainableCameraDataset

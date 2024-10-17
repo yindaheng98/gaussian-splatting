@@ -88,12 +88,16 @@ def parse_RawCamera(colmap_camera: RawCamera, device="cuda"):
 
 class ColmapCameraDataset(CameraDataset):
     def __init__(self, colmap_folder, device="cuda"):
+        super().__init__()
         self.raw_cameras = read_colmap_cameras(colmap_folder)
-        super().__init__([parse_RawCamera(cam, device=device) for cam in self.raw_cameras])
+        self.cameras = [parse_RawCamera(cam, device=device) for cam in self.raw_cameras]
 
     def to(self, device):
         self.cameras = [parse_RawCamera(cam, device=device) for cam in self.raw_cameras]
         return self
+
+    def __len__(self):
+        return len(self.cameras)
 
     def __getitem__(self, idx):
         return self.cameras[idx]

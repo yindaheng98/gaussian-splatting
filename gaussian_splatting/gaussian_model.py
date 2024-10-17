@@ -22,7 +22,7 @@ class Camera(NamedTuple):
     full_proj_transform: torch.Tensor
     camera_center: torch.Tensor
     def postprocess(self, x): return x
-    bg_color: list[float] = torch.tensor([0., 0., 0.])
+    bg_color: torch.Tensor = torch.tensor([0., 0., 0.])
     ground_truth_image: torch.Tensor = None
 
 
@@ -120,7 +120,7 @@ class GaussianModel(nn.Module):
             image_width=int(viewpoint_camera.image_width),
             tanfovx=tanfovx,
             tanfovy=tanfovy,
-            bg=torch.tensor(viewpoint_camera.bg_color, dtype=torch.float32, device=self._xyz.device),
+            bg=viewpoint_camera.bg_color.to(self._xyz.device),
             scale_modifier=self.scale_modifier,
             viewmatrix=viewpoint_camera.world_view_transform,
             projmatrix=viewpoint_camera.full_proj_transform,

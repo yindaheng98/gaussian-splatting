@@ -16,7 +16,7 @@ from os import makedirs
 import torchvision
 from argparse import ArgumentParser
 from gaussian_splatting import GaussianModel
-from gaussian_splatting.dataset import ColmapCameraDataset
+from gaussian_splatting.dataset.colmap import ColmapCameraDataset
 
 parser = ArgumentParser()
 parser.add_argument("--sh_degree", default=3, type=int)

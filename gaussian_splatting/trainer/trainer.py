@@ -44,17 +44,6 @@ class AbstractTrainer(ABC):
     def update_learning_rate(self, step: int):
         pass
 
-    def train_epoch(self, cameras: CameraDataset, current_epoch: int, total_epochs: int):
-        pbar = tqdm(cameras, desc=f"Epoch {current_epoch}/{total_epochs}")
-        for camera in pbar:
-            loss = self.step(camera)
-            if loss is not None:
-                pbar.set_postfix(loss=loss.item())
-
-    def train(self, cameras: CameraDataset, num_epochs):
-        for epoch in range(num_epochs):
-            self.train_epoch(cameras, epoch, num_epochs)
-
 
 class Trainer(AbstractTrainer):
     def __init__(

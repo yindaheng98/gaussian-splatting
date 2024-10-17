@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "train",
+            "name": "train test",
             "type": "debugpy",
             "request": "launch",
-            "program": "train.py",
+            "program": "train_test.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [

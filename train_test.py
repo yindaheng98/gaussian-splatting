@@ -32,8 +32,8 @@ except ImportError:
     TENSORBOARD_FOUND = False
 
 
-def print(*args, **kwargs):
-    pass
+# def print(*args, **kwargs):
+#     pass
 
 
 def compute_difference(gaussians: GaussianModel, new_gaussians: NewGaussianModel):

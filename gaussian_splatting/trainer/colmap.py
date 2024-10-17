@@ -1,10 +1,12 @@
 import os
 import struct
+from typing import List
 import numpy as np
 import torch
 
 from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
+from gaussian_splatting.dataset.dataset import RawCamera
 from gaussian_splatting.utils import getWorld2View2
 from .trainer import DensificationTrainer
 
@@ -94,7 +96,7 @@ def read_points3D_binary(path_to_model_file):
     return xyzs, rgbs, errors
 
 
-def getNerfppNorm(dataset: ColmapCameraDataset):
+def getNerfppNorm(cameras: List[RawCamera]):
     def get_center_and_diag(cam_centers):
         cam_centers = torch.hstack(cam_centers)
         avg_cam_center = torch.mean(cam_centers, axis=1, keepdims=True)
@@ -105,7 +107,7 @@ def getNerfppNorm(dataset: ColmapCameraDataset):
 
     cam_centers = []
 
-    for cam in dataset.cameras:
+    for cam in cameras:
         W2C = getWorld2View2(cam.R, cam.T)
         C2W = torch.linalg.inv(W2C)
         cam_centers.append(C2W[:3, 3:4])
@@ -129,6 +131,6 @@ class ColmapTrainer(DensificationTrainer):
             case _:
                 raise ValueError(f"Unsupported file extension: {ext}")
         model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
-        nerf_normalization = getNerfppNorm(dataset)
+        nerf_normalization = getNerfppNorm(dataset.raw_cameras)
         spatial_lr_scale = nerf_normalization["radius"]
         super().__init__(model, spatial_lr_scale=spatial_lr_scale, *args, **kwargs)

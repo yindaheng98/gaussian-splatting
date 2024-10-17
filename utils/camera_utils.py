@@ -14,6 +14,7 @@ import numpy as np
 from utils.graphics_utils import fov2focal
 from PIL import Image
 import cv2
+import torch
 
 WARNED = False
 
@@ -75,12 +76,12 @@ def cameraList_from_camInfos(cam_infos, resolution_scale, args, is_nerf_syntheti
     return camera_list
 
 def camera_to_JSON(id, camera : Camera):
-    Rt = np.zeros((4, 4))
-    Rt[:3, :3] = camera.R.transpose()
+    Rt = torch.zeros((4, 4))
+    Rt[:3, :3] = camera.R.transpose(0, 1)
     Rt[:3, 3] = camera.T
     Rt[3, 3] = 1.0
 
-    W2C = np.linalg.inv(Rt)
+    W2C = torch.linalg.inv(Rt)
     pos = W2C[:3, 3]
     rot = W2C[:3, :3]
     serializable_array_2d = [x.tolist() for x in rot]

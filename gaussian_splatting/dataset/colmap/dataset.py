@@ -59,14 +59,14 @@ def read_colmap_cameras(colmap_folder):
 def parse_RawCamera(colmap_camera: RawCamera, device="cuda"):
     zfar = 100.0
     znear = 0.01
-    trans = np.array([0.0, 0.0, 0.0])
+    trans = torch.zeros(3)
     scale = 1.0
     R = colmap_camera.R
     T = colmap_camera.T
     FoVx = colmap_camera.FoVx
     FoVy = colmap_camera.FoVy
-    world_view_transform = torch.tensor(getWorld2View2(R.numpy(), T.numpy(), trans, scale), device=device).transpose(0, 1)
-    projection_matrix = torch.tensor(getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy), device=device).transpose(0, 1)
+    world_view_transform = getWorld2View2(R, T, trans, scale).to(device).transpose(0, 1)
+    projection_matrix = getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy).to(device).transpose(0, 1)
     full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
     camera_center = world_view_transform.inverse()[3, :3]
     pil_image = Image.open(colmap_camera.image_path)

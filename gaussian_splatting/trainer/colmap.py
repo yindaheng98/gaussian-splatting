@@ -96,18 +96,18 @@ def read_points3D_binary(path_to_model_file):
 
 def getNerfppNorm(dataset: ColmapCameraDataset):
     def get_center_and_diag(cam_centers):
-        cam_centers = np.hstack(cam_centers)
-        avg_cam_center = np.mean(cam_centers, axis=1, keepdims=True)
+        cam_centers = torch.hstack(cam_centers)
+        avg_cam_center = torch.mean(cam_centers, axis=1, keepdims=True)
         center = avg_cam_center
-        dist = np.linalg.norm(cam_centers - center, axis=0, keepdims=True)
-        diagonal = np.max(dist)
+        dist = torch.linalg.norm(cam_centers - center, axis=0, keepdims=True)
+        diagonal = torch.max(dist)
         return center.flatten(), diagonal
 
     cam_centers = []
 
     for cam in dataset.cameras:
         W2C = getWorld2View2(cam.R, cam.T)
-        C2W = np.linalg.inv(W2C)
+        C2W = torch.linalg.inv(W2C)
         cam_centers.append(C2W[:3, 3:4])
 
     center, diagonal = get_center_and_diag(cam_centers)

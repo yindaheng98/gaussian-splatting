@@ -11,6 +11,7 @@
 
 import os
 import sys
+import torch
 from PIL import Image
 from typing import NamedTuple
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
@@ -25,10 +26,10 @@ from scene.gaussian_model import BasicPointCloud
 
 class CameraInfo(NamedTuple):
     uid: int
-    R: np.array
-    T: np.array
-    FovY: np.array
-    FovX: np.array
+    R: torch.Tensor
+    T: torch.Tensor
+    FovY: float
+    FovX: float
     depth_params: dict
     image_path: str
     image_name: str
@@ -47,18 +48,18 @@ class SceneInfo(NamedTuple):
 
 def getNerfppNorm(cam_info):
     def get_center_and_diag(cam_centers):
-        cam_centers = np.hstack(cam_centers)
-        avg_cam_center = np.mean(cam_centers, axis=1, keepdims=True)
+        cam_centers = torch.hstack(cam_centers)
+        avg_cam_center = torch.mean(cam_centers, axis=1, keepdims=True)
         center = avg_cam_center
-        dist = np.linalg.norm(cam_centers - center, axis=0, keepdims=True)
-        diagonal = np.max(dist)
+        dist = torch.linalg.norm(cam_centers - center, axis=0, keepdims=True)
+        diagonal = torch.max(dist)
         return center.flatten(), diagonal
 
     cam_centers = []
 
     for cam in cam_info:
         W2C = getWorld2View2(cam.R, cam.T)
-        C2W = np.linalg.inv(W2C)
+        C2W = torch.linalg.inv(W2C)
         cam_centers.append(C2W[:3, 3:4])
 
     center, diagonal = get_center_and_diag(cam_centers)
@@ -109,7 +110,7 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, depths_params, images_fold
         image_name = extr.name
         depth_path = os.path.join(depths_folder, f"{extr.name[:-n_remove]}.png") if depths_folder != "" else ""
 
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, depth_params=depth_params,
+        cam_info = CameraInfo(uid=uid, R=torch.from_numpy(R), T=torch.from_numpy(T), FovY=FovY, FovX=FovX, depth_params=depth_params,
                               image_path=image_path, image_name=image_name, depth_path=depth_path,
                               width=width, height=height, is_test=image_name in test_cam_names_list)
         cam_infos.append(cam_info)

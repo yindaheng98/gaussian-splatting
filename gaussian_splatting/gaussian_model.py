@@ -16,6 +16,8 @@ class Camera(NamedTuple):
     image_width: int
     FoVx: float
     FoVy: float
+    R: torch.Tensor
+    T: torch.Tensor
     world_view_transform: torch.Tensor
     full_proj_transform: torch.Tensor
     camera_center: torch.Tensor

@@ -41,6 +41,7 @@ def render_set(model_path, name, iteration, views, gaussians, new_gaussians, new
             image_width=view.image_width,
             FoVx=view.FoVx,
             FoVy=view.FoVy,
+            R=view.R, T=view.T,
             world_view_transform=view.world_view_transform,
             full_proj_transform=view.full_proj_transform,
             camera_center=view.camera_center,

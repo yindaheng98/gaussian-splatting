@@ -1,1 +1,1 @@
-from .dataset import RawCamera, CameraDataset, TrainableCameraDataset
+from .dataset import CameraDataset, TrainableCameraDataset

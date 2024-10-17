@@ -4,9 +4,8 @@ from typing import List
 import numpy as np
 import torch
 
-from gaussian_splatting import GaussianModel
+from gaussian_splatting import Camera, GaussianModel
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
-from gaussian_splatting.dataset.dataset import RawCamera
 from gaussian_splatting.utils import getWorld2View2
 from .trainer import DensificationTrainer
 
@@ -96,7 +95,7 @@ def read_points3D_binary(path_to_model_file):
     return xyzs, rgbs, errors
 
 
-def getNerfppNorm(cameras: List[RawCamera]):
+def getNerfppNorm(cameras: List[Camera]):
     def get_center_and_diag(cam_centers):
         cam_centers = torch.hstack(cam_centers)
         avg_cam_center = torch.mean(cam_centers, axis=1, keepdims=True)

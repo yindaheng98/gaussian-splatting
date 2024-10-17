@@ -32,8 +32,8 @@ except ImportError:
     TENSORBOARD_FOUND = False
 
 
-# def print(*args, **kwargs):
-#     pass
+def print(*args, **kwargs):
+    pass
 
 
 def compute_difference(gaussians: GaussianModel, new_gaussians: NewGaussianModel):
@@ -213,6 +213,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             image_width=viewpoint_cam.image_width,
             FoVx=viewpoint_cam.FoVx,
             FoVy=viewpoint_cam.FoVy,
+            R=viewpoint_cam.R, T=viewpoint_cam.T,
             world_view_transform=viewpoint_cam.world_view_transform,
             full_proj_transform=viewpoint_cam.full_proj_transform,
             camera_center=viewpoint_cam.camera_center,

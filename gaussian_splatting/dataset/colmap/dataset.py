@@ -1,17 +1,28 @@
 import os
+from typing import NamedTuple
 import numpy as np
 
 import torch
 from PIL import Image
 
 from gaussian_splatting import Camera
-from gaussian_splatting.dataset import RawCamera, CameraDataset, TrainableCameraDataset
+from gaussian_splatting.dataset import CameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import focal2fov, getProjectionMatrix, getWorld2View2, PILtoTorch
 from .utils import (
     read_extrinsics_text, read_extrinsics_binary,
     read_intrinsics_text, read_intrinsics_binary,
     qvec2rotmat
 )
+
+
+class ColmapCamera(NamedTuple):
+    image_height: int
+    image_width: int
+    FoVx: float
+    FoVy: float
+    R: torch.Tensor
+    T: torch.Tensor
+    image_path: str
 
 
 def read_colmap_cameras(colmap_folder):
@@ -47,7 +58,7 @@ def read_colmap_cameras(colmap_folder):
             raise ValueError("Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!")
 
         image_path = os.path.join(os.path.join(path, "images"), extr.name)
-        cameras.append(RawCamera(
+        cameras.append(ColmapCamera(
             image_height=height, image_width=width,
             R=torch.from_numpy(R), T=torch.from_numpy(T),
             FoVy=FovY, FoVx=FovX,
@@ -56,7 +67,7 @@ def read_colmap_cameras(colmap_folder):
     return cameras
 
 
-def parse_RawCamera(colmap_camera: RawCamera, device="cuda"):
+def parse_ColmapCamera(colmap_camera: ColmapCamera, device="cuda"):
     zfar = 100.0
     znear = 0.01
     trans = torch.zeros(3)
@@ -79,6 +90,7 @@ def parse_RawCamera(colmap_camera: RawCamera, device="cuda"):
         # image_width=colmap_camera.image_width, # colmap_camera.image_width is read from cameras.bin, maybe dfferent from the actual image size
         image_height=image_height, image_width=image_width,
         FoVx=FoVx, FoVy=FoVy,
+        R=R.to(device), T=T.to(device),
         world_view_transform=world_view_transform,
         full_proj_transform=full_proj_transform,
         camera_center=camera_center,
@@ -93,7 +105,7 @@ class ColmapCameraDataset(CameraDataset):
         self.to(device)
 
     def to(self, device):
-        self.cameras = [parse_RawCamera(cam, device=device) for cam in self.raw_cameras]
+        self.cameras = [parse_ColmapCamera(cam, device=device) for cam in self.raw_cameras]
         return self
 
     def __len__(self):

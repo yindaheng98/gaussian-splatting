@@ -12,12 +12,13 @@ parser.add_argument("--sh_degree", default=3, type=int)
 parser.add_argument("-s", "--source", required=True, type=str)
 parser.add_argument("-d", "--destination", required=True, type=str)
 parser.add_argument("-i", "--iteration", required=True, type=int)
+parser.add_argument("--device", default="cuda", type=str)
 
 
-def main(sh_degree: int, source: str, destination: str, iteration: int):
-    gaussians = GaussianModel(sh_degree)
+def main(sh_degree: int, source: str, destination: str, iteration: int, device: str):
+    gaussians = GaussianModel(sh_degree, device=device)
     gaussians.load_ply(os.path.join(destination, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"))
-    dataset = ColmapCameraDataset(source)
+    dataset = ColmapCameraDataset(source, device=device)
     render_path = os.path.join(destination, "ours_{}".format(iteration), "renders")
     gt_path = os.path.join(destination, "ours_{}".format(iteration), "gt")
     makedirs(render_path, exist_ok=True)
@@ -33,4 +34,4 @@ def main(sh_degree: int, source: str, destination: str, iteration: int):
 if __name__ == "__main__":
     args = parser.parse_args()
     with torch.no_grad():
-        main(args.sh_degree, args.source, args.destination, args.iteration)
+        main(args.sh_degree, args.source, args.destination, args.iteration, args.device)

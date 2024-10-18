@@ -116,7 +116,7 @@ class DensificationTrainer(Trainer):
         self.densify_grad_threshold = densify_grad_threshold
         self.percent_dense = percent_dense
         self.scene_extent = scene_extent
-        self.curr_step = 0
+        self.curr_step = 1
         self.densifier = Densifier(model, self.optimizer)
 
     def update_densification_stats(self, out):

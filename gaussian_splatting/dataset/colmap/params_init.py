@@ -5,9 +5,8 @@ import numpy as np
 import torch
 
 from gaussian_splatting import Camera, GaussianModel
-from gaussian_splatting.dataset.colmap import ColmapCameraDataset
 from gaussian_splatting.utils import getWorld2View2
-from .trainer import DensificationTrainer
+from .dataset import ColmapCameraDataset
 
 
 def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="<"):
@@ -119,17 +118,14 @@ def getNerfppNorm(cameras: List[Camera]):
     return {"translate": translate, "radius": radius}
 
 
-class ColmapTrainer(DensificationTrainer):
-    def __init__(self, model: GaussianModel, init_path: str, dataset: ColmapCameraDataset, *args, **kwargs):
-        ext = os.path.splitext(init_path)[1]
-        match ext:
-            case ".bin":
-                xyz, rgb, _ = read_points3D_binary(init_path)
-            case ".txt":
-                xyz, rgb, _ = read_points3D_text(init_path)
-            case _:
-                raise ValueError(f"Unsupported file extension: {ext}")
-        model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
-        nerf_normalization = getNerfppNorm(dataset.raw_cameras)
-        spatial_lr_scale = nerf_normalization["radius"]
-        super().__init__(model, spatial_lr_scale=spatial_lr_scale, *args, **kwargs)
+def colmap_init(model: GaussianModel, colmap_folder: str, dataset: ColmapCameraDataset):
+    try:
+        init_path = os.path.join(colmap_folder, "sparse/0", "points3D.bin")
+        xyz, rgb, _ = read_points3D_binary(init_path)
+    except:
+        init_path = os.path.join(colmap_folder, "sparse/0", "points3D.txt")
+        xyz, rgb, _ = read_points3D_text(init_path)
+    model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
+    nerf_normalization = getNerfppNorm(dataset.raw_cameras)
+    spatial_lr_scale = nerf_normalization["radius"]
+    return spatial_lr_scale

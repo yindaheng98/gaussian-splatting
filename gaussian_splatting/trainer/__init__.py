@@ -1,1 +1,1 @@
-from .trainer import AbstractTrainer, Trainer
+from .trainer import AbstractTrainer, Trainer, DensificationTrainer

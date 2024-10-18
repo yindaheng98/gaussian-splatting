@@ -12,8 +12,8 @@
 import os
 import torch
 from random import randint
-from gaussian_splatting.dataset.colmap.dataset import ColmapCameraDataset
-from gaussian_splatting.trainer.colmap import ColmapTrainer
+from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init
+from gaussian_splatting.trainer import DensificationTrainer
 from utils.loss_utils import l1_loss, ssim
 from gaussian_renderer import render, network_gui
 import sys
@@ -95,7 +95,7 @@ def compute_difference_optim(optim: torch.optim.Optimizer, new_optim: torch.opti
     print("Differences lr: ", record)
 
 
-def compute_difference_densification_stats(gaussians: GaussianModel, new_gaussians: ColmapTrainer):
+def compute_difference_densification_stats(gaussians: GaussianModel, new_gaussians: DensificationTrainer):
     densifier = new_gaussians.densifier
     with torch.no_grad():
         diff_max_radii2D = torch.abs(gaussians.max_radii2D - densifier.max_radii2D).max().item()
@@ -112,10 +112,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     gaussians.training_setup(opt)
     new_gaussians = NewGaussianModel(dataset.sh_degree).to("cuda")
     new_dataset = ColmapCameraDataset(dataset.source_path)
-    trainer = ColmapTrainer(
+    spatial_lr_scale = colmap_init(new_gaussians, dataset.source_path, new_dataset)
+    trainer = DensificationTrainer(
         new_gaussians,
-        os.path.join(dataset.source_path, "sparse/0/points3D.bin"),
-        dataset=new_dataset,
+        spatial_lr_scale=spatial_lr_scale,
         densify_from_iter=opt.densify_from_iter,
         densify_until_iter=opt.densify_until_iter,
         densification_interval=opt.densification_interval,

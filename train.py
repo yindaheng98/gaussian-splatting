@@ -1,7 +1,10 @@
+import os
 import random
+import torch
 from tqdm import tqdm
 from argparse import ArgumentParser
 from gaussian_splatting import GaussianModel
+from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init
 from gaussian_splatting.trainer import DensificationTrainer
 
@@ -10,6 +13,7 @@ parser.add_argument("--sh_degree", default=3, type=int)
 parser.add_argument("-s", "--source", required=True, type=str)
 parser.add_argument("-d", "--destination", required=True, type=str)
 parser.add_argument("-i", "--iteration", default=30000, type=int)
+parser.add_argument("--save_iterations", nargs="+", type=int, default=[7000, 30000])
 parser.add_argument("--device", default="cuda", type=str)
 parser.add_argument("--densify_from_iter", default=500, type=int)
 parser.add_argument("--densify_until_iter", default=15000, type=int)
@@ -31,16 +35,24 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     )
 
     pbar = tqdm(range(iteration))
-    epoch, epoch_loss = list(range(len(dataset))), []
+    epoch, epoch_loss, epoch_psnr = list(range(len(dataset))), [], torch.empty(3, 0, device=device)
     for step in pbar:
         epoch_idx = step % len(dataset)
         if epoch_idx == 0:
+            pbar.set_postfix({'epoch': step // len(dataset), 'loss': sum(epoch_loss) / len(dataset), 'psnr': epoch_psnr.mean().item()})
+            epoch_loss, epoch_psnr = [], torch.empty(3, 0, device=device)
             random.shuffle(epoch)
-            pbar.set_postfix({'epoch': step // len(dataset), 'loss': sum(epoch_loss) / len(dataset)})
-            epoch_loss = []
         idx = epoch[epoch_idx]
         loss, out, gt = trainer.step(dataset[idx])
         epoch_loss.append(loss.item())
+        epoch_psnr = torch.concat([epoch_psnr, psnr(out["render"], gt)], dim=1)
+        if step in args.save_iterations:
+            save_path = os.path.join(destination, "point_cloud", "iteration_" + str(step))
+            os.makedirs(save_path, exist_ok=True)
+            gaussians.save_ply(os.path.join(save_path, "point_cloud.ply"))
+    save_path = os.path.join(destination, "point_cloud", "iteration_" + str(iteration))
+    os.makedirs(save_path, exist_ok=True)
+    gaussians.save_ply(os.path.join(save_path, "point_cloud.ply"))
 
 
 if __name__ == "__main__":

@@ -24,10 +24,10 @@ parser.add_argument("--opacity_reset_interval", default=3000, type=int)
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
     gaussians = GaussianModel(sh_degree, device=device)
     dataset = ColmapCameraDataset(source, device=device)
-    spatial_lr_scale = colmap_init(gaussians, args.source, dataset)
+    scene_extent = colmap_init(gaussians, args.source, dataset)
     trainer = DensificationTrainer(
         gaussians,
-        spatial_lr_scale=spatial_lr_scale,
+        scene_extent=scene_extent,
         densify_from_iter=args.densify_from_iter,
         densify_until_iter=args.densify_until_iter,
         densification_interval=args.densification_interval,
@@ -42,6 +42,8 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
             pbar.set_postfix({'epoch': step // len(dataset), 'loss': sum(epoch_loss) / len(dataset), 'psnr': epoch_psnr.mean().item()})
             epoch_loss, epoch_psnr = [], torch.empty(3, 0, device=device)
             random.shuffle(epoch)
+        if step % 1000 == 0:
+            trainer.oneupSHdegree()
         idx = epoch[epoch_idx]
         loss, out, gt = trainer.step(dataset[idx])
         epoch_loss.append(loss.item())

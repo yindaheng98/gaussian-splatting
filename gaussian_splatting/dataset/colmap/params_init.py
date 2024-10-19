@@ -127,5 +127,5 @@ def colmap_init(model: GaussianModel, colmap_folder: str, dataset: ColmapCameraD
         xyz, rgb, _ = read_points3D_text(init_path)
     model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
     nerf_normalization = getNerfppNorm(dataset.raw_cameras)
-    spatial_lr_scale = nerf_normalization["radius"]
-    return spatial_lr_scale
+    scene_extent = nerf_normalization["radius"]
+    return scene_extent

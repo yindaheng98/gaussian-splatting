@@ -34,7 +34,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         opacity_reset_interval=args.opacity_reset_interval,
     )
 
-    pbar = tqdm(range(iteration))
+    pbar = tqdm(range(1, iteration+1))
     epoch, epoch_loss, epoch_psnr = list(range(len(dataset))), [], torch.empty(3, 0, device=device)
     for step in pbar:
         epoch_idx = step % len(dataset)

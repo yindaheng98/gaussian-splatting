@@ -17,15 +17,12 @@ class Densifier:
         self.denom = torch.zeros((model.get_xyz.shape[0], 1), device=device)
         self.max_radii2D = torch.zeros((model.get_xyz.shape[0]), device=device)
 
-    def update_max_radii2D(self, radii: torch.Tensor, visibility_filter: torch.Tensor):
-        self.max_radii2D[visibility_filter] = torch.max(self.max_radii2D[visibility_filter], radii[visibility_filter])
-
     def add_densification_stats(self, viewspace_point_tensor, update_filter):
         self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter, :2], dim=-1, keepdim=True)
         self.denom[update_filter] += 1
 
     def update_densification_stats(self, radii, viewspace_points, visibility_filter):
-        self.update_max_radii2D(radii, visibility_filter)
+        self.max_radii2D[visibility_filter] = torch.max(self.max_radii2D[visibility_filter], radii[visibility_filter])
         self.add_densification_stats(viewspace_points, visibility_filter)
 
     def densify_and_prune(self, max_grad, min_opacity, extent, max_screen_size):

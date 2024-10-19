@@ -248,12 +248,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
             compute_difference_densification_stats(gaussians, trainer)
             new_out["viewspace_points"].grad[:] = viewspace_point_tensor.grad[:]  # sync grad
-            trainer.update_densification_stats(new_out)
             # Densification
             if iteration < opt.densify_until_iter:
                 # Keep track of max radii in image-space for pruning
                 gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
                 gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
+                trainer.densifier.update_densification_stats(new_out["radii"], new_out["viewspace_points"], new_out["visibility_filter"])
                 if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
                     compute_difference_densification_stats(gaussians, trainer)
                     size_threshold = 20 if iteration > opt.opacity_reset_interval else None
@@ -261,7 +261,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     trainer.densifier.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
                     compute_difference(gaussians, new_gaussians)
                     compute_difference_densification_stats(gaussians, trainer)
-                    sync_params(gaussians, new_gaussians)
+                    sync_params(new_gaussians, gaussians)
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
                     trainer.densifier.reset_opacity()

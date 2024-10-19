@@ -247,7 +247,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 scene.save(iteration)
 
             compute_difference_densification_stats(gaussians, trainer)
-            new_out["viewspace_points"].grad[:] = viewspace_point_tensor.grad[:]  # sync grad
+            viewspace_point_tensor.grad[:] = new_out["viewspace_points"].grad[:]  # sync grad
             # Densification
             if iteration < opt.densify_until_iter:
                 # Keep track of max radii in image-space for pruning
@@ -265,6 +265,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
                     trainer.densifier.reset_opacity()
+                    compute_difference(gaussians, new_gaussians)
 
             # Optimizer step
             if iteration < opt.iterations:

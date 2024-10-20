@@ -10,6 +10,7 @@
 #
 
 import torch
+from gaussian_splatting.camera_trainable import CameraTrainableGaussianModel
 from scene import Scene
 import os
 from tqdm import tqdm
@@ -24,7 +25,7 @@ from gaussian_splatting import GaussianModel, Camera
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
 
 
-def render_set(model_path, name, iteration, views, gaussians, new_gaussians, new_dataset, pipeline, background, train_test_exp):
+def render_set(model_path, name, iteration, views, gaussians, new_gaussians, new_gaussians2, new_dataset, pipeline, background, train_test_exp):
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
     gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
 
@@ -45,6 +46,8 @@ def render_set(model_path, name, iteration, views, gaussians, new_gaussians, new
             world_view_transform=view.world_view_transform,
             full_proj_transform=view.full_proj_transform,
             camera_center=view.camera_center,
+            projection_matrix=None,
+            quaternion=None,
             bg_color=background
         )
         out = new_gaussians(camera)
@@ -57,6 +60,9 @@ def render_set(model_path, name, iteration, views, gaussians, new_gaussians, new
         out = new_gaussians(new_view)
         difference = torch.abs(out["render"] - rendering)
         print("difference", difference.max())
+        out2 = new_gaussians2(new_view)
+        difference2 = torch.abs(out["render"] - out2["render"])
+        print("difference2", difference2.max())
         print("difference", camera.world_view_transform - new_view.world_view_transform)
         print("difference", camera.full_proj_transform - new_view.full_proj_transform)
         print("difference", camera.camera_center - new_view.camera_center)
@@ -66,18 +72,20 @@ def render_sets(dataset: ModelParams, iteration: int, pipeline: PipelineParams, 
     with torch.no_grad():
         gaussians = OldGaussianModel(dataset.sh_degree)
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
-        new_gaussians = GaussianModel(dataset.sh_degree)
+        new_gaussians = GaussianModel(dataset.sh_degree).to("cuda")
         new_gaussians.load_ply(os.path.join(dataset.model_path, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"))
+        new_gaussians2 = CameraTrainableGaussianModel(dataset.sh_degree).to("cuda")
+        new_gaussians2.load_ply(os.path.join(dataset.model_path, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"))
         new_dataset = ColmapCameraDataset(dataset.source_path)
 
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
         if not skip_train:
-            render_set(dataset.model_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, new_gaussians, new_dataset, pipeline, background, dataset.train_test_exp)
+            render_set(dataset.model_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, new_gaussians, new_gaussians2, new_dataset, pipeline, background, dataset.train_test_exp)
 
         if not skip_test:
-            render_set(dataset.model_path, "test", scene.loaded_iter, scene.getTestCameras(), gaussians, new_gaussians, new_dataset, pipeline, background, dataset.train_test_exp)
+            render_set(dataset.model_path, "test", scene.loaded_iter, scene.getTestCameras(), gaussians, new_gaussians, new_gaussians2, new_dataset, pipeline, background, dataset.train_test_exp)
 
 
 if __name__ == "__main__":

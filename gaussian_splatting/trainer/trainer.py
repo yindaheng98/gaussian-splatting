@@ -103,8 +103,8 @@ class DensificationTrainer(Trainer):
             densification_interval: int,
             opacity_reset_interval: int,
             scene_extent: float,
-            densify_grad_threshold=0.1,
-            percent_dense=0.1,
+            densify_grad_threshold=0.0002,
+            percent_dense=0.01,
             *args, **kwargs
     ):
         super().__init__(model, spatial_lr_scale=scene_extent, *args, **kwargs)

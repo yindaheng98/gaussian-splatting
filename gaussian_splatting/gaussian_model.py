@@ -45,7 +45,7 @@ class GaussianModel(nn.Module):
 
         self.rotation_activation = torch.nn.functional.normalize
 
-    def __init__(self, sh_degree, device="cuda"):
+    def __init__(self, sh_degree):
         super(GaussianModel, self).__init__()
         self.active_sh_degree = sh_degree
         self.max_sh_degree = sh_degree
@@ -59,7 +59,6 @@ class GaussianModel(nn.Module):
         self.scale_modifier = 1.0
         self.debug = False
         self.antialiasing = False
-        self.to(device)
 
     def to(self, device):
         self._xyz = self._xyz.to(device)

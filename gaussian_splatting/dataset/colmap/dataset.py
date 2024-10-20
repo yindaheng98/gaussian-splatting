@@ -7,7 +7,7 @@ from PIL import Image
 
 from gaussian_splatting import Camera, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import CameraDataset, TrainableCameraDataset
-from gaussian_splatting.utils import focal2fov, getProjectionMatrix, getWorld2View2, PILtoTorch
+from gaussian_splatting.utils import focal2fov, getProjectionMatrix, getWorld2View2, PILtoTorch, matrix_to_quaternion
 from .utils import (
     read_extrinsics_text, read_extrinsics_binary,
     read_intrinsics_text, read_intrinsics_binary,
@@ -94,6 +94,7 @@ def parse_ColmapCamera(colmap_camera: ColmapCamera, device="cuda"):
         world_view_transform=world_view_transform,
         full_proj_transform=full_proj_transform,
         camera_center=camera_center,
+        quaternion=matrix_to_quaternion(R).to(device),
         ground_truth_image=gt_image
     )
 

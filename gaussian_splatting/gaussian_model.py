@@ -21,6 +21,7 @@ class Camera(NamedTuple):
     world_view_transform: torch.Tensor
     full_proj_transform: torch.Tensor
     camera_center: torch.Tensor
+    quaternion: torch.Tensor
     def postprocess(self, x): return x
     bg_color: torch.Tensor = torch.tensor([0., 0., 0.])
     ground_truth_image: torch.Tensor = None

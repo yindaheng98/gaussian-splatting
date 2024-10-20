@@ -13,7 +13,7 @@ def standardize_quaternion(quaternions: torch.Tensor) -> torch.Tensor:
 
     Returns:
         Standardized quaternions as tensor of shape (..., 4).
-    Source: https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html#matrix_to_quaternion
+    Source: https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html
     """
     return torch.where(quaternions[..., 0:1] < 0, -quaternions, quaternions)
 
@@ -22,7 +22,7 @@ def _sqrt_positive_part(x: torch.Tensor) -> torch.Tensor:
     """
     Returns torch.sqrt(torch.max(0, x))
     but with a zero subgradient where x is 0.
-    Source: https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html#matrix_to_quaternion
+    Source: https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html
     """
     ret = torch.zeros_like(x)
     positive_mask = x > 0
@@ -43,7 +43,7 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
 
     Returns:
         quaternions with real part first, as tensor of shape (..., 4).
-    Source: https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html#matrix_to_quaternion
+    Source: https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html
     """
     if matrix.size(-1) != 3 or matrix.size(-2) != 3:
         raise ValueError(f"Invalid rotation matrix shape {matrix.shape}.")
@@ -115,6 +115,7 @@ def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
 
     Returns:
         Rotation matrices as tensor of shape (..., 3, 3).
+    Source: https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html
     """
     r, i, j, k = torch.unbind(quaternions, -1)
     # pyre-fixme[58]: `/` is not supported for operand types `float` and `Tensor`.
@@ -135,3 +136,25 @@ def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
         -1,
     )
     return o.reshape(quaternions.shape[:-1] + (3, 3))
+
+
+def quaternion_raw_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """
+    Multiply two quaternions.
+    Usual torch rules for broadcasting apply.
+
+    Args:
+        a: Quaternions as tensor of shape (..., 4), real part first.
+        b: Quaternions as tensor of shape (..., 4), real part first.
+
+    Returns:
+        The product of a and b, a tensor of quaternions shape (..., 4).
+    Source: https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html
+    """
+    aw, ax, ay, az = torch.unbind(a, -1)
+    bw, bx, by, bz = torch.unbind(b, -1)
+    ow = aw * bw - ax * bx - ay * by - az * bz
+    ox = aw * bx + ax * bw + ay * bz - az * by
+    oy = aw * by - ax * bz + ay * bw + az * bx
+    oz = aw * bz + ax * by - ay * bx + az * bw
+    return torch.stack((ow, ox, oy, oz), -1)

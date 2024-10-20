@@ -37,7 +37,6 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     pbar = tqdm(range(1, iteration+1))
     epoch, epoch_loss, epoch_psnr = list(range(len(dataset))), [], torch.empty(3, 0, device=device)
     for step in pbar:
-        trainer.update_learning_rate(step)
         epoch_idx = step % len(dataset)
         if epoch_idx == 0:
             pbar.set_postfix({'epoch': step // len(dataset), 'loss': sum(epoch_loss) / len(dataset), 'psnr': epoch_psnr.mean().item()})
@@ -46,20 +45,17 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         if step % 1000 == 0:
             trainer.oneupSHdegree()
         idx = epoch[epoch_idx]
+        trainer.update_learning_rate(step)
         loss, out, gt = trainer.forward_backward(dataset[idx])
-
+        viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
         with torch.no_grad():
-
-            # Densification
             if step < args.densify_until_iter:
-                # Keep track of max radii in image-space for pruning
-                trainer.densifier.update_densification_stats(out["radii"], out["viewspace_points"], out["visibility_filter"])
+                trainer.densifier.update_densification_stats(radii, viewspace_points, visibility_filter)
                 if step > args.densify_from_iter and step % args.densification_interval == 0:
                     size_threshold = 20 if step > args.opacity_reset_interval else None
                     trainer.densifier.densify_and_prune(trainer.densify_grad_threshold, 0.005, scene_extent, size_threshold)
                 if step % args.opacity_reset_interval == 0:
                     trainer.densifier.reset_opacity()
-
             trainer.optim_step()
             epoch_loss.append(loss.item())
             epoch_psnr = torch.concat([epoch_psnr, psnr(out["render"], gt)], dim=1)

@@ -93,6 +93,7 @@ def parse_ColmapCamera(colmap_camera: ColmapCamera, device="cuda"):
         FoVx=FoVx, FoVy=FoVy,
         R=R.to(device), T=T.to(device),
         world_view_transform=world_view_transform,
+        projection_matrix=projection_matrix,
         full_proj_transform=full_proj_transform,
         camera_center=camera_center,
         quaternion=quaternion.to(device),

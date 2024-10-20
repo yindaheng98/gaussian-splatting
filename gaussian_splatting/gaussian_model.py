@@ -19,6 +19,7 @@ class Camera(NamedTuple):
     R: torch.Tensor
     T: torch.Tensor
     world_view_transform: torch.Tensor
+    projection_matrix: torch.Tensor
     full_proj_transform: torch.Tensor
     camera_center: torch.Tensor
     quaternion: torch.Tensor

@@ -45,18 +45,8 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         if step % 1000 == 0:
             trainer.oneupSHdegree()
         idx = epoch[epoch_idx]
-        trainer.update_learning_rate(step)
-        loss, out, gt = trainer.forward_backward(dataset[idx])
-        viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
+        loss, out, gt = trainer.step(dataset[idx])
         with torch.no_grad():
-            if step < args.densify_until_iter:
-                trainer.densifier.update_densification_stats(radii, viewspace_points, visibility_filter)
-                if step > args.densify_from_iter and step % args.densification_interval == 0:
-                    size_threshold = 20 if step > args.opacity_reset_interval else None
-                    trainer.densifier.densify_and_prune(trainer.densify_grad_threshold, 0.005, scene_extent, size_threshold)
-                if step % args.opacity_reset_interval == 0:
-                    trainer.densifier.reset_opacity()
-            trainer.optim_step()
             epoch_loss.append(loss.item())
             epoch_psnr = torch.concat([epoch_psnr, psnr(out["render"], gt)], dim=1)
         if step in args.save_iterations:

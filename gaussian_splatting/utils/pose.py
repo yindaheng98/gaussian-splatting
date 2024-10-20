@@ -2,6 +2,22 @@ import torch
 import torch.nn.functional as F
 
 
+def standardize_quaternion(quaternions: torch.Tensor) -> torch.Tensor:
+    """
+    Convert a unit quaternion to a standard form: one in which the real
+    part is non negative.
+
+    Args:
+        quaternions: Quaternions with real part first,
+            as tensor of shape (..., 4).
+
+    Returns:
+        Standardized quaternions as tensor of shape (..., 4).
+    Source: https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html#matrix_to_quaternion
+    """
+    return torch.where(quaternions[..., 0:1] < 0, -quaternions, quaternions)
+
+
 def _sqrt_positive_part(x: torch.Tensor) -> torch.Tensor:
     """
     Returns torch.sqrt(torch.max(0, x))
@@ -78,5 +94,44 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
     out = quat_candidates[
         F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :
     ].reshape(batch_dim + (4,))
-    # return standardize_quaternion(out)
-    return out
+    return standardize_quaternion(out)
+
+
+def normalize_quaternion(q):
+    norm = torch.sqrt(
+        q[:, 0] * q[:, 0] + q[:, 1] * q[:, 1] + q[:, 2] * q[:, 2] + q[:, 3] * q[:, 3]
+    )
+    q = q / norm[:, None]
+    return q
+
+
+def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
+    """
+    Convert rotations given as quaternions to rotation matrices.
+
+    Args:
+        quaternions: quaternions with real part first,
+            as tensor of shape (..., 4).
+
+    Returns:
+        Rotation matrices as tensor of shape (..., 3, 3).
+    """
+    r, i, j, k = torch.unbind(quaternions, -1)
+    # pyre-fixme[58]: `/` is not supported for operand types `float` and `Tensor`.
+    two_s = 2.0 / (quaternions * quaternions).sum(-1)
+
+    o = torch.stack(
+        (
+            1 - two_s * (j * j + k * k),
+            two_s * (i * j - k * r),
+            two_s * (i * k + j * r),
+            two_s * (i * j + k * r),
+            1 - two_s * (i * i + k * k),
+            two_s * (j * k - i * r),
+            two_s * (i * k - j * r),
+            two_s * (j * k + i * r),
+            1 - two_s * (i * i + j * j),
+        ),
+        -1,
+    )
+    return o.reshape(quaternions.shape[:-1] + (3, 3))

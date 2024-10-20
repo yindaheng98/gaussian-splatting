@@ -22,8 +22,8 @@ parser.add_argument("--opacity_reset_interval", default=3000, type=int)
 
 
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
-    gaussians = GaussianModel(sh_degree, device=device)
-    dataset = ColmapCameraDataset(source, device=device)
+    gaussians = GaussianModel(sh_degree).to(device)
+    dataset = ColmapCameraDataset(source).to(device)
     scene_extent = colmap_init(gaussians, args.source, dataset)
     trainer = DensificationTrainer(
         gaussians,

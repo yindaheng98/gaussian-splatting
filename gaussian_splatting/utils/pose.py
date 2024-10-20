@@ -10,6 +10,10 @@ def _sqrt_positive_part(x: torch.Tensor) -> torch.Tensor:
     """
     ret = torch.zeros_like(x)
     positive_mask = x > 0
+    # if torch.is_grad_enabled():
+    #     ret[positive_mask] = torch.sqrt(x[positive_mask])
+    # else:
+    #     ret = torch.where(positive_mask, torch.sqrt(x), ret)
     ret[positive_mask] = torch.sqrt(x[positive_mask])
     return ret
 
@@ -27,9 +31,6 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
     """
     if matrix.size(-1) != 3 or matrix.size(-2) != 3:
         raise ValueError(f"Invalid rotation matrix shape {matrix.shape}.")
-
-    if not isinstance(matrix, torch.Tensor):
-        matrix = torch.tensor(matrix).cuda()
 
     batch_dim = matrix.shape[:-2]
     m00, m01, m02, m10, m11, m12, m20, m21, m22 = torch.unbind(
@@ -74,7 +75,8 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
 
     # if not for numerical problems, quat_candidates[i] should be same (up to a sign),
     # forall i; we pick the best-conditioned one (with the largest denominator)
-
-    return quat_candidates[
+    out = quat_candidates[
         F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :
     ].reshape(batch_dim + (4,))
+    # return standardize_quaternion(out)
+    return out

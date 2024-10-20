@@ -80,6 +80,7 @@ def parse_ColmapCamera(colmap_camera: ColmapCamera, device="cuda"):
     projection_matrix = getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy).to(device).transpose(0, 1)
     full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
     camera_center = world_view_transform.inverse()[3, :3]
+    quaternion = matrix_to_quaternion(R)
     pil_image = Image.open(colmap_camera.image_path)
     torch_image = PILtoTorch(pil_image)
     gt_image = torch_image[:3, ...].clamp(0.0, 1.0).to(device)
@@ -94,7 +95,7 @@ def parse_ColmapCamera(colmap_camera: ColmapCamera, device="cuda"):
         world_view_transform=world_view_transform,
         full_proj_transform=full_proj_transform,
         camera_center=camera_center,
-        quaternion=matrix_to_quaternion(R).to(device),
+        quaternion=quaternion.to(device),
         ground_truth_image=gt_image
     )
 

@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from gaussian_splatting import Camera
+from gaussian_splatting import Camera, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import CameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import focal2fov, getProjectionMatrix, getWorld2View2, PILtoTorch
 from .utils import (
@@ -99,10 +99,10 @@ def parse_ColmapCamera(colmap_camera: ColmapCamera, device="cuda"):
 
 
 class ColmapCameraDataset(CameraDataset):
-    def __init__(self, colmap_folder, device="cuda"):
+    def __init__(self, colmap_folder):
         super().__init__()
         self.raw_cameras = read_colmap_cameras(colmap_folder)
-        self.to(device)
+        self.cameras = [parse_ColmapCamera(cam) for cam in self.raw_cameras]
 
     def to(self, device):
         self.cameras = [parse_ColmapCamera(cam, device=device) for cam in self.raw_cameras]
@@ -115,8 +115,9 @@ class ColmapCameraDataset(CameraDataset):
         return self.cameras[idx]
 
 
-class ColmapTrainableCameraDataset(TrainableCameraDataset):
-    def __init__(self, colmap_folder, device="cuda"):
-        raw_cameras = read_colmap_cameras(colmap_folder)
-        super().__init__(raw_cameras)
-        self.to(device)
+def ColmapTrainableCameraDataset(colmap_folder):
+    return TrainableCameraDataset(ColmapCameraDataset(colmap_folder))
+
+
+def ColmapCameraTrainableGaussianModel(colmap_folder, *args, **kwargs):
+    return CameraTrainableGaussianModel(dataset=ColmapTrainableCameraDataset(colmap_folder), *args, **kwargs)

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, NamedTuple
+from typing import List
 from gaussian_splatting import Camera
 import torch
 import torch.nn as nn
@@ -11,6 +11,10 @@ class CameraDataset(Dataset):
     @abstractmethod
     def to(self, device) -> 'CameraDataset':
         return self
+
+    @abstractmethod
+    def __getitem__(self, idx) -> Camera:
+        pass
 
 
 class TrainableCameraDataset(CameraDataset):
@@ -25,9 +29,12 @@ class TrainableCameraDataset(CameraDataset):
         return len(self.cameras)
 
     def __getitem__(self, idx) -> Camera:
-        return Camera(**self.cameras[idx], R=self.Rs[idx, ...], T=self.Ts[idx, ...])
+        return Camera(**{**self.cameras[idx]._asdict(), 'R': self.Rs[idx, ...], 'T': self.Ts[idx, ...]})
 
     def to(self, device):
         self.Rs.to(device)
         self.Ts.to(device)
         return self
+
+    def get_params(self):
+        return dict(Rs=self.Rs, Ts=self.Ts)

@@ -6,7 +6,7 @@ import torch
 
 from gaussian_splatting import Camera, GaussianModel
 from gaussian_splatting.utils import getWorld2View2
-from .dataset import ColmapCameraDataset
+from .dataset import CameraDataset
 
 
 def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="<"):
@@ -118,7 +118,7 @@ def getNerfppNorm(cameras: List[Camera]):
     return {"translate": translate, "radius": radius}
 
 
-def colmap_init(model: GaussianModel, colmap_folder: str, dataset: ColmapCameraDataset):
+def colmap_init(model: GaussianModel, colmap_folder: str, dataset: CameraDataset):
     try:
         init_path = os.path.join(colmap_folder, "sparse/0", "points3D.bin")
         xyz, rgb, _ = read_points3D_binary(init_path)
@@ -126,6 +126,6 @@ def colmap_init(model: GaussianModel, colmap_folder: str, dataset: ColmapCameraD
         init_path = os.path.join(colmap_folder, "sparse/0", "points3D.txt")
         xyz, rgb, _ = read_points3D_text(init_path)
     model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
-    nerf_normalization = getNerfppNorm(dataset.raw_cameras)
+    nerf_normalization = getNerfppNorm(dataset)
     scene_extent = nerf_normalization["radius"]
     return scene_extent

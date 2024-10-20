@@ -35,20 +35,25 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     )
 
     pbar = tqdm(range(1, iteration+1))
-    epoch, epoch_loss, epoch_psnr = list(range(len(dataset))), [], torch.empty(3, 0, device=device)
+    epoch = list(range(len(dataset)))
+    epoch_psnr = torch.empty(3, 0, device=device)
+    ema_loss_for_log = 0.0
+    avg_psnr_for_log = 0.0
     for step in pbar:
         epoch_idx = step % len(dataset)
         if epoch_idx == 0:
-            pbar.set_postfix({'epoch': step // len(dataset), 'loss': sum(epoch_loss) / len(dataset), 'psnr': epoch_psnr.mean().item()})
-            epoch_loss, epoch_psnr = [], torch.empty(3, 0, device=device)
+            avg_psnr_for_log = epoch_psnr.mean().item()
+            epoch_psnr = torch.empty(3, 0, device=device)
             random.shuffle(epoch)
         if step % 1000 == 0:
             trainer.oneupSHdegree()
         idx = epoch[epoch_idx]
         loss, out, gt = trainer.step(dataset[idx])
         with torch.no_grad():
-            epoch_loss.append(loss.item())
+            ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             epoch_psnr = torch.concat([epoch_psnr, psnr(out["render"], gt)], dim=1)
+            if step % 10 == 0:
+                pbar.set_postfix({'epoch': step // len(dataset), 'loss': ema_loss_for_log, 'psnr': avg_psnr_for_log})
         if step in args.save_iterations:
             save_path = os.path.join(destination, "point_cloud", "iteration_" + str(step))
             os.makedirs(save_path, exist_ok=True)

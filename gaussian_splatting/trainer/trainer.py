@@ -10,25 +10,28 @@ from gaussian_splatting.utils.schedular import get_expon_lr_func
 
 
 class AbstractTrainer(ABC):
-    def __init__(self, model: GaussianModel, optimizer: torch.optim.Optimizer, schedulers: Dict[str, Callable[[int], float]] = {}):
+    def __init__(self):
         super().__init__()
-        self._model = model
-        self._model.active_sh_degree = 0
-        self._optimizer = optimizer
-        self.schedulers = schedulers
-        self.curr_step = 1
+        self.curr_step = 0
 
     @property
-    def model(self) -> nn.Module:
-        return self._model
+    @abstractmethod
+    def model(self) -> GaussianModel:
+        raise ValueError("Model is not set")
 
     @property
+    @abstractmethod
     def optimizer(self) -> torch.optim.Optimizer:
-        return self._optimizer
+        raise ValueError("Optimizer is not set")
+
+    @property
+    @abstractmethod
+    def schedulers(self) -> Dict[str, Callable[[int], float]]:
+        raise ValueError("Schedulers is not set")
 
     def oneupSHdegree(self):
-        if self._model.active_sh_degree < self._model.max_sh_degree:
-            self._model.active_sh_degree += 1
+        if self.model.active_sh_degree < self.model.max_sh_degree:
+            self.model.active_sh_degree += 1
 
     @abstractmethod
     def loss(self, out: dict, gt) -> torch.Tensor:
@@ -41,15 +44,18 @@ class AbstractTrainer(ABC):
         loss.backward()
         return loss, out, gt
 
-    def optim_step(self):
+    def update_learning_rate(self):
+        self.curr_step += 1
         for param_group in self.optimizer.param_groups:
             if param_group["name"] in self.schedulers:
                 param_group['lr'] = self.schedulers[param_group["name"]](self.curr_step)
+
+    def optim_step(self):
         self.optimizer.step()
         self.optimizer.zero_grad(set_to_none=True)
-        self.curr_step += 1
 
     def step(self, camera: Camera):
+        self.update_learning_rate()
         loss, out, gt = self.forward_backward(camera)
         self.optim_step()
         return loss, out, gt
@@ -69,6 +75,7 @@ class BaseTrainer(AbstractTrainer):
             scaling_lr=0.005,
             rotation_lr=0.001
     ):
+        super().__init__()
         self.lambda_dssim = lambda_dssim
         params = [
             {'params': [model._xyz], 'lr': position_lr_init * spatial_lr_scale, "name": "xyz"},
@@ -87,7 +94,21 @@ class BaseTrainer(AbstractTrainer):
                 max_steps=position_lr_max_steps,
             )
         }
-        super().__init__(model, optimizer, schedulers)
+        self._model = model
+        self._optimizer = optimizer
+        self._schedulers = schedulers
+
+    @property
+    def model(self) -> GaussianModel:
+        return self._model
+
+    @property
+    def optimizer(self) -> torch.optim.Optimizer:
+        return self._optimizer
+
+    @property
+    def schedulers(self) -> Dict[str, Callable[[int], float]]:
+        return self._schedulers
 
     def loss(self, out: dict, gt):
         render = out["render"]
@@ -99,16 +120,20 @@ class BaseTrainer(AbstractTrainer):
 
 class TrainerWrapper(AbstractTrainer):
     def __init__(self, base_trainer: AbstractTrainer):
-        super().__init__(base_trainer.model, base_trainer.optimizer, base_trainer.schedulers)
+        super().__init__()
         self.base_trainer = base_trainer
+
+    @property
+    def model(self) -> nn.Module:
+        return self.base_trainer.model
+
+    @property
+    def optimizer(self) -> torch.optim.Optimizer:
+        return self.base_trainer.optimizer
+
+    @property
+    def schedulers(self) -> Dict[str, Callable[[int], float]]:
+        return self.base_trainer.schedulers
 
     def loss(self, out: dict, gt):
         return self.base_trainer.loss(out, gt)
-
-    def optim_step(self):
-        self.base_trainer.optim_step()
-        self.curr_step += 1
-
-    @property
-    def schedualers(self):
-        return self.base_trainer.schedulers

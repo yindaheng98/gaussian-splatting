@@ -202,6 +202,7 @@ class Densifier(TrainerWrapper):
         self.percent_dense = percent_dense
 
     def step(self, camera):
+        self.update_learning_rate()
         loss, out, gt = self.forward_backward(camera)
         viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
         with torch.no_grad():

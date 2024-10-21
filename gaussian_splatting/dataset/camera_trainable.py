@@ -17,7 +17,7 @@ class TrainableCameraDataset(CameraDataset):
         return len(self.cameras)
 
     def __getitem__(self, idx) -> Camera:
-        return Camera(**{**self.cameras[idx]._asdict(), 'R': self.Rs[idx, ...], 'T': self.Ts[idx, ...]})
+        return Camera(**{**self.cameras[idx]._asdict(), 'quaternion': self.quaternions[idx, ...], 'T': self.Ts[idx, ...]})
 
     def to(self, device):
         self.quaternions.to(device)

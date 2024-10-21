@@ -119,6 +119,11 @@ def getNerfppNorm(cameras: List[Camera]):
 
 
 def colmap_init(model: GaussianModel, colmap_folder: str, dataset: CameraDataset):
+    with torch.no_grad():
+        return _colmap_init(model, colmap_folder, dataset).item()
+
+
+def _colmap_init(model: GaussianModel, colmap_folder: str, dataset: CameraDataset):
     try:
         init_path = os.path.join(colmap_folder, "sparse/0", "points3D.bin")
         xyz, rgb, _ = read_points3D_binary(init_path)

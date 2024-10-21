@@ -46,8 +46,7 @@ class BaseTrainer(AbstractTrainer):
             feature_lr=0.0025,
             opacity_lr=0.025,
             scaling_lr=0.005,
-            rotation_lr=0.001,
-            additional_optim_params=[],
+            rotation_lr=0.001
     ):
         super().__init__(model)
         self.lambda_dssim = lambda_dssim
@@ -58,7 +57,7 @@ class BaseTrainer(AbstractTrainer):
             {'params': [model._opacity], 'lr': opacity_lr, "name": "opacity"},
             {'params': [model._scaling], 'lr': scaling_lr, "name": "scaling"},
             {'params': [model._rotation], 'lr': rotation_lr, "name": "rotation"}
-        ] + additional_optim_params
+        ]
         self.optimizer = torch.optim.Adam(params=params, lr=0.0, eps=1e-15)
 
     def loss(self, out: dict, gt):

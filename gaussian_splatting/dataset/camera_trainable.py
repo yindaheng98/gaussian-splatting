@@ -23,6 +23,3 @@ class TrainableCameraDataset(CameraDataset):
         self.quaternions.to(device)
         self.Ts.to(device)
         return self
-
-    def get_params(self):
-        return dict(quaternions=self.quaternions, Ts=self.Ts)

@@ -50,7 +50,8 @@ class CameraTrainableGaussianModel(GaussianModel):
 
         # means3D = pc.get_xyz
         rel_w2c = torch.eye(4, device=self._xyz.device)
-        rel_w2c[:3, :3] = quaternion_to_matrix(normalize_quaternion(viewpoint_camera.quaternion.unsqueeze(0))).squeeze(0)
+        quaternion = viewpoint_camera.quaternion * torch.tensor([1, -1, -1, -1], device=viewpoint_camera.quaternion.device)
+        rel_w2c[:3, :3] = quaternion_to_matrix(normalize_quaternion(quaternion.unsqueeze(0))).squeeze(0)
         rel_w2c[:3, 3] = viewpoint_camera.T
         # Transform mean and rot of Gaussians to camera frame
         gaussians_xyz = self._xyz.clone()
@@ -59,7 +60,7 @@ class CameraTrainableGaussianModel(GaussianModel):
         xyz_ones = torch.ones(gaussians_xyz.shape[0], 1).cuda().float()
         xyz_homo = torch.cat((gaussians_xyz, xyz_ones), dim=1)
         gaussians_xyz_trans = (rel_w2c @ xyz_homo.T).T[:, :3]
-        gaussians_rot_trans = quaternion_raw_multiply(viewpoint_camera.quaternion, gaussians_rot)
+        gaussians_rot_trans = quaternion_raw_multiply(quaternion, gaussians_rot)
         means3D = gaussians_xyz_trans
         means2D = screenspace_points
         opacity = self.get_opacity

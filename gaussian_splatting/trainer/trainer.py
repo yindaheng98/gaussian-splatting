@@ -84,3 +84,6 @@ class TrainerWrapper(AbstractTrainer):
 
     def loss(self, out: dict, gt):
         return self.base_trainer.loss(out, gt)
+
+    def optim_step(self):
+        return self.base_trainer.optim_step()

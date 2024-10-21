@@ -10,9 +10,16 @@ from gaussian_splatting.utils.schedular import get_expon_lr_func
 
 
 class AbstractTrainer(ABC):
-    def __init__(self):
-        super().__init__()
-        self.curr_step = 0
+
+    @property
+    @abstractmethod
+    def curr_step(self) -> int:
+        raise ValueError("Current step is not set")
+
+    @curr_step.setter
+    @abstractmethod
+    def curr_step(self, v):
+        raise ValueError("Current step is not set")
 
     @property
     @abstractmethod
@@ -28,10 +35,6 @@ class AbstractTrainer(ABC):
     @abstractmethod
     def schedulers(self) -> Dict[str, Callable[[int], float]]:
         raise ValueError("Schedulers is not set")
-
-    def oneupSHdegree(self):
-        if self.model.active_sh_degree < self.model.max_sh_degree:
-            self.model.active_sh_degree += 1
 
     @abstractmethod
     def loss(self, out: dict, gt) -> torch.Tensor:
@@ -73,9 +76,11 @@ class BaseTrainer(AbstractTrainer):
             feature_lr=0.0025,
             opacity_lr=0.025,
             scaling_lr=0.005,
-            rotation_lr=0.001
+            rotation_lr=0.001,
+            sh_degree_up_interval=1000
     ):
         super().__init__()
+        self.sh_degree_up_interval = sh_degree_up_interval
         self.lambda_dssim = lambda_dssim
         params = [
             {'params': [model._xyz], 'lr': position_lr_init * spatial_lr_scale, "name": "xyz"},
@@ -97,6 +102,16 @@ class BaseTrainer(AbstractTrainer):
         self._model = model
         self._optimizer = optimizer
         self._schedulers = schedulers
+        self._curr_step = 0
+        self.model.active_sh_degree = 0
+
+    @property
+    def curr_step(self) -> int:
+        return self._curr_step
+
+    @curr_step.setter
+    def curr_step(self, v):
+        self._curr_step = v
 
     @property
     def model(self) -> GaussianModel:
@@ -110,7 +125,13 @@ class BaseTrainer(AbstractTrainer):
     def schedulers(self) -> Dict[str, Callable[[int], float]]:
         return self._schedulers
 
+    def oneupSHdegree(self):
+        if self.model.active_sh_degree < self.model.max_sh_degree:
+            self.model.active_sh_degree += 1
+
     def loss(self, out: dict, gt):
+        if self.curr_step % self.sh_degree_up_interval == 0:
+            self.oneupSHdegree()
         render = out["render"]
         Ll1 = l1_loss(render, gt)
         ssim_value = ssim(render, gt)
@@ -122,6 +143,14 @@ class TrainerWrapper(AbstractTrainer):
     def __init__(self, base_trainer: AbstractTrainer):
         super().__init__()
         self.base_trainer = base_trainer
+
+    @property
+    def curr_step(self) -> int:
+        return self.base_trainer.curr_step
+
+    @curr_step.setter
+    def curr_step(self, v):
+        self.base_trainer.curr_step = v
 
     @property
     def model(self) -> nn.Module:

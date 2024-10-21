@@ -45,8 +45,6 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
             avg_psnr_for_log = epoch_psnr.mean().item()
             epoch_psnr = torch.empty(3, 0, device=device)
             random.shuffle(epoch)
-        if step % 1000 == 0:
-            trainer.oneupSHdegree()
         idx = epoch[epoch_idx]
         loss, out, gt = trainer.step(dataset[idx])
         with torch.no_grad():

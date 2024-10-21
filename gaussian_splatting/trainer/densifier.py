@@ -220,10 +220,10 @@ class Densifier(TrainerWrapper):
 def DensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
-        densify_from_iter: int,
-        densify_until_iter: int,
-        densification_interval: int,
-        opacity_reset_interval: int,
+        densify_from_iter=500,
+        densify_until_iter=15000,
+        densification_interval=100,
+        opacity_reset_interval=3000,
         densify_grad_threshold=0.0002,
         percent_dense=0.01,
         *args, **kwargs):

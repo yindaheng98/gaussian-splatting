@@ -18,6 +18,8 @@
                 "output/truck",
                 "-i",
                 "30000",
+                "--mode",
+                "densify",
             ]
         },
         {

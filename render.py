@@ -4,7 +4,7 @@ from tqdm import tqdm
 from os import makedirs
 import torchvision
 from argparse import ArgumentParser
-from gaussian_splatting import GaussianModel
+from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
 
 parser = ArgumentParser()
@@ -16,9 +16,9 @@ parser.add_argument("--device", default="cuda", type=str)
 
 
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str):
-    gaussians = GaussianModel(sh_degree, device=device)
+    gaussians = GaussianModel(sh_degree).to(device)
     gaussians.load_ply(os.path.join(destination, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"))
-    dataset = ColmapCameraDataset(source, device=device)
+    dataset = ColmapCameraDataset(source).to(device)
     render_path = os.path.join(destination, "ours_{}".format(iteration), "renders")
     gt_path = os.path.join(destination, "ours_{}".format(iteration), "gt")
     makedirs(render_path, exist_ok=True)

@@ -3,10 +3,10 @@ import random
 import torch
 from tqdm import tqdm
 from argparse import ArgumentParser
-from gaussian_splatting import GaussianModel
+from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.utils import psnr
-from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, colmap_compute_scene_extent
-from gaussian_splatting.trainer import DensificationTrainer
+from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset, colmap_compute_scene_extent
+from gaussian_splatting.trainer import DensificationTrainer, CameraTrainer
 
 parser = ArgumentParser()
 parser.add_argument("--sh_degree", default=3, type=int)
@@ -22,17 +22,14 @@ parser.add_argument("--opacity_reset_interval", default=3000, type=int)
 
 
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
-    gaussians = GaussianModel(sh_degree).to(device)
-    dataset = ColmapCameraDataset(source).to(device)
+    gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
+    dataset = ColmapTrainableCameraDataset(source).to(device)
     colmap_init(gaussians, args.source)
     scene_extent = colmap_compute_scene_extent(dataset)
-    trainer = DensificationTrainer(
+    trainer = CameraTrainer(
         gaussians,
         scene_extent=scene_extent,
-        densify_from_iter=args.densify_from_iter,
-        densify_until_iter=args.densify_until_iter,
-        densification_interval=args.densification_interval,
-        opacity_reset_interval=args.opacity_reset_interval,
+        dataset=dataset
     )
 
     pbar = tqdm(range(1, iteration+1))

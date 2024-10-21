@@ -3,6 +3,8 @@ import torch.nn as nn
 from gaussian_splatting.utils import build_rotation
 from gaussian_splatting.gaussian_model import GaussianModel
 
+from .trainer import LRScheduledTrainer
+
 
 class Densifier:
     def __init__(self,
@@ -176,3 +178,41 @@ class Densifier:
 
                 optimizable_tensors[group["name"]] = group["params"][0]
         return optimizable_tensors
+
+
+class DensificationTrainer(LRScheduledTrainer):
+    def __init__(
+            self, model: GaussianModel,
+            densify_from_iter: int,
+            densify_until_iter: int,
+            densification_interval: int,
+            opacity_reset_interval: int,
+            scene_extent: float,
+            densify_grad_threshold=0.0002,
+            percent_dense=0.01,
+            *args, **kwargs
+    ):
+        super().__init__(model, spatial_lr_scale=scene_extent, *args, **kwargs)
+        self.scene_extent = scene_extent
+        self.densify_from_iter = densify_from_iter
+        self.densify_until_iter = densify_until_iter
+        self.densification_interval = densification_interval
+        self.opacity_reset_interval = opacity_reset_interval
+        self.densify_grad_threshold = densify_grad_threshold
+        self.percent_dense = percent_dense
+        self.densifier = Densifier(model, self.optimizer)
+
+    def step(self, camera):
+        self.update_learning_rate(self.curr_step)
+        loss, out, gt = self.forward_backward(camera)
+        viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
+        with torch.no_grad():
+            if self.curr_step < self.densify_until_iter:
+                self.densifier.update_densification_stats(radii, viewspace_points, visibility_filter)
+                if self.curr_step >= self.densify_from_iter and self.curr_step % self.densification_interval == 0:
+                    size_threshold = 20 if self.curr_step > self.opacity_reset_interval else None
+                    self.densifier.densify_and_prune(self.densify_grad_threshold, 0.005, self.scene_extent, size_threshold)
+                if self.curr_step % self.opacity_reset_interval == 0:
+                    self.densifier.reset_opacity()
+            self.optim_step()
+        return loss, out, gt

@@ -1,1 +1,2 @@
-from .trainer import AbstractTrainer, LRScheduledTrainer, DensificationTrainer
+from .trainer import AbstractTrainer, LRScheduledTrainer
+from .densifier import DensificationTrainer

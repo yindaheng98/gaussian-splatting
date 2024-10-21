@@ -3,7 +3,8 @@ import torch.nn as nn
 from gaussian_splatting.utils import build_rotation
 from gaussian_splatting.gaussian_model import GaussianModel
 
-from .trainer import LRScheduledTrainer, AbstractTrainer, TrainerWrapper
+from .trainer import AbstractTrainer, TrainerWrapper
+from .lr_scheduler import LRScheduledTrainer
 
 
 class _Densifier:

@@ -16,7 +16,7 @@ class AbstractTrainer(ABC):
         self._model.active_sh_degree = 0
         self._optimizer = optimizer
         self.schedulers = schedulers
-        self.current_step = 0
+        self.curr_step = 1
 
     @property
     def model(self) -> nn.Module:
@@ -44,10 +44,10 @@ class AbstractTrainer(ABC):
     def optim_step(self):
         for param_group in self.optimizer.param_groups:
             if param_group["name"] in self.schedulers:
-                param_group['lr'] = self.schedulers[param_group["name"]](self.current_step)
+                param_group['lr'] = self.schedulers[param_group["name"]](self.curr_step)
         self.optimizer.step()
         self.optimizer.zero_grad(set_to_none=True)
-        self.current_step += 1
+        self.curr_step += 1
 
     def step(self, camera: Camera):
         loss, out, gt = self.forward_backward(camera)
@@ -99,11 +99,16 @@ class BaseTrainer(AbstractTrainer):
 
 class TrainerWrapper(AbstractTrainer):
     def __init__(self, base_trainer: AbstractTrainer):
-        super().__init__(base_trainer.model, base_trainer.optimizer)
+        super().__init__(base_trainer.model, base_trainer.optimizer, base_trainer.schedulers)
         self.base_trainer = base_trainer
 
     def loss(self, out: dict, gt):
         return self.base_trainer.loss(out, gt)
 
     def optim_step(self):
-        return self.base_trainer.optim_step()
+        self.base_trainer.optim_step()
+        self.curr_step += 1
+
+    @property
+    def schedualers(self):
+        return self.base_trainer.schedulers

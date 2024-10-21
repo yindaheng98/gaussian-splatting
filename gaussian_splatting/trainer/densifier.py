@@ -200,7 +200,6 @@ class Densifier(TrainerWrapper):
         self.opacity_reset_interval = opacity_reset_interval
         self.densify_grad_threshold = densify_grad_threshold
         self.percent_dense = percent_dense
-        self.curr_step = 1
 
     def step(self, camera):
         loss, out, gt = self.forward_backward(camera)
@@ -214,7 +213,6 @@ class Densifier(TrainerWrapper):
                 if self.curr_step % self.opacity_reset_interval == 0:
                     self.densifier.reset_opacity()
         self.optim_step()
-        self.curr_step += 1
         return loss, out, gt
 
 

@@ -3,10 +3,10 @@ import torch.nn as nn
 from gaussian_splatting.utils import build_rotation
 from gaussian_splatting.gaussian_model import GaussianModel
 
-from .trainer import LRScheduledTrainer
+from .trainer import LRScheduledTrainer, AbstractTrainer, TrainerWrapper
 
 
-class Densifier:
+class _Densifier:
     def __init__(self,
                  model: GaussianModel, optimizer: torch.optim.Optimizer,
                  percent_dense=0.01,
@@ -180,19 +180,19 @@ class Densifier:
         return optimizable_tensors
 
 
-class DensificationTrainer(LRScheduledTrainer):
+class Densifier(TrainerWrapper):
     def __init__(
-            self, model: GaussianModel,
+            self, base_trainer: AbstractTrainer,
             densify_from_iter: int,
             densify_until_iter: int,
             densification_interval: int,
             opacity_reset_interval: int,
             scene_extent: float,
             densify_grad_threshold=0.0002,
-            percent_dense=0.01,
-            *args, **kwargs
+            percent_dense=0.01
     ):
-        super().__init__(model, spatial_lr_scale=scene_extent, *args, **kwargs)
+        super().__init__(base_trainer)
+        self.densifier = _Densifier(self.model, self.optimizer)
         self.scene_extent = scene_extent
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
@@ -200,10 +200,9 @@ class DensificationTrainer(LRScheduledTrainer):
         self.opacity_reset_interval = opacity_reset_interval
         self.densify_grad_threshold = densify_grad_threshold
         self.percent_dense = percent_dense
-        self.densifier = Densifier(model, self.optimizer)
+        self.curr_step = 1
 
     def step(self, camera):
-        self.update_learning_rate(self.curr_step)
         loss, out, gt = self.forward_backward(camera)
         viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
         with torch.no_grad():
@@ -214,5 +213,22 @@ class DensificationTrainer(LRScheduledTrainer):
                     self.densifier.densify_and_prune(self.densify_grad_threshold, 0.005, self.scene_extent, size_threshold)
                 if self.curr_step % self.opacity_reset_interval == 0:
                     self.densifier.reset_opacity()
-            self.optim_step()
+        self.optim_step()
+        self.curr_step += 1
         return loss, out, gt
+
+
+def DensificationTrainer(
+        model: GaussianModel,
+        scene_extent: float,
+        densify_from_iter: int,
+        densify_until_iter: int,
+        densification_interval: int,
+        opacity_reset_interval: int,
+        densify_grad_threshold=0.0002,
+        percent_dense=0.01,
+        *args, **kwargs):
+    return Densifier(
+        LRScheduledTrainer(model, scene_extent, *args, **kwargs),
+        densify_from_iter, densify_until_iter, densification_interval, opacity_reset_interval, scene_extent, densify_grad_threshold, percent_dense
+    )

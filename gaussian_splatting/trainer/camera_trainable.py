@@ -2,7 +2,7 @@ from gaussian_splatting import CameraTrainableGaussianModel
 from gaussian_splatting.dataset import TrainableCameraDataset
 from gaussian_splatting.utils import get_expon_lr_func
 from .trainer import AbstractTrainer, TrainerWrapper
-from .lr_scheduler import LRSchedulerWrapper, LRScheduledTrainer
+from .lr_scheduler import AbstractLRScheduler, _LRScheduledTrainer, LRSchedulerCombiner
 
 
 class CameraOptimizer(TrainerWrapper):
@@ -17,7 +17,7 @@ class CameraOptimizer(TrainerWrapper):
         self.optimizer.add_param_group({'params': [dataset.Ts], 'lr': camera_rotation_lr * spatial_lr_scale, "name": "Ts"})
 
 
-class CameraLRScheduler(LRSchedulerWrapper):
+class CameraLRScheduler(AbstractLRScheduler):
     def __init__(
             self,  base_trainer: AbstractTrainer,
             spatial_lr_scale: float,
@@ -66,13 +66,15 @@ def LRScheduledCameraTrainer(
         camera_rotation_lr_delay_mult=0.01,
         camera_rotation_lr_max_steps=30_000,
         *args, **kwargs):
-    return CameraLRScheduler(
-        CameraOptimizer(
-            LRScheduledTrainer(model, scene_extent=scene_extent, *args, **kwargs),
-            dataset=dataset, spatial_lr_scale=scene_extent,
-            camera_position_lr=camera_position_lr_init,
-            camera_rotation_lr=camera_rotation_lr_init
-        ),
+    trainer, scheduler = _LRScheduledTrainer(model, scene_extent=scene_extent, *args, **kwargs)
+    camera_trainer = CameraOptimizer(
+        trainer,
+        dataset=dataset, spatial_lr_scale=scene_extent,
+        camera_position_lr=camera_position_lr_init,
+        camera_rotation_lr=camera_rotation_lr_init
+    )
+    camera_scheduler = CameraLRScheduler(
+        camera_trainer,
         spatial_lr_scale=scene_extent,
         camera_position_lr_init=camera_position_lr_init,
         camera_position_lr_final=camera_position_lr_final,
@@ -83,3 +85,4 @@ def LRScheduledCameraTrainer(
         camera_rotation_lr_delay_mult=camera_rotation_lr_delay_mult,
         camera_rotation_lr_max_steps=camera_rotation_lr_max_steps
     )
+    return LRSchedulerCombiner(camera_trainer, camera_scheduler, scheduler)

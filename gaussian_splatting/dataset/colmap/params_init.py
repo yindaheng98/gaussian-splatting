@@ -118,19 +118,22 @@ def getNerfppNorm(cameras: List[Camera]):
     return {"translate": translate, "radius": radius}
 
 
-def colmap_init(model: GaussianModel, colmap_folder: str, dataset: CameraDataset):
+def colmap_init(model: GaussianModel, colmap_folder: str):
     with torch.no_grad():
-        return _colmap_init(model, colmap_folder, dataset).item()
+        return _colmap_init(model, colmap_folder)
 
 
-def _colmap_init(model: GaussianModel, colmap_folder: str, dataset: CameraDataset):
+def _colmap_init(model: GaussianModel, colmap_folder: str):
     try:
         init_path = os.path.join(colmap_folder, "sparse/0", "points3D.bin")
         xyz, rgb, _ = read_points3D_binary(init_path)
     except:
         init_path = os.path.join(colmap_folder, "sparse/0", "points3D.txt")
         xyz, rgb, _ = read_points3D_text(init_path)
-    model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
+    return model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
+
+
+def colmap_compute_scene_extent(dataset):
     nerf_normalization = getNerfppNorm(dataset)
     scene_extent = nerf_normalization["radius"]
-    return scene_extent
+    return scene_extent.item()

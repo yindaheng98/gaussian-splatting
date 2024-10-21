@@ -12,7 +12,7 @@
 import os
 import torch
 from random import randint
-from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init
+from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, colmap_compute_scene_extent
 from gaussian_splatting.trainer import DensificationTrainer
 from utils.loss_utils import l1_loss, ssim
 from gaussian_renderer import render, network_gui
@@ -112,10 +112,11 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     gaussians.training_setup(opt)
     new_gaussians = NewGaussianModel(dataset.sh_degree).to("cuda")
     new_dataset = ColmapCameraDataset(dataset.source_path)
-    spatial_lr_scale = colmap_init(new_gaussians, dataset.source_path, new_dataset)
+    colmap_init(new_gaussians, dataset.source_path)
+    scene_extent = colmap_compute_scene_extent(new_dataset)
     trainer = DensificationTrainer(
         new_gaussians,
-        spatial_lr_scale=spatial_lr_scale,
+        scene_extent=scene_extent,
         densify_from_iter=opt.densify_from_iter,
         densify_until_iter=opt.densify_until_iter,
         densification_interval=opt.densification_interval,
@@ -160,13 +161,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         iter_start.record()
 
         gaussians.update_learning_rate(iteration)
-        trainer.update_learning_rate(iteration)
+        trainer.update_learning_rate()
         compute_difference_optim(gaussians.optimizer, trainer.optimizer)
 
         # Every 1000 its we increase the levels of SH up to a maximum degree
         if iteration % 1000 == 0:
             gaussians.oneupSHdegree()
-            trainer.oneupSHdegree()
 
         # Pick a random Camera
         if not viewpoint_stack:
@@ -219,6 +219,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             camera_center=viewpoint_cam.camera_center,
             bg_color=bg,
             ground_truth_image=gt_image,
+            projection_matrix=None,
+            quaternion=None,
         )
         new_loss, new_out, new_gt = trainer.forward_backward(camera)
         compute_difference_grad(gaussians, new_gaussians)

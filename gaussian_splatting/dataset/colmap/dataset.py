@@ -97,6 +97,7 @@ def parse_ColmapCamera(colmap_camera: ColmapCamera, device="cuda"):
         full_proj_transform=full_proj_transform,
         camera_center=camera_center,
         quaternion=quaternion.to(device),
+        ground_truth_image_path=colmap_camera.image_path,
         ground_truth_image=gt_image
     )
 

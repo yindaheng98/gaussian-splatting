@@ -25,6 +25,7 @@ class Camera(NamedTuple):
     quaternion: torch.Tensor
     postprocess: Callable[['Camera', torch.Tensor], torch.Tensor] = lambda camera, x: x
     bg_color: torch.Tensor = torch.tensor([0., 0., 0.])
+    ground_truth_image_path: str
     ground_truth_image: torch.Tensor = None
 
 

@@ -72,8 +72,30 @@
                 "output/truck",
                 "-i",
                 "30000",
+                "--mode",
+                "densify",
                 "--load_camera",
                 "output/truck/cameras.json",
+            ]
+        },
+        {
+            "name": "render camera",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "render.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-s",
+                "data/truck",
+                "-d",
+                "output/truck-camera",
+                "-i",
+                "30000",
+                "--mode",
+                "camera",
+                "--load_camera",
+                "output/truck-camera/cameras.json",
             ]
         },
         {

@@ -5,6 +5,8 @@ from os import makedirs
 import torchvision
 from argparse import ArgumentParser
 from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
+from gaussian_splatting.dataset import TrainableCameraDataset
+from gaussian_splatting.dataset.colmap import ColmapTrainableCameraDataset
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset import JSONCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
@@ -15,13 +17,30 @@ parser.add_argument("-s", "--source", required=True, type=str)
 parser.add_argument("-d", "--destination", required=True, type=str)
 parser.add_argument("-i", "--iteration", required=True, type=int)
 parser.add_argument("--load_camera", default=None, type=str)
+parser.add_argument("--mode", choices=["pure", "densify", "camera"], default="pure")
 parser.add_argument("--device", default="cuda", type=str)
 
 
-def main(sh_degree: int, source: str, destination: str, iteration: int, load_camera: str, device: str):
-    gaussians = GaussianModel(sh_degree).to(device)
-    gaussians.load_ply(os.path.join(destination, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"))
-    dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
+def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply: str, load_camera: str = None):
+    match mode:
+        case "pure" | "densify":
+            gaussians = GaussianModel(sh_degree).to(device)
+            gaussians.load_ply(load_ply)
+            dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
+        case "camera":
+            gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
+            gaussians.load_ply(load_ply)
+            dataset = (ColmapTrainableCameraDataset(source) if load_camera else TrainableCameraDataset.from_json(load_camera)).to(device)
+        case _:
+            raise ValueError(f"Unknown mode: {mode}")
+    return dataset, gaussians
+
+
+def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
+    dataset, gaussians = init_gaussians(
+        sh_degree=sh_degree, source=source, device=device, mode=args.mode,
+        load_ply=os.path.join(destination, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"),
+        load_camera=args.load_camera)
     render_path = os.path.join(destination, "ours_{}".format(iteration), "renders")
     gt_path = os.path.join(destination, "ours_{}".format(iteration), "gt")
     makedirs(render_path, exist_ok=True)
@@ -39,4 +58,4 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, load_cam
 if __name__ == "__main__":
     args = parser.parse_args()
     with torch.no_grad():
-        main(args.sh_degree, args.source, args.destination, args.iteration, args.load_camera, args.device)
+        main(args.sh_degree, args.source, args.destination, args.iteration, args.device, args)

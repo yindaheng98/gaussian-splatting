@@ -5,6 +5,7 @@ import torch
 from tqdm import tqdm
 from argparse import ArgumentParser
 from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
+from gaussian_splatting.dataset import JSONCameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset, colmap_compute_scene_extent
 from gaussian_splatting.trainer import BaseTrainer, DensificationTrainer, CameraTrainer
@@ -15,6 +16,7 @@ parser.add_argument("-s", "--source", required=True, type=str)
 parser.add_argument("-d", "--destination", required=True, type=str)
 parser.add_argument("-i", "--iteration", default=30000, type=int)
 parser.add_argument("-l", "--load_ply", default=None, type=str)
+parser.add_argument("--load_camera", default=None, type=str)
 parser.add_argument("--mode", choices=["pure", "densify", "camera"], default="pure")
 parser.add_argument("--save_iterations", nargs="+", type=int, default=[7000, 30000])
 parser.add_argument("--device", default="cuda", type=str)
@@ -26,36 +28,30 @@ def read_config(config_path: str):
         return json.load(f)
 
 
-def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, configs={}):
-    def init(gaussians: GaussianModel, source: str, load_ply: str = None):
-        if load_ply:
-            gaussians.load_ply(load_ply)
-        else:
-            colmap_init(gaussians, source)
-
+def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, configs={}):
     match mode:
         case "pure":
-            dataset = ColmapCameraDataset(source).to(device)
             gaussians = GaussianModel(sh_degree).to(device)
-            init(gaussians, source, load_ply)
+            gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
+            dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
             trainer = BaseTrainer(
                 gaussians,
                 spatial_lr_scale=colmap_compute_scene_extent(dataset),
                 **configs
             )
         case "densify":
-            dataset = ColmapCameraDataset(source).to(device)
             gaussians = GaussianModel(sh_degree).to(device)
-            init(gaussians, source, load_ply)
+            gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
+            dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
             trainer = DensificationTrainer(
                 gaussians,
                 scene_extent=colmap_compute_scene_extent(dataset),
                 **configs
             )
         case "camera":
-            dataset = ColmapTrainableCameraDataset(source).to(device)
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
-            init(gaussians, source, load_ply)
+            gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
+            dataset = (ColmapTrainableCameraDataset(source) if load_camera else TrainableCameraDataset.from_json(load_camera)).to(device)
             trainer = CameraTrainer(
                 gaussians,
                 scene_extent=colmap_compute_scene_extent(dataset),
@@ -71,7 +67,7 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
 
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
     configs = {} if args.config is None else read_config(args.config)
-    dataset, gaussians, trainer = init_gaussians(sh_degree, source, device, args.mode, args.load_ply, configs)
+    dataset, gaussians, trainer = init_gaussians(sh_degree, source, device, args.mode, args.load_ply, args.load_camera, configs)
     dataset.save_cameras(os.path.join(destination, "cameras.json"))
 
     pbar = tqdm(range(1, iteration+1))

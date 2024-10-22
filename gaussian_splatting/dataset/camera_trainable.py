@@ -6,17 +6,21 @@ import torch.nn as nn
 
 from gaussian_splatting.camera import camera2dict
 from gaussian_splatting.utils import quaternion_to_matrix
-from .dataset import CameraDataset
+from .dataset import CameraDataset, JSONCameraDataset
 
 
 class TrainableCameraDataset(CameraDataset):
 
-    def __init__(self, cameras: List[Camera]):
+    def __init__(self, cameras: List[Camera], exposures: List[torch.Tensor] = []):
         super().__init__()
         self.cameras = cameras
         self.quaternions = nn.Parameter(torch.stack([camera.quaternion for camera in cameras]))
         self.Ts = nn.Parameter(torch.stack([camera.T for camera in cameras]))
         self.exposures = nn.Parameter(torch.stack([torch.eye(3, 4, device=camera.T.device) for camera in cameras]))
+        if len(exposures) > 0:
+            assert len(exposures) == len(cameras), "Number of exposures must match number of cameras"
+            for idx, exposure in enumerate(exposures):
+                self.exposures[idx, ...] = exposure.to(self.exposures.device)
 
     def __len__(self):
         return len(self.cameras)
@@ -42,12 +46,18 @@ class TrainableCameraDataset(CameraDataset):
         cameras = []
         for idx, camera in enumerate(self):
             cameras.append({
-                "exposure": self.exposures[idx, ...].detach().tolist(),
                 **camera2dict(Camera(**{
                     **camera._asdict(),
                     'R': quaternion_to_matrix(self.quaternions[idx, ...]),
                     'T': self.Ts[idx, ...],
                 }), idx),
+                "exposure": self.exposures[idx, ...].detach().tolist(),
             })
         with open(path, 'w') as f:
             json.dump(cameras, f, indent=2)
+
+    @classmethod
+    def from_json(cls, path):
+        cameras = JSONCameraDataset(path)
+        exposures = [torch.tensor(camera['exposure']) for camera in cameras.json_cameras]
+        return cls(cameras, exposures)

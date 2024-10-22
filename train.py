@@ -96,9 +96,11 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
             save_path = os.path.join(destination, "point_cloud", "iteration_" + str(step))
             os.makedirs(save_path, exist_ok=True)
             gaussians.save_ply(os.path.join(save_path, "point_cloud.ply"))
+            dataset.save_cameras(os.path.join(destination, "cameras.json"))
     save_path = os.path.join(destination, "point_cloud", "iteration_" + str(iteration))
     os.makedirs(save_path, exist_ok=True)
     gaussians.save_ply(os.path.join(save_path, "point_cloud.ply"))
+    dataset.save_cameras(os.path.join(destination, "cameras.json"))
 
 
 if __name__ == "__main__":

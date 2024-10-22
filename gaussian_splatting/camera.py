@@ -22,7 +22,7 @@ class Camera(NamedTuple):
     bg_color: torch.Tensor = torch.tensor([0., 0., 0.])
 
 
-def camera2dict(camera: Camera, id, extra_data={}):
+def camera2dict(camera: Camera, id):
     Rt = torch.zeros((4, 4))
     Rt[:3, :3] = camera.R.transpose(0, 1)
     Rt[:3, 3] = camera.T
@@ -42,6 +42,5 @@ def camera2dict(camera: Camera, id, extra_data={}):
         'fx': fov2focal(camera.FoVy, camera.image_width),
         'ground_truth_image_path': camera.ground_truth_image_path.replace("\\", "/"),
         "img_name": os.path.basename(camera.ground_truth_image_path),
-        **extra_data
     }
     return camera_entry

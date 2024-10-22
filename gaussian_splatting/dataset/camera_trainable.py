@@ -1,7 +1,11 @@
+import json
 from typing import List
 from gaussian_splatting import Camera
 import torch
 import torch.nn as nn
+
+from gaussian_splatting.camera import camera2dict
+from gaussian_splatting.utils import quaternion_to_matrix
 from .dataset import CameraDataset
 
 
@@ -33,3 +37,17 @@ class TrainableCameraDataset(CameraDataset):
         self.Ts.to(device)
         self.exposures.to(device)
         return self
+
+    def save_cameras(self, path):
+        cameras = []
+        for idx, camera in enumerate(self):
+            cameras.append({
+                "exposure": self.exposures[idx, ...].detach().tolist(),
+                **camera2dict(Camera(**{
+                    **camera._asdict(),
+                    'R': quaternion_to_matrix(self.quaternions[idx, ...]),
+                    'T': self.Ts[idx, ...],
+                }), idx),
+            })
+        with open(path, 'w') as f:
+            json.dump(cameras, f, indent=2)

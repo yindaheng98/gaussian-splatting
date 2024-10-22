@@ -8,6 +8,7 @@ from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import TrainableCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapTrainableCameraDataset
 from gaussian_splatting.utils import psnr
+from lpipsPyTorch import lpips
 from gaussian_splatting.dataset import JSONCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
 
@@ -50,7 +51,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         out = gaussians(camera)
         rendering = out["render"]
         gt = camera.ground_truth_image
-        pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item()})
+        pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
 

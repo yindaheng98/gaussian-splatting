@@ -87,9 +87,10 @@ def dict2camera(camera_dict, device="cuda"):
     W2C = torch.zeros((4, 4))
     W2C[:3, 3] = torch.tensor(camera_dict['position'])
     W2C[:3, :3] = torch.tensor(camera_dict['rotation'])
+    W2C[3, 3] = 1.0
     Rt = torch.linalg.inv(W2C)
     T = Rt[:3, 3]
-    R = Rt[:3, :3]
+    R = Rt[:3, :3].transpose(0, 1)
     return build_camera(
         image_width=camera_dict['width'],
         image_height=camera_dict['height'],

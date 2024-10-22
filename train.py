@@ -72,6 +72,7 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
     configs = {} if args.config is None else read_config(args.config)
     dataset, gaussians, trainer = init_gaussians(sh_degree, source, device, args.mode, args.load_ply, configs)
+    dataset.save_cameras(os.path.join(destination, "cameras.json"))
 
     pbar = tqdm(range(1, iteration+1))
     epoch = list(range(len(dataset)))

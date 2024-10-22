@@ -1,5 +1,4 @@
 import math
-from typing import NamedTuple, Callable
 import numpy as np
 import torch
 from torch import nn
@@ -9,24 +8,7 @@ from gaussian_splatting.diff_gaussian_rasterization import GaussianRasterization
 from gaussian_splatting.simple_knn._C import distCUDA2
 
 from .utils import inverse_sigmoid, strip_symmetric, build_scaling_rotation, RGB2SH
-
-
-class Camera(NamedTuple):
-    image_height: int
-    image_width: int
-    FoVx: float
-    FoVy: float
-    R: torch.Tensor
-    T: torch.Tensor
-    world_view_transform: torch.Tensor
-    projection_matrix: torch.Tensor
-    full_proj_transform: torch.Tensor
-    camera_center: torch.Tensor
-    quaternion: torch.Tensor
-    postprocess: Callable[['Camera', torch.Tensor], torch.Tensor] = lambda camera, x: x
-    bg_color: torch.Tensor = torch.tensor([0., 0., 0.])
-    ground_truth_image_path: str
-    ground_truth_image: torch.Tensor = None
+from .camera import Camera
 
 
 class GaussianModel(nn.Module):

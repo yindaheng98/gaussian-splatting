@@ -21,6 +21,7 @@ class Camera(NamedTuple):
     ground_truth_image: torch.Tensor = None
     postprocess: Callable[['Camera', torch.Tensor], torch.Tensor] = lambda camera, x: x
     bg_color: torch.Tensor = torch.tensor([0., 0., 0.])
+    custom_data: dict = {}
 
 
 def camera2dict(camera: Camera, id):

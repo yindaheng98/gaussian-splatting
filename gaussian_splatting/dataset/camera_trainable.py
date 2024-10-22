@@ -9,6 +9,11 @@ from gaussian_splatting.utils import quaternion_to_matrix
 from .dataset import CameraDataset, JSONCameraDataset
 
 
+def exposure_postprocess(camera: Camera, x: torch.Tensor):
+    exposure = camera.custom_data['exposures']
+    return torch.matmul(x.permute(1, 2, 0), exposure[:3, :3]).permute(2, 0, 1) + exposure[:3, 3, None, None]
+
+
 class TrainableCameraDataset(CameraDataset):
 
     def __init__(self, cameras: List[Camera], exposures: List[torch.Tensor] = []):
@@ -26,14 +31,15 @@ class TrainableCameraDataset(CameraDataset):
         return len(self.cameras)
 
     def __getitem__(self, idx) -> Camera:
-
-        def postprocess(_, x):
-            return torch.matmul(x.permute(1, 2, 0), self.exposures[idx, :3, :3]).permute(2, 0, 1) + self.exposures[idx, :3, 3, None, None]
         return Camera(**{
             **self.cameras[idx]._asdict(),
             'quaternion': self.quaternions[idx, ...],
             'T': self.Ts[idx, ...],
-            'postprocess': postprocess
+            'postprocess': exposure_postprocess,
+            'custom_data': {
+                **self.cameras[idx].custom_data,
+                'exposures': self.exposures[idx, ...]
+            }
         })
 
     def to(self, device):

@@ -1,7 +1,8 @@
 import os
 from typing import NamedTuple, Callable
 import torch
-from .utils import fov2focal
+from PIL import Image
+from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, PILtoTorch, matrix_to_quaternion
 
 
 class Camera(NamedTuple):
@@ -44,3 +45,58 @@ def camera2dict(camera: Camera, id):
         "img_name": os.path.basename(camera.ground_truth_image_path),
     }
     return camera_entry
+
+
+def build_camera(
+        image_height: int, image_width: int,
+        FoVx: float, FoVy: float,
+        R: torch.Tensor, T: torch.Tensor,
+        image_path: str, device="cuda"
+):
+    zfar = 100.0
+    znear = 0.01
+    trans = torch.zeros(3)
+    scale = 1.0
+    world_view_transform = getWorld2View2(R, T, trans, scale).to(device).transpose(0, 1)
+    projection_matrix = getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy).to(device).transpose(0, 1)
+    full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
+    camera_center = world_view_transform.inverse()[3, :3]
+    quaternion = matrix_to_quaternion(R)
+    pil_image = Image.open(image_path)
+    torch_image = PILtoTorch(pil_image)
+    gt_image = torch_image[:3, ...].clamp(0.0, 1.0).to(device)
+    image_height = gt_image.shape[1]
+    image_width = gt_image.shape[2]
+    return Camera(
+        # image_height=colmap_camera.image_height, # colmap_camera.image_height is read from cameras.bin, maybe dfferent from the actual image size
+        # image_width=colmap_camera.image_width, # colmap_camera.image_width is read from cameras.bin, maybe dfferent from the actual image size
+        image_height=image_height, image_width=image_width,
+        FoVx=FoVx, FoVy=FoVy,
+        R=R.to(device), T=T.to(device),
+        world_view_transform=world_view_transform,
+        projection_matrix=projection_matrix,
+        full_proj_transform=full_proj_transform,
+        camera_center=camera_center,
+        quaternion=quaternion.to(device),
+        ground_truth_image_path=image_path,
+        ground_truth_image=gt_image
+    )
+
+
+def dict2camera(camera_dict, device="cuda"):
+    W2C = torch.zeros((4, 4))
+    W2C[:3, 3] = torch.tensor(camera_dict['position'])
+    W2C[:3, :3] = torch.tensor(camera_dict['rotation'])
+    Rt = torch.linalg.inv(W2C)
+    T = Rt[:3, 3]
+    R = Rt[:3, :3]
+    return build_camera(
+        image_width=camera_dict['width'],
+        image_height=camera_dict['height'],
+        FoVx=focal2fov(camera_dict['fy'], camera_dict['height']),
+        FoVy=focal2fov(camera_dict['fx'], camera_dict['width']),
+        R=R,
+        T=T,
+        image_path=camera_dict['ground_truth_image_path'],
+        device=device
+    )

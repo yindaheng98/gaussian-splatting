@@ -3,11 +3,11 @@ from typing import NamedTuple
 import numpy as np
 
 import torch
-from PIL import Image
 
-from gaussian_splatting import Camera, CameraTrainableGaussianModel
+from gaussian_splatting import CameraTrainableGaussianModel
+from gaussian_splatting.camera import build_camera
 from gaussian_splatting.dataset import CameraDataset, TrainableCameraDataset
-from gaussian_splatting.utils import focal2fov, getProjectionMatrix, getWorld2View2, PILtoTorch, matrix_to_quaternion
+from gaussian_splatting.utils import focal2fov
 from .utils import (
     read_extrinsics_text, read_extrinsics_binary,
     read_intrinsics_text, read_intrinsics_binary,
@@ -67,49 +67,14 @@ def read_colmap_cameras(colmap_folder):
     return cameras
 
 
-def parse_ColmapCamera(colmap_camera: ColmapCamera, device="cuda"):
-    zfar = 100.0
-    znear = 0.01
-    trans = torch.zeros(3)
-    scale = 1.0
-    R = colmap_camera.R
-    T = colmap_camera.T
-    FoVx = colmap_camera.FoVx
-    FoVy = colmap_camera.FoVy
-    world_view_transform = getWorld2View2(R, T, trans, scale).to(device).transpose(0, 1)
-    projection_matrix = getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy).to(device).transpose(0, 1)
-    full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
-    camera_center = world_view_transform.inverse()[3, :3]
-    quaternion = matrix_to_quaternion(R)
-    pil_image = Image.open(colmap_camera.image_path)
-    torch_image = PILtoTorch(pil_image)
-    gt_image = torch_image[:3, ...].clamp(0.0, 1.0).to(device)
-    image_height = gt_image.shape[1]
-    image_width = gt_image.shape[2]
-    return Camera(
-        # image_height=colmap_camera.image_height, # colmap_camera.image_height is read from cameras.bin, maybe dfferent from the actual image size
-        # image_width=colmap_camera.image_width, # colmap_camera.image_width is read from cameras.bin, maybe dfferent from the actual image size
-        image_height=image_height, image_width=image_width,
-        FoVx=FoVx, FoVy=FoVy,
-        R=R.to(device), T=T.to(device),
-        world_view_transform=world_view_transform,
-        projection_matrix=projection_matrix,
-        full_proj_transform=full_proj_transform,
-        camera_center=camera_center,
-        quaternion=quaternion.to(device),
-        ground_truth_image_path=colmap_camera.image_path,
-        ground_truth_image=gt_image
-    )
-
-
 class ColmapCameraDataset(CameraDataset):
     def __init__(self, colmap_folder):
         super().__init__()
         self.raw_cameras = read_colmap_cameras(colmap_folder)
-        self.cameras = [parse_ColmapCamera(cam) for cam in self.raw_cameras]
+        self.cameras = [build_camera(**cam._asdict()) for cam in self.raw_cameras]
 
     def to(self, device):
-        self.cameras = [parse_ColmapCamera(cam, device=device) for cam in self.raw_cameras]
+        self.cameras = [build_camera(**cam._asdict(), device=device) for cam in self.raw_cameras]
         return self
 
     def __len__(self):

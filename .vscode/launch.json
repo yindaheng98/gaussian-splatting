@@ -72,6 +72,8 @@
                 "output/truck",
                 "-i",
                 "30000",
+                "--load_camera",
+                "output/truck/cameras.json",
             ]
         },
         {

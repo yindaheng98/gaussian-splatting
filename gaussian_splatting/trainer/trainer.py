@@ -37,15 +37,14 @@ class AbstractTrainer(ABC):
         raise ValueError("Schedulers is not set")
 
     @abstractmethod
-    def loss(self, out: dict, gt) -> torch.Tensor:
+    def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         pass
 
     def forward_backward(self, camera: Camera):
         out = self.model(camera)
-        gt = camera.ground_truth_image
-        loss = self.loss(out, gt)
+        loss = self.loss(out, camera)
         loss.backward()
-        return loss, out, gt
+        return loss, out
 
     def update_learning_rate(self):
         self.curr_step += 1
@@ -59,9 +58,9 @@ class AbstractTrainer(ABC):
 
     def step(self, camera: Camera):
         self.update_learning_rate()
-        loss, out, gt = self.forward_backward(camera)
+        loss, out = self.forward_backward(camera)
         self.optim_step()
-        return loss, out, gt
+        return loss, out
 
 
 class BaseTrainer(AbstractTrainer):
@@ -129,10 +128,11 @@ class BaseTrainer(AbstractTrainer):
         if self.model.active_sh_degree < self.model.max_sh_degree:
             self.model.active_sh_degree += 1
 
-    def loss(self, out: dict, gt):
+    def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         if self.curr_step % self.sh_degree_up_interval == 0:
             self.oneupSHdegree()
         render = out["render"]
+        gt = camera.ground_truth_image
         Ll1 = l1_loss(render, gt)
         ssim_value = ssim(render, gt)
         loss = (1.0 - self.lambda_dssim) * Ll1 + self.lambda_dssim * (1.0 - ssim_value)
@@ -164,5 +164,5 @@ class TrainerWrapper(AbstractTrainer):
     def schedulers(self) -> Dict[str, Callable[[int], float]]:
         return self.base_trainer.schedulers
 
-    def loss(self, out: dict, gt):
-        return self.base_trainer.loss(out, gt)
+    def loss(self, out: dict, camera: Camera) -> torch.Tensor:
+        return self.base_trainer.loss(out, camera)

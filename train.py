@@ -84,10 +84,10 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
             epoch_psnr = torch.empty(3, 0, device=device)
             random.shuffle(epoch)
         idx = epoch[epoch_idx]
-        loss, out, gt = trainer.step(dataset[idx])
+        loss, out = trainer.step(dataset[idx])
         with torch.no_grad():
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
-            epoch_psnr = torch.concat([epoch_psnr, psnr(out["render"], gt)], dim=1)
+            epoch_psnr = torch.concat([epoch_psnr, psnr(out["render"], dataset[idx].ground_truth_image)], dim=1)
             if step % 10 == 0:
                 pbar.set_postfix({'epoch': step // len(dataset), 'loss': ema_loss_for_log, 'psnr': avg_psnr_for_log, 'n': gaussians._xyz.shape[0]})
         if step in args.save_iterations:

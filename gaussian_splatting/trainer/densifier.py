@@ -203,7 +203,7 @@ class Densifier(TrainerWrapper):
 
     def step(self, camera):
         self.update_learning_rate()
-        loss, out, gt = self.forward_backward(camera)
+        loss, out = self.forward_backward(camera)
         viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
         with torch.no_grad():
             if self.curr_step < self.densify_until_iter:
@@ -214,7 +214,7 @@ class Densifier(TrainerWrapper):
                 if self.curr_step % self.opacity_reset_interval == 0:
                     self.densifier.reset_opacity()
         self.optim_step()
-        return loss, out, gt
+        return loss, out
 
 
 def DensificationTrainer(

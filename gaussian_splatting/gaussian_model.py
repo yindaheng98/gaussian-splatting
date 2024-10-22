@@ -1,5 +1,5 @@
 import math
-from typing import NamedTuple
+from typing import NamedTuple, Callable
 import numpy as np
 import torch
 from torch import nn
@@ -23,7 +23,7 @@ class Camera(NamedTuple):
     full_proj_transform: torch.Tensor
     camera_center: torch.Tensor
     quaternion: torch.Tensor
-    def postprocess(self, x): return x
+    postprocess: Callable[['Camera', torch.Tensor], torch.Tensor] = lambda camera, x: x
     bg_color: torch.Tensor = torch.tensor([0., 0., 0.])
     ground_truth_image: torch.Tensor = None
 

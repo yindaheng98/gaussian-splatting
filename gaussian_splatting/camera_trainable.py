@@ -80,7 +80,7 @@ class CameraTrainableGaussianModel(GaussianModel):
             scales=scales,
             rotations=rotations,
             cov3D_precomp=None)
-        rendered_image = viewpoint_camera.postprocess(rendered_image)
+        rendered_image = viewpoint_camera.postprocess(viewpoint_camera, rendered_image)
 
         # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
         # They will be excluded from value updates used in the splitting criteria.

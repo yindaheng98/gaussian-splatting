@@ -23,6 +23,26 @@
             ]
         },
         {
+            "name": "train camera",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-s",
+                "data/truck",
+                "-d",
+                "output/truck-camera",
+                "-i",
+                "30000",
+                "--mode",
+                "camera",
+                "-l",
+                "output/truck/point_cloud/iteration_30000/point_cloud.ply",
+            ]
+        },
+        {
             "name": "train test",
             "type": "debugpy",
             "request": "launch",

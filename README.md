@@ -14,6 +14,15 @@ We **refactored the original code following the standard Python package structur
 
 ## Install
 
+### Requirements
+
+Install Pytorch and torchvision following the official guideline: [pytorch.org](https://pytorch.org/)
+
+Install Pillow, numpy and tqdm
+```python
+pip install Pillow numpy tqdm
+```
+
 ### Local Install
 
 ```shell

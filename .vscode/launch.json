@@ -45,20 +45,6 @@
             ]
         },
         {
-            "name": "train test",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "train_test.py",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "args": [
-                "-s",
-                "data/truck",
-                "--model_path",
-                "output/truck",
-            ]
-        },
-        {
             "name": "render",
             "type": "debugpy",
             "request": "launch",
@@ -96,22 +82,6 @@
                 "camera",
                 "--load_camera",
                 "output/truck-camera/cameras.json",
-            ]
-        },
-        {
-            "name": "render test",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "render_test.py",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "args": [
-                "-m",
-                "output/truck",
-                "--iteration",
-                "30000",
-                "--resolution",
-                "1"
             ]
         },
     ]

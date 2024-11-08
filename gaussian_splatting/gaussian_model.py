@@ -112,7 +112,7 @@ class GaussianModel(nn.Module):
             campos=viewpoint_camera.camera_center,
             prefiltered=False,
             debug=self.debug,
-            antialiasing=self.antialiasing
+            # antialiasing=self.antialiasing
         )
 
         rasterizer = GaussianRasterizer(raster_settings=raster_settings)
@@ -126,7 +126,8 @@ class GaussianModel(nn.Module):
         shs = self.get_features
 
         # Rasterize visible Gaussians to image, obtain their radii (on screen).
-        rendered_image, radii, depth_image = rasterizer(
+        rendered_image, radii = rasterizer(
+        # rendered_image, radii, depth_image = rasterizer(
             means3D=means3D,
             means2D=means2D,
             shs=shs,
@@ -145,7 +146,7 @@ class GaussianModel(nn.Module):
             "viewspace_points": screenspace_points,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
-            "depth": depth_image
+            # "depth": depth_image
         }
         return out
 

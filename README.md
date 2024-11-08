@@ -28,7 +28,7 @@ pip install Pillow numpy tqdm
 ```shell
 git clone https://github.com/yindaheng98/gaussian-splatting --recursive
 cd gaussian-splatting
-pip install --perfix . .
+pip install --target . .
 ```
 
 ### Pip Install

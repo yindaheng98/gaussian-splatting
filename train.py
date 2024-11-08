@@ -51,7 +51,7 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
         case "camera":
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-            dataset = (ColmapTrainableCameraDataset(source) if load_camera else TrainableCameraDataset.from_json(load_camera)).to(device)
+            dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source)).to(device)
             trainer = CameraTrainer(
                 gaussians,
                 scene_extent=colmap_compute_scene_extent(dataset),

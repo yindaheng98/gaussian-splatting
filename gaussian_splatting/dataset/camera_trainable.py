@@ -24,8 +24,9 @@ class TrainableCameraDataset(CameraDataset):
         self.exposures = nn.Parameter(torch.stack([torch.eye(3, 4, device=camera.T.device) for camera in cameras]))
         if len(exposures) > 0:
             assert len(exposures) == len(cameras), "Number of exposures must match number of cameras"
-            for idx, exposure in enumerate(exposures):
-                self.exposures[idx, ...] = exposure.to(self.exposures.device)
+            with torch.no_grad():
+                for idx, exposure in enumerate(exposures):
+                    self.exposures[idx, ...] = exposure.to(self.exposures.device)
 
     def __len__(self):
         return len(self.cameras)
@@ -65,5 +66,5 @@ class TrainableCameraDataset(CameraDataset):
     @classmethod
     def from_json(cls, path):
         cameras = JSONCameraDataset(path)
-        exposures = [torch.tensor(camera['exposure']) for camera in cameras.json_cameras]
+        exposures = [(torch.tensor(camera['exposure']) if 'exposure' in camera else torch.eye(3, 4)) for camera in cameras.json_cameras]
         return cls(cameras, exposures)

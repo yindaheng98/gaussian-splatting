@@ -50,7 +50,7 @@ class CameraTrainableGaussianModel(GaussianModel):
 
         # means3D = pc.get_xyz
         rel_w2c = torch.eye(4, device=self._xyz.device)
-        quaternion = viewpoint_camera.quaternion * torch.tensor([1, -1, -1, -1], device=viewpoint_camera.quaternion.device)
+        quaternion = viewpoint_camera.quaternion
         rel_w2c[:3, :3] = quaternion_to_matrix(normalize_quaternion(quaternion.unsqueeze(0))).squeeze(0)
         rel_w2c[:3, 3] = viewpoint_camera.T
         # Transform mean and rot of Gaussians to camera frame

@@ -16,7 +16,7 @@ import torch
 
 def getWorld2View(R, t):
     Rt = torch.zeros((4, 4))
-    Rt[:3, :3] = R.transpose(0, 1)
+    Rt[:3, :3] = R
     Rt[:3, 3] = t
     Rt[3, 3] = 1.0
     return Rt.float()
@@ -24,7 +24,7 @@ def getWorld2View(R, t):
 
 def getWorld2View2(R, t, translate=torch.zeros(3), scale=1.0):
     Rt = torch.zeros((4, 4))
-    Rt[:3, :3] = R.transpose(0, 1)
+    Rt[:3, :3] = R
     Rt[:3, 3] = t
     Rt[3, 3] = 1.0
 

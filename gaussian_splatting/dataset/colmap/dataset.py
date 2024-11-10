@@ -43,7 +43,7 @@ def read_colmap_cameras(colmap_folder):
         intr = cam_intrinsics[extr.camera_id]
         height = intr.height
         width = intr.width
-        R = np.transpose(qvec2rotmat(extr.qvec))
+        R = qvec2rotmat(extr.qvec)
         T = np.array(extr.tvec)
         if intr.model == "SIMPLE_PINHOLE":
             focal_length_x = intr.params[0]

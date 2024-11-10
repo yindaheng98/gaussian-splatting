@@ -26,7 +26,7 @@ class Camera(NamedTuple):
 
 def camera2dict(camera: Camera, id):
     Rt = torch.zeros((4, 4))
-    Rt[:3, :3] = camera.R.transpose(0, 1)
+    Rt[:3, :3] = camera.R
     Rt[:3, 3] = camera.T
     Rt[3, 3] = 1.0
 
@@ -91,7 +91,7 @@ def dict2camera(camera_dict, device="cuda"):
     W2C[3, 3] = 1.0
     Rt = torch.linalg.inv(W2C)
     T = Rt[:3, 3]
-    R = Rt[:3, :3].transpose(0, 1)
+    R = Rt[:3, :3]
     return build_camera(
         image_width=camera_dict['width'],
         image_height=camera_dict['height'],

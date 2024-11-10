@@ -124,33 +124,30 @@ for camera in dataset:
 
 `BaseTrainer` only optimize the 3DGS parameters, without densification or joint training with cameras.
 ```python
-from gaussian_splatting.dataset.colmap import colmap_compute_scene_extent
 from gaussian_splatting.trainer import BaseTrainer
 trainer = BaseTrainer(
     gaussians,
-    spatial_lr_scale=colmap_compute_scene_extent(dataset),
+    spatial_lr_scale=dataset.scene_extent(),
     ... # see gaussian_splatting/trainer/trainer.py for full options
 )
 ```
 
 `DensificationTrainer` optimize the 3DGS parameters and densify it.
 ```python
-from gaussian_splatting.dataset.colmap import colmap_compute_scene_extent
 from gaussian_splatting.trainer import DensificationTrainer
 trainer = DensificationTrainer(
     gaussians,
-    scene_extent=colmap_compute_scene_extent(dataset),
+    scene_extent=dataset.scene_extent(),
     ... # see gaussian_splatting/trainer/densifier.py for full options
 )
 ```
 
 `CameraTrainer` jointly optimize the 3DGS parameters and cameras, without densification
 ```python
-from gaussian_splatting.dataset.colmap import colmap_compute_scene_extent
 from gaussian_splatting.trainer import CameraTrainer
 trainer = CameraTrainer(
     gaussians,
-    scene_extent=colmap_compute_scene_extent(dataset),
+    scene_extent=dataset.scene_extent(),
     dataset=dataset,
     ... # see gaussian_splatting/trainer/camera_trainable.py for full options
 )

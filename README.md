@@ -28,13 +28,13 @@ pip install Pillow numpy tqdm
 ```shell
 git clone https://github.com/yindaheng98/gaussian-splatting --recursive
 cd gaussian-splatting
-pip install --target . .
+pip install --target . --upgrade .
 ```
 
 ### Pip Install
 
 ```shell
-pip install git+https://github.com/yindaheng98/gaussian-splatting.git@master
+pip install --upgrade git+https://github.com/yindaheng98/gaussian-splatting.git@master
 ```
 
 ## Running

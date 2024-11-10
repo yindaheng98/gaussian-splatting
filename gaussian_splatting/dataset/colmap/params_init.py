@@ -94,30 +94,6 @@ def read_points3D_binary(path_to_model_file):
     return xyzs, rgbs, errors
 
 
-def getNerfppNorm(cameras: List[Camera]):
-    def get_center_and_diag(cam_centers):
-        cam_centers = torch.hstack(cam_centers)
-        avg_cam_center = torch.mean(cam_centers, axis=1, keepdims=True)
-        center = avg_cam_center
-        dist = torch.linalg.norm(cam_centers - center, axis=0, keepdims=True)
-        diagonal = torch.max(dist)
-        return center.flatten(), diagonal
-
-    cam_centers = []
-
-    for cam in cameras:
-        W2C = getWorld2View2(cam.R, cam.T)
-        C2W = torch.linalg.inv(W2C)
-        cam_centers.append(C2W[:3, 3:4])
-
-    center, diagonal = get_center_and_diag(cam_centers)
-    radius = diagonal * 1.1
-
-    translate = -center
-
-    return {"translate": translate, "radius": radius}
-
-
 def colmap_init(model: GaussianModel, colmap_folder: str):
     with torch.no_grad():
         return _colmap_init(model, colmap_folder)
@@ -131,9 +107,3 @@ def _colmap_init(model: GaussianModel, colmap_folder: str):
         init_path = os.path.join(colmap_folder, "sparse/0", "points3D.txt")
         xyz, rgb, _ = read_points3D_text(init_path)
     return model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
-
-
-def colmap_compute_scene_extent(dataset):
-    nerf_normalization = getNerfppNorm(dataset)
-    scene_extent = nerf_normalization["radius"]
-    return scene_extent.item()

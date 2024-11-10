@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import JSONCameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import psnr
-from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset, colmap_compute_scene_extent
+from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
 from gaussian_splatting.trainer import BaseTrainer, DensificationTrainer, CameraTrainer
 
 parser = ArgumentParser()
@@ -36,7 +36,7 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
             dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
             trainer = BaseTrainer(
                 gaussians,
-                spatial_lr_scale=colmap_compute_scene_extent(dataset),
+                spatial_lr_scale=dataset.scene_extent(),
                 **configs
             )
         case "densify":
@@ -45,7 +45,7 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
             dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
             trainer = DensificationTrainer(
                 gaussians,
-                scene_extent=colmap_compute_scene_extent(dataset),
+                scene_extent=dataset.scene_extent(),
                 **configs
             )
         case "camera":
@@ -54,7 +54,7 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
             dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source)).to(device)
             trainer = CameraTrainer(
                 gaussians,
-                scene_extent=colmap_compute_scene_extent(dataset),
+                scene_extent=dataset.scene_extent(),
                 dataset=dataset,
                 **configs
             )

@@ -3,7 +3,7 @@ import os
 import random
 import torch
 from tqdm import tqdm
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import JSONCameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import psnr
@@ -66,6 +66,8 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
 
 
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
+    with open(os.path.join(destination, "cfg_args"), 'w') as cfg_log_f:
+        cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
     configs = {} if args.config is None else read_config(args.config)
     dataset, gaussians, trainer = init_gaussians(
         sh_degree=sh_degree, source=source, device=device, mode=args.mode,

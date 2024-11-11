@@ -10,7 +10,7 @@ We **refactored the original code following the standard Python package structur
 * [x] exposure compensation
 * [x] camera and 3DGS parameters joint training
 * [ ] depth regularization
-* [ ] integrated 2DGS
+* [ ] integrated 2DGS (integrated [gsplat](https://github.com/nerfstudio-project/gsplat) backend)
 
 ## Install
 

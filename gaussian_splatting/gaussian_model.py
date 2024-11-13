@@ -126,7 +126,7 @@ class GaussianModel(nn.Module):
         shs = self.get_features
 
         # Rasterize visible Gaussians to image, obtain their radii (on screen).
-        rendered_image, radii, depth_image = rasterizer(
+        rendered_image, radii, depth_image, info = rasterizer(
             means3D=means3D,
             means2D=means2D,
             shs=shs,

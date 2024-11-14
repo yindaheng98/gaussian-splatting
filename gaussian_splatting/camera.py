@@ -52,7 +52,7 @@ def build_camera(
         image_height: int, image_width: int,
         FoVx: float, FoVy: float,
         R: torch.Tensor, T: torch.Tensor,
-        image_path: str, device="cuda"
+        image_path: str = None, device="cuda"
 ):
     zfar = 100.0
     znear = 0.01
@@ -63,11 +63,13 @@ def build_camera(
     full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
     camera_center = world_view_transform.inverse()[3, :3]
     quaternion = matrix_to_quaternion(R)
-    pil_image = Image.open(image_path)
-    torch_image = PILtoTorch(pil_image)
-    gt_image = torch_image[:3, ...].clamp(0.0, 1.0).to(device)
-    image_height = gt_image.shape[1]
-    image_width = gt_image.shape[2]
+    gt_image = None
+    if image_path is not None:
+        pil_image = Image.open(image_path)
+        torch_image = PILtoTorch(pil_image)
+        gt_image = torch_image[:3, ...].clamp(0.0, 1.0).to(device)
+        image_height = gt_image.shape[1]
+        image_width = gt_image.shape[2]
     return Camera(
         # image_height=colmap_camera.image_height, # colmap_camera.image_height is read from cameras.bin, maybe dfferent from the actual image size
         # image_width=colmap_camera.image_width, # colmap_camera.image_width is read from cameras.bin, maybe dfferent from the actual image size

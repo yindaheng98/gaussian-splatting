@@ -43,8 +43,8 @@ def assign_color_block(BLOCK_SIZE, camera):
     y = torch.arange(0, math.ceil(camera.image_height / BLOCK_SIZE)).repeat(BLOCK_SIZE, 1).T.reshape(-1)[:camera.image_height]
     grid_x, grid_y = torch.meshgrid(x, y, indexing='xy')
     tile_id = (x[-1] + 1) * grid_y + grid_x
-    tile_xy = torch.stack([grid_x, grid_y], dim=-1)
-    feature_map = torch.concat([tile_xy, torch.ones((camera.image_height, camera.image_width, 1))], dim=-1)
+    colors = torch.rand(((x[-1] + 1) * (y[-1] + 1), 3))
+    feature_map = colors[tile_id]
     return feature_map
 
 
@@ -59,16 +59,29 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     gt_path = os.path.join(destination, "ours_{}".format(iteration), "gt")
     makedirs(render_path, exist_ok=True)
     makedirs(gt_path, exist_ok=True)
+    features_dc_backup = gaussians._features_dc.clone()
+    features_rest_backup = gaussians._features_rest.clone()
     pbar = tqdm(dataset, desc="Rendering progress")
     for idx, camera in enumerate(pbar):
         feature_map = assign_color_block(16, camera)
         camera = camera._replace(feature_map=feature_map.to(device))
         out = gaussians(camera)
+        features = out["features"] / out['features_alpha'].unsqueeze(-1)
+        features[out['features_alpha'] < 1e-5, ...] = 0
         rendering = out["render"]
         gt = camera.ground_truth_image
         pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
+        fusion_save_path = os.path.join(os.path.join(destination, f"fusion_{idx+1}"))
+        makedirs(os.path.join(fusion_save_path, "point_cloud", "iteration_" + str(iteration)), exist_ok=True)
+        with open(os.path.join(fusion_save_path, "cfg_args"), 'w') as cfg_log_f:
+            cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
+        gaussians._features_dc[:, 0, :] = features
+        gaussians._features_rest[...] = 0
+        gaussians.save_ply(os.path.join(fusion_save_path, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"))
+        gaussians._features_dc[...] = features_dc_backup
+        gaussians._features_rest[...] = features_rest_backup
 
 
 if __name__ == "__main__":

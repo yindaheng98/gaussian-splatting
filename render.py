@@ -59,6 +59,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     gt_path = os.path.join(destination, "ours_{}".format(iteration), "gt")
     makedirs(render_path, exist_ok=True)
     makedirs(gt_path, exist_ok=True)
+    opacity_backup = gaussians._opacity.clone()
     features_dc_backup = gaussians._features_dc.clone()
     features_rest_backup = gaussians._features_rest.clone()
     pbar = tqdm(dataset, desc="Rendering progress")
@@ -77,9 +78,12 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         makedirs(os.path.join(fusion_save_path, "point_cloud", "iteration_" + str(iteration)), exist_ok=True)
         with open(os.path.join(fusion_save_path, "cfg_args"), 'w') as cfg_log_f:
             cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
+        gaussians._opacity[out['features_alpha'] < 1] += gaussians.inverse_opacity_activation(out['features_alpha'][out['features_alpha'] < 1].unsqueeze(-1))
+        gaussians._opacity[gaussians.get_opacity < 0.05] = gaussians.inverse_opacity_activation(torch.tensor(0.05)).to(device)
         gaussians._features_dc[:, 0, :] = features
         gaussians._features_rest[...] = 0
         gaussians.save_ply(os.path.join(fusion_save_path, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"))
+        gaussians._opacity[...] = opacity_backup
         gaussians._features_dc[...] = features_dc_backup
         gaussians._features_rest[...] = features_rest_backup
 

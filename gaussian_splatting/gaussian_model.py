@@ -125,7 +125,9 @@ class GaussianModel(nn.Module):
 
         shs = self.get_features
 
-        feature_map = viewpoint_camera.feature_map or torch.ones((raster_settings.image_height, raster_settings.image_width, 1), dtype=torch.float32, device=self._xyz.device)
+        feature_map = viewpoint_camera.feature_map
+        if feature_map is None:
+            feature_map = torch.ones((raster_settings.image_height, raster_settings.image_width, 1), dtype=torch.float32, device=self._xyz.device)
 
         # Rasterize visible Gaussians to image, obtain their radii (on screen).
         rendered_image, radii, depth_image, features, features_alpha = rasterizer(

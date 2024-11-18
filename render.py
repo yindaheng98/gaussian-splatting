@@ -1,3 +1,4 @@
+import math
 import torch
 import os
 from tqdm import tqdm
@@ -37,6 +38,16 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
     return dataset, gaussians
 
 
+def assign_color_block(BLOCK_SIZE, camera):
+    x = torch.arange(0, math.ceil(camera.image_width / BLOCK_SIZE)).repeat(BLOCK_SIZE, 1).T.reshape(-1)[:camera.image_width]
+    y = torch.arange(0, math.ceil(camera.image_height / BLOCK_SIZE)).repeat(BLOCK_SIZE, 1).T.reshape(-1)[:camera.image_height]
+    grid_x, grid_y = torch.meshgrid(x, y, indexing='xy')
+    tile_id = (x[-1] + 1) * grid_y + grid_x
+    tile_xy = torch.stack([grid_x, grid_y], dim=-1)
+    feature_map = torch.concat([tile_xy, torch.ones((camera.image_height, camera.image_width, 1))], dim=-1)
+    return feature_map
+
+
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
     with open(os.path.join(destination, "cfg_args"), 'w') as cfg_log_f:
         cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
@@ -50,6 +61,8 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     makedirs(gt_path, exist_ok=True)
     pbar = tqdm(dataset, desc="Rendering progress")
     for idx, camera in enumerate(pbar):
+        feature_map = assign_color_block(16, camera)
+        camera = camera._replace(feature_map=feature_map.to(device))
         out = gaussians(camera)
         rendering = out["render"]
         gt = camera.ground_truth_image

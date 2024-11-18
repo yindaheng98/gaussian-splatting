@@ -22,6 +22,7 @@ class Camera(NamedTuple):
     postprocess: Callable[['Camera', torch.Tensor], torch.Tensor] = lambda camera, x: x
     bg_color: torch.Tensor = torch.tensor([0., 0., 0.])
     custom_data: dict = {}
+    feature_map: torch.Tensor = None
 
 
 def camera2dict(camera: Camera, id):

@@ -61,7 +61,7 @@ def build_camera(
     scale = 1.0
     world_view_transform = getWorld2View2(R, T, trans, scale).to(device).transpose(0, 1)
     projection_matrix = getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy).to(device).transpose(0, 1)
-    full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
+    full_proj_transform = world_view_transform @ projection_matrix
     camera_center = world_view_transform.inverse()[3, :3]
     quaternion = matrix_to_quaternion(R)
     gt_image = None

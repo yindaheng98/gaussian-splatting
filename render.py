@@ -37,6 +37,20 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
     return dataset, gaussians
 
 
+def transform2d_pixel(H, W, device="cuda"):
+    x = torch.arange(W, dtype=torch.float, device=device)
+    y = torch.arange(H, dtype=torch.float, device=device)
+    xy = torch.stack(torch.meshgrid(x, y, indexing='xy'), dim=-1)
+    A = torch.rand((2, 2)).to(device) - 0.5
+    b = (torch.rand(2).to(device) - 0.5) * H
+    solution = torch.cat([b[:, None], A], dim=1).T
+    xy_transformed = (xy.view(-1, 2) @ A.T + b).view(xy.shape)
+    # X = torch.cat([torch.ones((xy.view(-1, 2).shape[0], 1)).to(device=xy.device), xy.view(-1, 2)], dim=1)
+    # Y = xy_transformed.view(-1, 2)
+    # diff = solution - torch.linalg.lstsq(X, Y).solution
+    return xy_transformed, solution
+
+
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
     with open(os.path.join(destination, "cfg_args"), 'w') as cfg_log_f:
         cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
@@ -50,8 +64,11 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     makedirs(gt_path, exist_ok=True)
     pbar = tqdm(dataset, desc="Rendering progress")
     for idx, camera in enumerate(pbar):
-        out = gaussians(camera)
+        xy_transformed, solution = transform2d_pixel(camera.image_height, camera.image_width, device=device)
+        out = gaussians.motion_fusion(camera, xy_transformed)
         rendering = out["render"]
+        B = out['transform2d'][..., 0:6].reshape(-1, 2, 3)
+        eqs = out['transform2d'][..., 6:27].reshape(-1, 3, 7)
         gt = camera.ground_truth_image
         pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))

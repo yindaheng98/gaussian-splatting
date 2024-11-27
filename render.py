@@ -89,6 +89,52 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
         print((A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
 
+        # solve equations
+        eqsall = out['transform2d'][..., 6:27].reshape(-1, 3, 7)
+        if last_eqs is None:
+            last_eqs = eqsall
+            last_radii = out['radii']
+            continue
+        visiable_idx = (out['radii'] > 0) & (last_radii > 0)
+        eq2 = torch.cat([last_eqs, eqsall], dim=1)[visiable_idx]
+        X, Y = eq2[..., :-1], eq2[..., -1].unsqueeze(-1)
+        V11 = X.transpose(1, 2).bmm(X)
+        V12 = X.transpose(1, 2).bmm(Y)
+        det = torch.linalg.det(V11)
+        valid_idx = det.abs() > 1e-3
+        sigma_flatten = torch.linalg.inv(V11[valid_idx]).bmm(V12[valid_idx]).squeeze(-1)
+        sigma = torch.zeros((sigma_flatten.shape[0], 3, 3), device=sigma_flatten.device)
+        sigma[:, 0, 0] = sigma_flatten[:, 0]
+        sigma[:, 0, 1] = sigma_flatten[:, 1]
+        sigma[:, 0, 2] = sigma_flatten[:, 2]
+        sigma[:, 1, 0] = sigma_flatten[:, 1]
+        sigma[:, 1, 1] = sigma_flatten[:, 3]
+        sigma[:, 1, 2] = sigma_flatten[:, 4]
+        sigma[:, 2, 0] = sigma_flatten[:, 2]
+        sigma[:, 2, 1] = sigma_flatten[:, 4]
+        sigma[:, 2, 2] = sigma_flatten[:, 5]
+
+        # verify equations
+        B = out['transform2d'][..., 0:6].reshape(-1, 2, 3)[visiable_idx][valid_idx]
+        eqs = out['transform2d'][..., 6:27].reshape(-1, 3, 7)[visiable_idx][valid_idx]
+        conv3D = out['transform2d'][..., 27:36].reshape(-1, 3, 3)[visiable_idx][valid_idx]
+        conv2D = out['transform2d'][..., 36:40].reshape(-1, 2, 2)[visiable_idx][valid_idx]
+        T = out['transform2d'][..., 40:49].reshape(-1, 3, 3)[visiable_idx][valid_idx]
+        conv2D_transformed = torch.zeros((conv2D.shape[0], 2, 2), device=conv2D.device)
+        conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]
+        conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
+        conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
+        conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
+        print((T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().mean())
+        A2D, b2D = B[..., :-1], B[..., -1]
+        conv2D_transformed = torch.zeros((conv2D.shape[0], 2, 2), device=conv2D.device)
+        conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]
+        conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
+        conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
+        conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
+        print((A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
+        print((T.bmm(sigma).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D_transformed).abs().mean())
+
 
 if __name__ == "__main__":
     args = parser.parse_args()

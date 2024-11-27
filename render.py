@@ -67,8 +67,12 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         xy_transformed, solution = transform2d_pixel(camera.image_height, camera.image_width, device=device)
         out = gaussians.motion_fusion(camera, xy_transformed)
         rendering = out["render"]
-        B = out['transform2d'][..., 0:6].reshape(-1, 2, 3)
-        eqs = out['transform2d'][..., 6:27].reshape(-1, 3, 7)
+        B = out['transform2d'][..., 0:6].reshape(-1, 2, 3)[out['radii'] > 0]
+        eqs = out['transform2d'][..., 6:27].reshape(-1, 3, 7)[out['radii'] > 0]
+        conv3D = out['transform2d'][..., 27:36].reshape(-1, 3, 3)[out['radii'] > 0]
+        conv2D = out['transform2d'][..., 36:40].reshape(-1, 2, 2)[out['radii'] > 0]
+        T = out['transform2d'][..., 40:49].reshape(-1, 3, 3)[out['radii'] > 0]
+        print((T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().max())
         gt = camera.ground_truth_image
         pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))

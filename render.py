@@ -63,7 +63,6 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     makedirs(render_path, exist_ok=True)
     makedirs(gt_path, exist_ok=True)
     pbar = tqdm(dataset, desc="Rendering progress")
-    last_eqs, last_radii, last_det = None, None, None
     for idx, camera in enumerate(pbar):
         xy_transformed, solution = transform2d_pixel(camera.image_height, camera.image_width, device=device)
         out = gaussians.motion_fusion(camera, xy_transformed)
@@ -81,29 +80,22 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         conv3D = out['transform2d'][..., 27:36].reshape(-1, 3, 3)[valid_idx]
         conv2D = out['transform2d'][..., 36:40].reshape(-1, 2, 2)[valid_idx]
         T = out['transform2d'][..., 40:49].reshape(-1, 3, 3)[valid_idx]
-        print((T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().mean())
+        print("T \Sigma_{3D} T^\\top - \Sigma_{2D}", (T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().mean())
         A2D, b2D = B[..., :-1], B[..., -1]
         conv2D_transformed = torch.zeros((conv2D.shape[0], 2, 2), device=conv2D.device)
         conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]
         conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
-        print((A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
+        print("A \Sigma_{2D} A^\\top - \Sigma'_{2D}", (A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
 
-        # solve equations
-        eqsall = out['transform2d'][..., 6:27].reshape(-1, 3, 7)
-        if last_eqs is None:
-            last_eqs = eqsall
-            last_radii = out['radii']
-            last_det = out['tran_det']
-            continue
-        eq2 = torch.cat([last_eqs, eqsall], dim=1)
-        X, Y = eq2[..., :-1], eq2[..., -1].unsqueeze(-1)
-        V11 = X.transpose(1, 2).bmm(X)
-        V12 = X.transpose(1, 2).bmm(Y)
-        det = torch.linalg.det(V11)
-        valid_idx = (out['radii'] > 0) & (last_radii > 0) & (out['tran_det'] > 1e-3) & (last_det.abs() > 1e-3) & (det.abs() > 1e-3)
-        sigma_flatten = torch.linalg.inv(V11[valid_idx]).bmm(V12[valid_idx]).squeeze(-1)
+        # solve underdetermined system of equations
+        X, Y = eqs[..., :-1], eqs[..., -1].unsqueeze(-1)
+        rank = torch.linalg.matrix_rank(X)
+        valid_idx = (rank == 3)
+        qr = torch.linalg.qr(X[valid_idx].transpose(1, 2))
+        sigma_flatten = qr.Q.bmm(torch.linalg.inv(qr.R).transpose(1, 2)).bmm(Y[valid_idx]).squeeze(-1)
+        print("A_{T} \Sigma_{3D} - b_{T}", (X.bmm(sigma_flatten.unsqueeze(-1)) - Y).abs().mean())
         sigma = torch.zeros((sigma_flatten.shape[0], 3, 3), device=sigma_flatten.device)
         sigma[:, 0, 0] = sigma_flatten[:, 0]
         sigma[:, 0, 1] = sigma_flatten[:, 1]
@@ -116,20 +108,20 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         sigma[:, 2, 2] = sigma_flatten[:, 5]
 
         # verify equations
-        B = out['transform2d'][..., 0:6].reshape(-1, 2, 3)[valid_idx]
-        eqs = out['transform2d'][..., 6:27].reshape(-1, 3, 7)[valid_idx]
-        conv3D = out['transform2d'][..., 27:36].reshape(-1, 3, 3)[valid_idx]
-        conv2D = out['transform2d'][..., 36:40].reshape(-1, 2, 2)[valid_idx]
-        T = out['transform2d'][..., 40:49].reshape(-1, 3, 3)[valid_idx]
-        print((T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().mean())
+        B = B[valid_idx]
+        eqs = eqs[valid_idx]
+        conv3D = conv3D[valid_idx]
+        conv2D = conv2D[valid_idx]
+        T = T[valid_idx]
+        print("T \Sigma_{3D} T^\\top - \Sigma_{2D}", (T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().mean())
         A2D, b2D = B[..., :-1], B[..., -1]
         conv2D_transformed = torch.zeros((conv2D.shape[0], 2, 2), device=conv2D.device)
         conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]
         conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
-        print((A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
-        print((T.bmm(sigma).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D_transformed).abs().mean())
+        print("A \Sigma_{2D} A^\\top - \Sigma'_{2D}", (A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
+        print("T \Sigma'_{3D} T^\\top - \Sigma'_{2D}", (T.bmm(sigma).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D_transformed).abs().mean())
 
 
 if __name__ == "__main__":

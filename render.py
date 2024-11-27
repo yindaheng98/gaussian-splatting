@@ -63,20 +63,31 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     makedirs(render_path, exist_ok=True)
     makedirs(gt_path, exist_ok=True)
     pbar = tqdm(dataset, desc="Rendering progress")
+    last_eqs, last_radii = None, None
     for idx, camera in enumerate(pbar):
         xy_transformed, solution = transform2d_pixel(camera.image_height, camera.image_width, device=device)
         out = gaussians.motion_fusion(camera, xy_transformed)
         rendering = out["render"]
-        B = out['transform2d'][..., 0:6].reshape(-1, 2, 3)[out['radii'] > 0]
-        eqs = out['transform2d'][..., 6:27].reshape(-1, 3, 7)[out['radii'] > 0]
-        conv3D = out['transform2d'][..., 27:36].reshape(-1, 3, 3)[out['radii'] > 0]
-        conv2D = out['transform2d'][..., 36:40].reshape(-1, 2, 2)[out['radii'] > 0]
-        T = out['transform2d'][..., 40:49].reshape(-1, 3, 3)[out['radii'] > 0]
-        print((T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().max())
         gt = camera.ground_truth_image
         pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
+
+        # verify exported data
+        valid_idx = (out['radii'] > 0) & (out['tran_det'] > 1e-3)
+        B = out['transform2d'][..., 0:6].reshape(-1, 2, 3)[valid_idx]
+        eqs = out['transform2d'][..., 6:27].reshape(-1, 3, 7)[valid_idx]
+        conv3D = out['transform2d'][..., 27:36].reshape(-1, 3, 3)[valid_idx]
+        conv2D = out['transform2d'][..., 36:40].reshape(-1, 2, 2)[valid_idx]
+        T = out['transform2d'][..., 40:49].reshape(-1, 3, 3)[valid_idx]
+        print((T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().mean())
+        A2D, b2D = B[..., :-1], B[..., -1]
+        conv2D_transformed = torch.zeros((conv2D.shape[0], 2, 2), device=conv2D.device)
+        conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]
+        conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
+        conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
+        conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
+        print((A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
 
 
 if __name__ == "__main__":

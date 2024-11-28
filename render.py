@@ -157,7 +157,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         valid_idx = (rank == 3)
         qr = torch.linalg.qr(X[valid_idx].transpose(1, 2))
         sigma_flatten = qr.Q.bmm(torch.linalg.inv(qr.R).transpose(1, 2)).bmm(Y[valid_idx]).squeeze(-1)
-        print("A_{T} \Sigma_{3D} - b_{T}", (X.bmm(sigma_flatten.unsqueeze(-1)) - Y).abs().mean())
+        print("A_{T} \Sigma_{3D} - b_{T}", (X.bmm(sigma_flatten.unsqueeze(-1)) - Y).abs().mean()) # !large value in Y will cause error in solving sigma
 
         sigma = torch.zeros((sigma_flatten.shape[0], 3, 3), device=sigma_flatten.device)
         sigma[:, 0, 0] = sigma_flatten[:, 0]

@@ -79,12 +79,7 @@ def solve_sigma(T, cov2D):
     Y[..., 0, 0] = cov2D[..., 0, 0]
     Y[..., 1, 0] = cov2D[..., 1, 1]
     Y[..., 2, 0] = cov2D[..., 0, 1]
-    rank = torch.linalg.matrix_rank(X)
-    valid_idx = (rank == 3)
-    qr = torch.linalg.qr(X[valid_idx].transpose(1, 2))
-    sigma_flatten = qr.Q.bmm(torch.linalg.inv(qr.R).transpose(1, 2)).bmm(Y[valid_idx]).squeeze(-1)
-    print("A_{T} \Sigma_{3D} - b_{T}", (X.bmm(sigma_flatten.unsqueeze(-1)) - Y).abs().mean())
-    return sigma_flatten, valid_idx
+    return X, Y
 
 
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
@@ -127,15 +122,15 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
 
         # solve underdetermined system of equations
         X, Y = eqs[..., :-1], eqs[..., -1].unsqueeze(-1)
+        X0, Y0 = X.clone(), Y.clone()
+        X, Y = solve_sigma(T, conv2D_transformed)
+        print((X0 - X).abs().mean(), (Y0 - Y).abs().mean())
         rank = torch.linalg.matrix_rank(X)
         valid_idx = (rank == 3)
         qr = torch.linalg.qr(X[valid_idx].transpose(1, 2))
         sigma_flatten = qr.Q.bmm(torch.linalg.inv(qr.R).transpose(1, 2)).bmm(Y[valid_idx]).squeeze(-1)
         print("A_{T} \Sigma_{3D} - b_{T}", (X.bmm(sigma_flatten.unsqueeze(-1)) - Y).abs().mean())
 
-        sigma_flatten0 = sigma_flatten.clone()
-        sigma_flatten, valid_idx = solve_sigma(T, conv2D_transformed)
-        print((sigma_flatten0 - sigma_flatten).abs().mean())
         sigma = torch.zeros((sigma_flatten.shape[0], 3, 3), device=sigma_flatten.device)
         sigma[:, 0, 0] = sigma_flatten[:, 0]
         sigma[:, 0, 1] = sigma_flatten[:, 1]

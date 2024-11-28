@@ -12,6 +12,7 @@ from gaussian_splatting.utils import psnr
 from lpipsPyTorch import lpips
 from gaussian_splatting.dataset import JSONCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
+from gaussian_splatting.diff_gaussian_rasterization.motion_utils import solve_cov3D, compute_T, compute_Jacobian
 
 parser = ArgumentParser()
 parser.add_argument("--sh_degree", default=3, type=int)
@@ -52,63 +53,6 @@ def transform2d_pixel(H, W, device="cuda"):
     return xy_transformed, solution
 
 
-def solve_sigma(T, cov2D):
-    X = torch.zeros((T.shape[0], 3, 6), device=T.device)
-    # 1st row for x
-    X[..., 0, 0] = T[..., 0, 0] ** 2
-    X[..., 0, 1] = 2 * T[..., 0, 1] * T[..., 0, 0]
-    X[..., 0, 2] = 2 * T[..., 0, 2] * T[..., 0, 0]
-    X[..., 0, 3] = T[..., 0, 1] ** 2
-    X[..., 0, 4] = 2 * T[..., 0, 1] * T[..., 0, 2]
-    X[..., 0, 5] = T[..., 0, 2] ** 2
-    # 2nd row for y
-    X[..., 1, 0] = T[..., 1, 0] * T[..., 0, 0]
-    X[..., 1, 1] = T[..., 1, 1] * T[..., 0, 0] + T[..., 1, 0] * T[..., 0, 1]
-    X[..., 1, 2] = T[..., 1, 2] * T[..., 0, 0] + T[..., 1, 0] * T[..., 0, 2]
-    X[..., 1, 3] = T[..., 1, 1] * T[..., 0, 1]
-    X[..., 1, 4] = T[..., 1, 1] * T[..., 0, 2] + T[..., 1, 2] * T[..., 0, 1]
-    X[..., 1, 5] = T[..., 1, 2] * T[..., 0, 2]
-    # 3rd row for z
-    X[..., 2, 0] = T[..., 1, 0] ** 2
-    X[..., 2, 1] = 2 * T[..., 1, 1] * T[..., 1, 0]
-    X[..., 2, 2] = 2 * T[..., 1, 2] * T[..., 1, 0]
-    X[..., 2, 3] = T[..., 1, 1] ** 2
-    X[..., 2, 4] = 2 * T[..., 1, 1] * T[..., 1, 2]
-    X[..., 2, 5] = T[..., 1, 2] ** 2
-    # solve underdetermined system of equations
-    Y = torch.zeros((T.shape[0], 3, 1), device=T.device)
-    Y[..., 0, 0] = cov2D[..., 0, 0]  # for x
-    Y[..., 1, 0] = cov2D[..., 0, 1]  # for y
-    Y[..., 2, 0] = cov2D[..., 1, 1]  # for z
-    return X, Y
-
-
-def compute_Jacobian(mean, fovx, fovy, width, height, view_matrix):
-    t = view_matrix.T[:3, :3] @ mean.T + view_matrix.T[:3, 3, None]
-    tan_fovx = math.tan(fovx * 0.5)
-    tan_fovy = math.tan(fovy * 0.5)
-    focal_x = width / (2.0 * tan_fovx)
-    focal_y = height / (2.0 * tan_fovy)
-    limx = 1.3 * tan_fovx
-    limy = 1.3 * tan_fovy
-    txtz = t[0] / t[2]
-    tytz = t[1] / t[2]
-    t[0] = txtz.clamp(-limx, limx) * t[2]
-    t[1] = tytz.clamp(-limy, limy) * t[2]
-    J = torch.zeros((mean.shape[0], 2, 3), device=mean.device)
-    J[:, 0, 0] = focal_x / t[2]
-    J[:, 0, 2] = -focal_x * t[0] / (t[2] ** 2)
-    J[:, 1, 1] = focal_y / t[2]
-    J[:, 1, 2] = -focal_y * t[1] / (t[2] ** 2)
-    return J
-
-
-def compoute_T(mean, fovx, fovy, width, height, view_matrix):
-    J = compute_Jacobian(mean, fovx, fovy, width, height, view_matrix)
-    T = J @ view_matrix.T[:3, :3]
-    return T
-
-
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
     with open(os.path.join(destination, "cfg_args"), 'w') as cfg_log_f:
         cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
@@ -139,7 +83,8 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         B = out['motion2d'][valid_idx]
         eqs = out['conv3d_equations'][valid_idx]
         # T = out['motion2d'][..., 6:15].reshape(-1, 3, 3)[valid_idx]
-        T = compoute_T(gaussians.get_xyz.detach(), camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.world_view_transform)[valid_idx]
+        J = compute_Jacobian(gaussians.get_xyz.detach(), camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.world_view_transform)
+        T = compute_T(J, camera.world_view_transform)[valid_idx]
         # print("T", (T[:, :2, :] - T0[valid_idx]).abs().max())
         A2D, b2D = B[..., :-1], B[..., -1]
         conv2D_transformed = torch.zeros((A2D.shape[0], 2, 2), device=A2D.device)
@@ -151,13 +96,13 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         # solve underdetermined system of equations
         X, Y = eqs[..., :-1], eqs[..., -1].unsqueeze(-1)
         X0, Y0 = X.clone(), Y.clone()
-        X, Y = solve_sigma(T, conv2D_transformed)
+        X, Y = solve_cov3D(gaussians.get_xyz.detach()[valid_idx], camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.world_view_transform, conv2D_transformed)
         print((X0 - X).abs().mean(), (Y0 - Y).abs().mean())
         rank = torch.linalg.matrix_rank(X)
         valid_idx = (rank == 3)
         qr = torch.linalg.qr(X[valid_idx].transpose(1, 2))
         sigma_flatten = qr.Q.bmm(torch.linalg.inv(qr.R).transpose(1, 2)).bmm(Y[valid_idx]).squeeze(-1)
-        print("A_{T} \Sigma_{3D} - b_{T}", (X.bmm(sigma_flatten.unsqueeze(-1)) - Y).abs().mean()) # !large value in Y will cause error in solving sigma
+        print("A_{T} \Sigma_{3D} - b_{T}", (X.bmm(sigma_flatten.unsqueeze(-1)) - Y).abs().mean())  # !large value in Y will cause error in solving sigma
 
         sigma = torch.zeros((sigma_flatten.shape[0], 3, 3), device=sigma_flatten.device)
         sigma[:, 0, 0] = sigma_flatten[:, 0]

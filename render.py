@@ -1,3 +1,4 @@
+import math
 import torch
 import os
 from tqdm import tqdm
@@ -82,6 +83,32 @@ def solve_sigma(T, cov2D):
     return X, Y
 
 
+def compute_Jacobian(mean, fovx, fovy, width, height, view_matrix):
+    t = view_matrix.T[:3, :3] @ mean.T + view_matrix.T[:3, 3, None]
+    tan_fovx = math.tan(fovx * 0.5)
+    tan_fovy = math.tan(fovy * 0.5)
+    focal_x = width / (2.0 * tan_fovx)
+    focal_y = height / (2.0 * tan_fovy)
+    limx = 1.3 * tan_fovx
+    limy = 1.3 * tan_fovy
+    txtz = t[0] / t[2]
+    tytz = t[1] / t[2]
+    t[0] = txtz.clamp(-limx, limx) * t[2]
+    t[1] = tytz.clamp(-limy, limy) * t[2]
+    J = torch.zeros((mean.shape[0], 2, 3), device=mean.device)
+    J[:, 0, 0] = focal_x / t[2]
+    J[:, 0, 2] = -focal_x * t[0] / (t[2] ** 2)
+    J[:, 1, 1] = focal_y / t[2]
+    J[:, 1, 2] = -focal_y * t[1] / (t[2] ** 2)
+    return J
+
+
+def compoute_T(mean, fovx, fovy, width, height, view_matrix):
+    J = compute_Jacobian(mean, fovx, fovy, width, height, view_matrix)
+    T = J @ view_matrix.T[:3, :3]
+    return T
+
+
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
     with open(os.path.join(destination, "cfg_args"), 'w') as cfg_log_f:
         cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
@@ -103,6 +130,8 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
 
+        T0 = compoute_T(gaussians.get_xyz.detach(), camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.world_view_transform)
+
         print("\nframe", idx)
         valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-3) & (out['motion_alpha'] > 1e-3) & (out['pixhit'] > 1)
         motion_det = out['motion_det'][valid_idx]
@@ -112,6 +141,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         B = out['motion2d'][..., 0:6].reshape(-1, 2, 3)[valid_idx]
         eqs = out['conv3d_equations'][valid_idx]
         T = out['motion2d'][..., 6:15].reshape(-1, 3, 3)[valid_idx]
+        print("T", (T[:, :2, :] - T0[valid_idx]).abs().max())
         A2D, b2D = B[..., :-1], B[..., -1]
         conv2D_transformed = torch.zeros((A2D.shape[0], 2, 2), device=A2D.device)
         conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]

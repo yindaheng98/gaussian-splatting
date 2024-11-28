@@ -105,12 +105,12 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
 
         print("\nframe", idx)
         # verify exported data
-        valid_idx = (out['radii'] > 0) & (out['tran_det'] > 1e-3)
-        B = out['transform2d'][..., 0:6].reshape(-1, 2, 3)[valid_idx]
-        eqs = out['transform2d'][..., 6:27].reshape(-1, 3, 7)[valid_idx]
-        conv3D = out['transform2d'][..., 27:36].reshape(-1, 3, 3)[valid_idx]
-        conv2D = out['transform2d'][..., 36:40].reshape(-1, 2, 2)[valid_idx]
-        T = out['transform2d'][..., 40:49].reshape(-1, 3, 3)[valid_idx]
+        valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-3) & (out['motion_alpha'] > 1e-3)
+        B = out['motion2d'][..., 0:6].reshape(-1, 2, 3)[valid_idx]
+        eqs = out['conv3d_equations'][valid_idx]
+        conv3D = out['motion2d'][..., 6:15].reshape(-1, 3, 3)[valid_idx]
+        conv2D = out['motion2d'][..., 15:19].reshape(-1, 2, 2)[valid_idx]
+        T = out['motion2d'][..., 19:28].reshape(-1, 3, 3)[valid_idx]
         print("T \Sigma_{3D} T^\\top - \Sigma_{2D}", (T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().mean())
         A2D, b2D = B[..., :-1], B[..., -1]
         conv2D_transformed = torch.zeros((conv2D.shape[0], 2, 2), device=conv2D.device)

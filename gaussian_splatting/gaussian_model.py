@@ -290,7 +290,7 @@ class GaussianModel(nn.Module):
         shs = self.get_features
 
         # Rasterize visible Gaussians to image, obtain their radii (on screen).
-        rendered_image, radii, depth_image, transform2d, tran_alpha, tran_det = rasterizer.motion_fusion(
+        rendered_image, radii, depth_image, motion2d, motion_alpha, motion_det, conv3d_equations = rasterizer.motion_fusion(
             motion_map=motion_map,
             means3D=means3D,
             means2D=means2D,
@@ -311,8 +311,9 @@ class GaussianModel(nn.Module):
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
             "depth": depth_image,
-            "transform2d": transform2d,
-            "tran_alpha": tran_alpha,
-            "tran_det": tran_det
+            "motion2d": motion2d,
+            "motion_alpha": motion_alpha,
+            "motion_det": motion_det,
+            "conv3d_equations": conv3d_equations
         }
         return out

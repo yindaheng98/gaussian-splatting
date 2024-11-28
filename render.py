@@ -51,6 +51,42 @@ def transform2d_pixel(H, W, device="cuda"):
     return xy_transformed, solution
 
 
+def solve_sigma(T, cov2D):
+    X = torch.zeros((T.shape[0], 3, 6), device=T.device)
+    # 1st row
+    X[..., 0, 0] = T[..., 0, 0] ** 2
+    X[..., 0, 1] = 2 * T[..., 0, 1] * T[..., 0, 0]
+    X[..., 0, 2] = 2 * T[..., 0, 2] * T[..., 0, 0]
+    X[..., 0, 3] = T[..., 0, 1] ** 2
+    X[..., 0, 4] = 2 * T[..., 0, 1] * T[..., 0, 2]
+    X[..., 0, 5] = T[..., 0, 2] ** 2
+    # 2nd row
+    X[..., 1, 0] = T[..., 1, 0] ** 2
+    X[..., 1, 1] = 2 * T[..., 1, 1] * T[..., 1, 0]
+    X[..., 1, 2] = 2 * T[..., 1, 2] * T[..., 1, 0]
+    X[..., 1, 3] = T[..., 1, 1] ** 2
+    X[..., 1, 4] = 2 * T[..., 1, 1] * T[..., 1, 2]
+    X[..., 1, 5] = T[..., 1, 2] ** 2
+    # 3rd row
+    X[..., 2, 0] = T[..., 1, 0] * T[..., 0, 0]
+    X[..., 2, 1] = T[..., 1, 1] * T[..., 0, 0] + T[..., 1, 0] * T[..., 0, 1]
+    X[..., 2, 2] = T[..., 1, 2] * T[..., 0, 0] + T[..., 1, 0] * T[..., 0, 2]
+    X[..., 2, 3] = T[..., 1, 1] * T[..., 0, 1]
+    X[..., 2, 4] = T[..., 1, 1] * T[..., 0, 2] + T[..., 1, 2] * T[..., 0, 1]
+    X[..., 2, 5] = T[..., 1, 2] * T[..., 0, 2]
+    # solve underdetermined system of equations
+    Y = torch.zeros((T.shape[0], 3, 1), device=T.device)
+    Y[..., 0, 0] = cov2D[..., 0, 0]
+    Y[..., 1, 0] = cov2D[..., 1, 1]
+    Y[..., 2, 0] = cov2D[..., 0, 1]
+    rank = torch.linalg.matrix_rank(X)
+    valid_idx = (rank == 3)
+    qr = torch.linalg.qr(X[valid_idx].transpose(1, 2))
+    sigma_flatten = qr.Q.bmm(torch.linalg.inv(qr.R).transpose(1, 2)).bmm(Y[valid_idx]).squeeze(-1)
+    print("A_{T} \Sigma_{3D} - b_{T}", (X.bmm(sigma_flatten.unsqueeze(-1)) - Y).abs().mean())
+    return sigma_flatten, valid_idx
+
+
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
     with open(os.path.join(destination, "cfg_args"), 'w') as cfg_log_f:
         cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
@@ -96,6 +132,10 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         qr = torch.linalg.qr(X[valid_idx].transpose(1, 2))
         sigma_flatten = qr.Q.bmm(torch.linalg.inv(qr.R).transpose(1, 2)).bmm(Y[valid_idx]).squeeze(-1)
         print("A_{T} \Sigma_{3D} - b_{T}", (X.bmm(sigma_flatten.unsqueeze(-1)) - Y).abs().mean())
+
+        sigma_flatten0 = sigma_flatten.clone()
+        sigma_flatten, valid_idx = solve_sigma(T, conv2D_transformed)
+        print((sigma_flatten0 - sigma_flatten).abs().mean())
         sigma = torch.zeros((sigma_flatten.shape[0], 3, 3), device=sigma_flatten.device)
         sigma[:, 0, 0] = sigma_flatten[:, 0]
         sigma[:, 0, 1] = sigma_flatten[:, 1]
@@ -122,6 +162,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
         print("A \Sigma_{2D} A^\\top - \Sigma'_{2D}", (A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
         print("T \Sigma'_{3D} T^\\top - \Sigma'_{2D}", (T.bmm(sigma).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D_transformed).abs().mean())
+        pass
 
 
 if __name__ == "__main__":

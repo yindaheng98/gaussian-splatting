@@ -130,18 +130,17 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
 
-        T0 = compoute_T(gaussians.get_xyz.detach(), camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.world_view_transform)
-
         print("\nframe", idx)
         valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-3) & (out['motion_alpha'] > 1e-3) & (out['pixhit'] > 1)
         motion_det = out['motion_det'][valid_idx]
         motion_alpha = out['motion_alpha'][valid_idx]
         pixhit = out['pixhit'][valid_idx]
         # verify exported data
-        B = out['motion2d'][..., 0:6].reshape(-1, 2, 3)[valid_idx]
+        B = out['motion2d'][valid_idx]
         eqs = out['conv3d_equations'][valid_idx]
-        T = out['motion2d'][..., 6:15].reshape(-1, 3, 3)[valid_idx]
-        print("T", (T[:, :2, :] - T0[valid_idx]).abs().max())
+        # T = out['motion2d'][..., 6:15].reshape(-1, 3, 3)[valid_idx]
+        T = compoute_T(gaussians.get_xyz.detach(), camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.world_view_transform)[valid_idx]
+        # print("T", (T[:, :2, :] - T0[valid_idx]).abs().max())
         A2D, b2D = B[..., :-1], B[..., -1]
         conv2D_transformed = torch.zeros((A2D.shape[0], 2, 2), device=A2D.device)
         conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]

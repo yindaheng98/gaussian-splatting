@@ -104,9 +104,10 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
 
         print("\nframe", idx)
-        valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-3) & (out['motion_alpha'] > 1e-3)
+        valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-3) & (out['motion_alpha'] > 1e-3) & (out['pixhit'] > 1)
         motion_det = out['motion_det'][valid_idx]
         motion_alpha = out['motion_alpha'][valid_idx]
+        pixhit = out['pixhit'][valid_idx]
         # verify exported data
         B = out['motion2d'][..., 0:6].reshape(-1, 2, 3)[valid_idx]
         eqs = out['conv3d_equations'][valid_idx]
@@ -142,6 +143,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
 
         motion_det = motion_det[valid_idx]
         motion_alpha = motion_alpha[valid_idx]
+        pixhit = pixhit[valid_idx]
         # verify equations
         B = B[valid_idx]
         eqs = eqs[valid_idx]

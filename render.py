@@ -150,9 +150,9 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
 
         # solve underdetermined system of equations
         X, Y = eqs[..., :-1], eqs[..., -1].unsqueeze(-1)
-        # X0, Y0 = X.clone(), Y.clone()
-        # X, Y = solve_sigma(T, conv2D_transformed)
-        # print((X0 - X).abs().mean(), (Y0 - Y).abs().mean())
+        X0, Y0 = X.clone(), Y.clone()
+        X, Y = solve_sigma(T, conv2D_transformed)
+        print((X0 - X).abs().mean(), (Y0 - Y).abs().mean())
         rank = torch.linalg.matrix_rank(X)
         valid_idx = (rank == 3)
         qr = torch.linalg.qr(X[valid_idx].transpose(1, 2))

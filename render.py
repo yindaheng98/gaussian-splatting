@@ -104,21 +104,19 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
 
         print("\nframe", idx)
-        # verify exported data
         valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-3) & (out['motion_alpha'] > 1e-3)
+        motion_det = out['motion_det'][valid_idx]
+        motion_alpha = out['motion_alpha'][valid_idx]
+        # verify exported data
         B = out['motion2d'][..., 0:6].reshape(-1, 2, 3)[valid_idx]
         eqs = out['conv3d_equations'][valid_idx]
-        conv3D = out['motion2d'][..., 6:15].reshape(-1, 3, 3)[valid_idx]
-        conv2D = out['motion2d'][..., 15:19].reshape(-1, 2, 2)[valid_idx]
-        T = out['motion2d'][..., 19:28].reshape(-1, 3, 3)[valid_idx]
-        print("T \Sigma_{3D} T^\\top - \Sigma_{2D}", (T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().mean())
+        T = out['motion2d'][..., 6:15].reshape(-1, 3, 3)[valid_idx]
         A2D, b2D = B[..., :-1], B[..., -1]
-        conv2D_transformed = torch.zeros((conv2D.shape[0], 2, 2), device=conv2D.device)
+        conv2D_transformed = torch.zeros((A2D.shape[0], 2, 2), device=A2D.device)
         conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]
         conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
-        print("A \Sigma_{2D} A^\\top - \Sigma'_{2D}", (A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
 
         # solve underdetermined system of equations
         X, Y = eqs[..., :-1], eqs[..., -1].unsqueeze(-1)
@@ -142,20 +140,18 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         sigma[:, 2, 1] = sigma_flatten[:, 4]
         sigma[:, 2, 2] = sigma_flatten[:, 5]
 
+        motion_det = motion_det[valid_idx]
+        motion_alpha = motion_alpha[valid_idx]
         # verify equations
         B = B[valid_idx]
         eqs = eqs[valid_idx]
-        conv3D = conv3D[valid_idx]
-        conv2D = conv2D[valid_idx]
         T = T[valid_idx]
-        print("T \Sigma_{3D} T^\\top - \Sigma_{2D}", (T.bmm(conv3D).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D).abs().mean())
         A2D, b2D = B[..., :-1], B[..., -1]
-        conv2D_transformed = torch.zeros((conv2D.shape[0], 2, 2), device=conv2D.device)
+        conv2D_transformed = torch.zeros((A2D.shape[0], 2, 2), device=A2D.device)
         conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]
         conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
-        print("A \Sigma_{2D} A^\\top - \Sigma'_{2D}", (A2D.bmm(conv2D).bmm(A2D.transpose(1, 2)) - conv2D_transformed).abs().mean())
         print("T \Sigma'_{3D} T^\\top - \Sigma'_{2D}", (T.bmm(sigma).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D_transformed).abs().mean())
         pass
 

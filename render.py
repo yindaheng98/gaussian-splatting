@@ -12,7 +12,7 @@ from gaussian_splatting.utils import psnr
 from lpipsPyTorch import lpips
 from gaussian_splatting.dataset import JSONCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
-from gaussian_splatting.diff_gaussian_rasterization.motion_utils import solve_cov3D, compute_T, compute_Jacobian
+from gaussian_splatting.diff_gaussian_rasterization.motion_utils import solve_cov3D, compute_T, compute_Jacobian, compute_cov2D, transform_cov2D, unflatten_symmetry_3x3
 
 parser = ArgumentParser()
 parser.add_argument("--sh_degree", default=3, type=int)
@@ -83,6 +83,9 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         B = out['motion2d'][valid_idx]
         eqs = out['conv3d_equations'][valid_idx]
         # T = out['motion2d'][..., 6:15].reshape(-1, 3, 3)[valid_idx]
+        # conv3D0 = out['motion2d'][..., 6:12][valid_idx]
+        conv3D = gaussians.get_covariance()[valid_idx]
+        # print("conv3D", (conv3D - conv3D0).abs().max())
         J = compute_Jacobian(gaussians.get_xyz.detach(), camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.world_view_transform)
         T = compute_T(J, camera.world_view_transform)[valid_idx]
         # print("T", (T[:, :2, :] - T0[valid_idx]).abs().max())
@@ -92,6 +95,10 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
         conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
+        conv2D_transformed0 = conv2D_transformed.clone()
+        conv2D = compute_cov2D(T, unflatten_symmetry_3x3(conv3D))
+        conv2D_transformed = transform_cov2D(A2D, conv2D)
+        print("T", (conv2D_transformed - conv2D_transformed0).abs().max())
 
         # solve underdetermined system of equations
         X, Y = eqs[..., :-1], eqs[..., -1].unsqueeze(-1)

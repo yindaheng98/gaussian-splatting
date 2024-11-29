@@ -81,7 +81,6 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         pixhit = out['pixhit'][valid_idx]
         # verify exported data
         B = out['motion2d'][valid_idx]
-        eqs = out['conv3d_equations'][valid_idx]
         # T = out['motion2d'][..., 6:15].reshape(-1, 3, 3)[valid_idx]
         # conv3D0 = out['motion2d'][..., 6:12][valid_idx]
         conv3D = gaussians.get_covariance()[valid_idx]
@@ -90,21 +89,11 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         T = compute_T(J, camera.world_view_transform)[valid_idx]
         # print("T", (T[:, :2, :] - T0[valid_idx]).abs().max())
         A2D, b2D = B[..., :-1], B[..., -1]
-        conv2D_transformed = torch.zeros((A2D.shape[0], 2, 2), device=A2D.device)
-        conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]
-        conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
-        conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
-        conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
-        conv2D_transformed0 = conv2D_transformed.clone()
         conv2D = compute_cov2D(T, unflatten_symmetry_3x3(conv3D))
         conv2D_transformed = transform_cov2D(A2D, conv2D)
-        print("T", (conv2D_transformed - conv2D_transformed0).abs().max())
 
         # solve underdetermined system of equations
-        X, Y = eqs[..., :-1], eqs[..., -1].unsqueeze(-1)
-        X0, Y0 = X.clone(), Y.clone()
         X, Y = solve_cov3D(gaussians.get_xyz.detach()[valid_idx], camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.world_view_transform, conv2D_transformed)
-        print((X0 - X).abs().mean(), (Y0 - Y).abs().mean())
         rank = torch.linalg.matrix_rank(X)
         valid_idx = (rank == 3)
         qr = torch.linalg.qr(X[valid_idx].transpose(1, 2))
@@ -127,14 +116,9 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         pixhit = pixhit[valid_idx]
         # verify equations
         B = B[valid_idx]
-        eqs = eqs[valid_idx]
         T = T[valid_idx]
         A2D, b2D = B[..., :-1], B[..., -1]
-        conv2D_transformed = torch.zeros((A2D.shape[0], 2, 2), device=A2D.device)
-        conv2D_transformed[:, 0, 0] = eqs[..., 0, -1]
-        conv2D_transformed[:, 0, 1] = eqs[..., 1, -1]
-        conv2D_transformed[:, 1, 0] = eqs[..., 1, -1]
-        conv2D_transformed[:, 1, 1] = eqs[..., 2, -1]
+        conv2D_transformed = conv2D_transformed[valid_idx]
         print("T \Sigma'_{3D} T^\\top - \Sigma'_{2D}", (T.bmm(sigma).bmm(T.transpose(1, 2))[:, :2, :2] - conv2D_transformed).abs().mean())
         pass
 

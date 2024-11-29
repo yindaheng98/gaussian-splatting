@@ -31,7 +31,7 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
         case "camera":
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply)
-            dataset = (ColmapTrainableCameraDataset(source) if load_camera else TrainableCameraDataset.from_json(load_camera)).to(device)
+            dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source)).to(device)
         case _:
             raise ValueError(f"Unknown mode: {mode}")
     return dataset, gaussians

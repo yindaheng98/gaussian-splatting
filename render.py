@@ -70,9 +70,9 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         features_part = out["features"] / out['features_alpha'].unsqueeze(-1)
         features_part[out['features_alpha'] < 1e-5, ...] = 0
         features = torch.ones((gaussians._features_dc.shape[0], features_part.shape[1]), dtype=features_part.dtype, device=device)
-        features[out["features_idx"] >= 0, :] = features_part[out["features_idx"][out["features_idx"] >= 0]]
+        features[out["features_idx"], :] = features_part
         features_alpha = torch.zeros((gaussians._features_dc.shape[0],), dtype=out['features_alpha'].dtype, device=device)
-        features_alpha[out["features_idx"] >= 0] = out['features_alpha'][out["features_idx"][out["features_idx"] >= 0]]
+        features_alpha[out["features_idx"]] = out['features_alpha']
         rendering = out["render"]
         gt = camera.ground_truth_image
         pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})

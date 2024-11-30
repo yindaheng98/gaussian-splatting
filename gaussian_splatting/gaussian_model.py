@@ -130,7 +130,7 @@ class GaussianModel(nn.Module):
             feature_map = torch.ones((raster_settings.image_height, raster_settings.image_width, 1), dtype=torch.float32, device=self._xyz.device)
 
         # Rasterize visible Gaussians to image, obtain their radii (on screen).
-        rendered_image, radii, depth_image, features, features_alpha = rasterizer(
+        rendered_image, radii, depth_image, features, features_alpha, features_idx = rasterizer(
             feature_map=feature_map,
             means3D=means3D,
             means2D=means2D,
@@ -152,7 +152,8 @@ class GaussianModel(nn.Module):
             "radii": radii,
             "depth": depth_image,
             "features": features,
-            "features_alpha": features_alpha
+            "features_alpha": features_alpha,
+            "features_idx": features_idx
         }
         return out
 

@@ -67,8 +67,12 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         feature_map = assign_color_block(16, camera)
         camera = camera._replace(feature_map=feature_map.to(device))
         out = gaussians(camera)
-        features = out["features"] / out['features_alpha'].unsqueeze(-1)
-        features[out['features_alpha'] < 1e-5, ...] = 0
+        features_part = out["features"] / out['features_alpha'].unsqueeze(-1)
+        features_part[out['features_alpha'] < 1e-5, ...] = 0
+        features = torch.ones((gaussians._features_dc.shape[0], features_part.shape[1]), dtype=features_part.dtype, device=device)
+        features[out["features_idx"] >= 0, :] = features_part[out["features_idx"][out["features_idx"] >= 0]]
+        features_alpha = torch.zeros((gaussians._features_dc.shape[0],), dtype=out['features_alpha'].dtype, device=device)
+        features_alpha[out["features_idx"] >= 0] = out['features_alpha'][out["features_idx"][out["features_idx"] >= 0]]
         rendering = out["render"]
         gt = camera.ground_truth_image
         pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
@@ -78,7 +82,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         makedirs(os.path.join(fusion_save_path, "point_cloud", "iteration_" + str(iteration)), exist_ok=True)
         with open(os.path.join(fusion_save_path, "cfg_args"), 'w') as cfg_log_f:
             cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
-        gaussians._opacity[out['features_alpha'] < 1] += gaussians.inverse_opacity_activation(out['features_alpha'][out['features_alpha'] < 1].unsqueeze(-1))
+        gaussians._opacity[features_alpha < 1] += gaussians.inverse_opacity_activation(features_alpha[features_alpha < 1].unsqueeze(-1))
         gaussians._opacity[gaussians.get_opacity < 0.05] = gaussians.inverse_opacity_activation(torch.tensor(0.05)).to(device)
         gaussians._features_dc[:, 0, :] = features
         gaussians._features_rest[...] = 0

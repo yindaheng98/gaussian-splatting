@@ -61,5 +61,9 @@ setup(
     ],
     cmdclass={
         'build_ext': BuildExtension
-    }
+    },
+    install_requires=[
+        'tqdm',
+        'plyfile',
+    ]
 )

@@ -18,17 +18,13 @@ We **refactored the original code following the standard Python package structur
 
 Install Pytorch and torchvision following the official guideline: [pytorch.org](https://pytorch.org/)
 
-Install Pillow, numpy and tqdm
-```python
-pip install Pillow numpy tqdm
-```
-
 ### Local Install
 
 ```shell
 git clone https://github.com/yindaheng98/gaussian-splatting --recursive
 cd gaussian-splatting
-pip install --target . --upgrade .
+pip install tqdm plyfile
+pip install --target . --upgrade . --no-deps
 ```
 
 ### Pip Install

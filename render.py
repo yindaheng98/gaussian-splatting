@@ -47,9 +47,16 @@ def transform2d_pixel(H, W, device="cuda"):
     b = (torch.rand(2).to(device) - 0.5) * H
     solution = torch.cat([b[:, None], A], dim=1).T
     xy_transformed = (xy.view(-1, 2) @ A.T + b).view(xy.shape)
-    # X = torch.cat([torch.ones((xy.view(-1, 2).shape[0], 1)).to(device=xy.device), xy.view(-1, 2)], dim=1)
-    # Y = xy_transformed.view(-1, 2)
-    # diff = solution - torch.linalg.lstsq(X, Y).solution
+    X = torch.cat([torch.ones((xy.view(-1, 2).shape[0], 1)).to(device=xy.device), xy.view(-1, 2)], dim=1)
+    Y = xy_transformed.view(-1, 2)
+    print(solution - torch.linalg.lstsq(X, Y).solution)
+    B = (X.T@X).inverse()@X.T@Y
+    print(B.T[:, 0] - b, B.T[:, 1:] - A)
+    v11 = X.unsqueeze(-1).bmm(X.unsqueeze(-1).transpose(1, 2)).sum(dim=0)
+    v12 = X.unsqueeze(-1).bmm(Y.unsqueeze(-1).transpose(1, 2)).sum(dim=0)
+    print((v11 - X.T@X) / v11, (v12 - X.T@Y) / v12)
+    randidx = torch.randint(0, X.shape[0], size=(30,), device=X.device)
+    print(X[randidx].unsqueeze(-1).bmm(X[randidx].unsqueeze(-1).transpose(1, 2)).sum(dim=0) - X[randidx].T@X[randidx])
     return xy_transformed, solution
 
 

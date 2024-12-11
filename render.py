@@ -12,7 +12,7 @@ from gaussian_splatting.utils import psnr
 from lpipsPyTorch import lpips
 from gaussian_splatting.dataset import JSONCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
-from gaussian_splatting.diff_gaussian_rasterization.motion_utils import solve_cov3D, compute_T, compute_Jacobian, compute_cov2D, transform_cov2D, unflatten_symmetry_3x3
+from gaussian_splatting.diff_gaussian_rasterization.motion_utils import solve_cov3D, solve_mean, compute_T, compute_Jacobian, compute_cov2D, transform_cov2D, unflatten_symmetry_3x3
 
 parser = ArgumentParser()
 parser.add_argument("--sh_degree", default=3, type=int)
@@ -82,7 +82,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
 
         print("\nframe", idx)
-        valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-3) & (out['motion_alpha'] > 1e-3) & (out['pixhit'] > 1)
+        valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-12) & (out['motion_alpha'] > 1e-3) & (out['pixhit'] > 1)
         motion_det = out['motion_det'][valid_idx]
         motion_alpha = out['motion_alpha'][valid_idx]
         pixhit = out['pixhit'][valid_idx]

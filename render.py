@@ -98,18 +98,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         A2D, b2D = B[..., :-1], B[..., -1]
 
         # solve mean
-        projmatrix = camera.full_proj_transform
-        p_orig = gaussians.get_xyz
-        p_hom = torch.cat([p_orig, torch.ones((p_orig.shape[0], 1), device=p_orig.device)], dim=1) @ projmatrix
-        p_hom_ = out["mean2D"][:, :4]
-        print("p_hom", (p_hom[p_hom_.abs().sum(1) > 0] - p_hom_[p_hom_.abs().sum(1) > 0]).abs().mean())
-        p_w = 1 / (p_hom[:, -1:] + 0.0000001)
-        p_proj = p_hom[:, :-1] * p_w
-        p_proj_ = out["mean2D"][:, 4:7]
-        print("p_proj", (p_proj[p_proj_.abs().sum(1) > 0] - p_proj_[p_proj_.abs().sum(1) > 0]).abs().mean())
-        W = camera.image_width
-        H = camera.image_height
-        point_image = ((p_proj[:, :2] + 1) * torch.tensor([[W, H]], device=p_proj.device) - 1) * 0.5
+        point_image = compute_mean2D(camera.full_proj_transform, camera.image_width, camera.image_height, gaussians.get_xyz.detach())
         point_image_ = out["mean2D"][:, 7:]
         print("point_image", (point_image[point_image_.abs().sum(1) > 0] - point_image[point_image_.abs().sum(1) > 0]).abs().mean())
 

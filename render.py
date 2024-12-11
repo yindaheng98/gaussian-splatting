@@ -105,8 +105,13 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         print("p_hom", (p_hom[p_hom_.abs().sum(1) > 0] - p_hom_[p_hom_.abs().sum(1) > 0]).abs().mean())
         p_w = 1 / (p_hom[:, -1:] + 0.0000001)
         p_proj = p_hom[:, :-1] * p_w
-        p_proj_ = out["mean2D"][:, 4:]
+        p_proj_ = out["mean2D"][:, 4:7]
         print("p_proj", (p_proj[p_proj_.abs().sum(1) > 0] - p_proj_[p_proj_.abs().sum(1) > 0]).abs().mean())
+        W = camera.image_width
+        H = camera.image_height
+        point_image = ((p_proj[:, :2] + 1) * torch.tensor([[W, H]], device=p_proj.device) - 1) * 0.5
+        point_image_ = out["mean2D"][:, 7:]
+        print("point_image", (point_image[point_image_.abs().sum(1) > 0] - point_image[point_image_.abs().sum(1) > 0]).abs().mean())
 
         # solve cov2D
         conv2D = compute_cov2D(T, unflatten_symmetry_3x3(conv3D))

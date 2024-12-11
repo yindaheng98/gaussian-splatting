@@ -96,13 +96,18 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         T = compute_T(J, camera.world_view_transform)[valid_idx]
         # print("T", (T[:, :2, :] - T0[valid_idx]).abs().max())
         A2D, b2D = B[..., :-1], B[..., -1]
-        
+
         # solve mean
         projmatrix = camera.full_proj_transform
         p_orig = gaussians.get_xyz
-        p_hom = projmatrix.T @ torch.cat([p_orig, torch.ones((p_orig.shape[0], 1), device=p_orig.device)], dim=1).T
-        print("p_hom", (p_hom.T[out["mean2D"].sum(1) > 0, ...] - out["mean2D"][out["mean2D"].sum(1) > 0, ...]).abs().mean())
-        
+        p_hom = torch.cat([p_orig, torch.ones((p_orig.shape[0], 1), device=p_orig.device)], dim=1) @ projmatrix
+        p_hom_ = out["mean2D"][:, :4]
+        print("p_hom", (p_hom[p_hom_.abs().sum(1) > 0] - p_hom_[p_hom_.abs().sum(1) > 0]).abs().mean())
+        p_w = 1 / (p_hom[:, -1:] + 0.0000001)
+        p_proj = p_hom[:, :-1] * p_w
+        p_proj_ = out["mean2D"][:, 4:]
+        print("p_proj", (p_proj[p_proj_.abs().sum(1) > 0] - p_proj_[p_proj_.abs().sum(1) > 0]).abs().mean())
+
         # solve cov2D
         conv2D = compute_cov2D(T, unflatten_symmetry_3x3(conv3D))
         conv2D_transformed = transform_cov2D(A2D, conv2D)

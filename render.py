@@ -12,7 +12,7 @@ from gaussian_splatting.utils import psnr
 from lpipsPyTorch import lpips
 from gaussian_splatting.dataset import JSONCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset
-from gaussian_splatting.diff_gaussian_rasterization.motion_utils import solve_cov3D, compute_mean2D, compute_T, compute_Jacobian, compute_cov2D, transform_cov2D, unflatten_symmetry_3x3
+from gaussian_splatting.diff_gaussian_rasterization.motion_utils import compute_mean2D_equations, solve_cov3D, compute_mean2D, compute_T, compute_Jacobian, compute_cov2D, transform_cov2D, unflatten_symmetry_3x3
 
 parser = ArgumentParser()
 parser.add_argument("--sh_degree", default=3, type=int)
@@ -44,7 +44,9 @@ def transform2d_pixel(H, W, device="cuda"):
     y = torch.arange(H, dtype=torch.float, device=device)
     xy = torch.stack(torch.meshgrid(x, y, indexing='xy'), dim=-1)
     A = torch.rand((2, 2)).to(device) - 0.5
+    A = torch.eye(2).to(device)
     b = (torch.rand(2).to(device) - 0.5) * H
+    b = torch.zeros(2).to(device)
     solution = torch.cat([b[:, None], A], dim=1).T
     xy_transformed = (xy.view(-1, 2) @ A.T + b).view(xy.shape)
     X = torch.cat([torch.ones((xy.view(-1, 2).shape[0], 1)).to(device=xy.device), xy.view(-1, 2)], dim=1)
@@ -99,8 +101,10 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
 
         # solve mean
         point_image = compute_mean2D(camera.full_proj_transform, camera.image_width, camera.image_height, gaussians.get_xyz.detach())
-        point_image_ = out["mean2D"][:, 7:]
-        print("point_image", (point_image[point_image_.abs().sum(1) > 0] - point_image[point_image_.abs().sum(1) > 0]).abs().mean())
+        # point_image_ = out["mean2D"][:, 7:]
+        # print("point_image", (point_image[point_image_.abs().sum(1) > 0] - point_image[point_image_.abs().sum(1) > 0]).abs().mean())
+        A = compute_mean2D_equations(camera.full_proj_transform, camera.image_width, camera.image_height, point_image[valid_idx] + b2D)
+        print("point_image", (A[..., :3] @ gaussians.get_xyz[valid_idx].detach().unsqueeze(-1) + A[..., 3:]).abs().mean())
 
         # solve cov2D
         conv2D = compute_cov2D(T, unflatten_symmetry_3x3(conv3D))

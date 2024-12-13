@@ -103,8 +103,8 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         point_image = compute_mean2D(camera.full_proj_transform, camera.image_width, camera.image_height, gaussians.get_xyz.detach())
         # point_image_ = out["mean2D"][:, 7:]
         # print("point_image", (point_image[point_image_.abs().sum(1) > 0] - point_image[point_image_.abs().sum(1) > 0]).abs().mean())
-        A = compute_mean2D_equations(camera.full_proj_transform, camera.image_width, camera.image_height, point_image[valid_idx] + b2D)
-        print("point_image", (A[..., :3] @ gaussians.get_xyz[valid_idx].detach().unsqueeze(-1) + A[..., 3:]).abs().mean())
+        A = compute_mean2D_equations(camera.full_proj_transform, camera.image_width, camera.image_height, point_image[valid_idx])
+        print("point_image identical", (A[..., :3] @ gaussians.get_xyz[valid_idx].detach().unsqueeze(-1) + A[..., 3:]).abs().mean())
 
         # solve cov2D
         conv2D = compute_cov2D(T, unflatten_symmetry_3x3(conv3D))

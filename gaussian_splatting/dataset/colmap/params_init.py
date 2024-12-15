@@ -94,16 +94,17 @@ def read_points3D_binary(path_to_model_file):
     return xyzs, rgbs, errors
 
 
-def colmap_init(model: GaussianModel, colmap_folder: str):
-    with torch.no_grad():
-        return _colmap_init(model, colmap_folder)
-
-
-def _colmap_init(model: GaussianModel, colmap_folder: str):
+def read_colmap_points3D(colmap_folder: str):
     try:
         init_path = os.path.join(colmap_folder, "sparse/0", "points3D.bin")
-        xyz, rgb, _ = read_points3D_binary(init_path)
+        xyz, rgb, errors = read_points3D_binary(init_path)
     except:
         init_path = os.path.join(colmap_folder, "sparse/0", "points3D.txt")
-        xyz, rgb, _ = read_points3D_text(init_path)
-    return model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
+        xyz, rgb, errors = read_points3D_text(init_path)
+    return xyz, rgb, errors
+
+
+def colmap_init(model: GaussianModel, colmap_folder: str):
+    with torch.no_grad():
+        xyz, rgb, _ = read_colmap_points3D(colmap_folder)
+        return model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)

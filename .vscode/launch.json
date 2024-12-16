@@ -1,14 +1,11 @@
 {
-    // 使用 IntelliSense 了解相关属性。 
-    // 悬停以查看现有属性的描述。
-    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
             "name": "train",
             "type": "debugpy",
             "request": "launch",
-            "program": "train.py",
+            "module": "gaussian_splatting.train",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -26,7 +23,7 @@
             "name": "train camera",
             "type": "debugpy",
             "request": "launch",
-            "program": "train.py",
+            "module": "gaussian_splatting.train",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -48,7 +45,7 @@
             "name": "render",
             "type": "debugpy",
             "request": "launch",
-            "program": "render.py",
+            "module": "gaussian_splatting.render",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -68,7 +65,7 @@
             "name": "render camera",
             "type": "debugpy",
             "request": "launch",
-            "program": "render.py",
+            "module": "gaussian_splatting.render",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [

@@ -40,6 +40,7 @@ if os.name == 'nt':
 
 setup(
     name="gaussian_splatting",
+    version='1.0',
     packages=packages + list(rasterizor_packages.keys()),
     package_dir={
         'gaussian_splatting': 'gaussian_splatting',

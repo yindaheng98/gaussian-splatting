@@ -20,15 +20,10 @@ parser.add_argument("--load_camera", default=None, type=str)
 parser.add_argument("--mode", choices=["pure", "densify", "camera"], default="pure")
 parser.add_argument("--save_iterations", nargs="+", type=int, default=[7000, 30000])
 parser.add_argument("--device", default="cuda", type=str)
-parser.add_argument("--config", default=None, type=str)
+parser.add_argument("-o", "--option", default=[], action='append', type=str)
 
 
-def read_config(config_path: str):
-    with open(config_path, "r") as f:
-        return json.load(f)
-
-
-def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, configs={}):
+def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, configs={}):
     match mode:
         case "pure":
             gaussians = GaussianModel(sh_degree).to(device)
@@ -68,8 +63,8 @@ def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
     with open(os.path.join(destination, "cfg_args"), 'w') as cfg_log_f:
         cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
-    configs = {} if args.config is None else read_config(args.config)
-    dataset, gaussians, trainer = init_gaussians(
+    configs = {o.split("=", 1)[0]: eval(o.split("=", 1)[1]) for o in args.option}
+    dataset, gaussians, trainer = prepare_training(
         sh_degree=sh_degree, source=source, device=device, mode=args.mode,
         load_ply=args.load_ply, load_camera=args.load_camera, configs=configs)
     dataset.save_cameras(os.path.join(destination, "cameras.json"))

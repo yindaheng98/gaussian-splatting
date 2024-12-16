@@ -1,3 +1,4 @@
+from typing import Tuple
 import torch
 import os
 from tqdm import tqdm
@@ -7,10 +8,10 @@ from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, TrainableCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, ColmapTrainableCameraDataset
 from gaussian_splatting.utils import psnr
-from lpipsPyTorch import lpips
+from gaussian_splatting.utils.lpipsPyTorch import lpips
 
 
-def prepare_rendering(sh_degree: int, source: str, device: str, mode: str, load_ply: str, load_camera: str = None):
+def prepare_rendering(sh_degree: int, source: str, device: str, mode: str, load_ply: str, load_camera: str = None) -> Tuple[CameraDataset, GaussianModel]:
     match mode:
         case "pure" | "densify":
             gaussians = GaussianModel(sh_degree).to(device)

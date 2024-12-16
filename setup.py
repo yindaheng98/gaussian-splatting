@@ -9,7 +9,7 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from torch.utils.cpp_extension import CUDAExtension, BuildExtension
 import os
 rasterizor_root = "submodules/diff-gaussian-rasterization"
@@ -25,16 +25,11 @@ simpleknn_sources = [
     "simple_knn.cu",
     "ext.cpp"]
 
-package_dir = {
-    'gaussian_splatting': 'gaussian_splatting',
-    'gaussian_splatting.utils': 'gaussian_splatting/utils',
-    'gaussian_splatting.trainer': 'gaussian_splatting/trainer',
-    'gaussian_splatting.dataset': 'gaussian_splatting/dataset',
-    'gaussian_splatting.dataset.colmap': 'gaussian_splatting/dataset/colmap',
+packages = ['gaussian_splatting'] + ["gaussian_splatting." + package for package in find_packages(where="gaussian_splatting")]
+rasterizor_packages = {
     'gaussian_splatting.diff_gaussian_rasterization': 'submodules/diff-gaussian-rasterization/diff_gaussian_rasterization',
     'gaussian_splatting.simple_knn': 'submodules/simple-knn/simple_knn',
 }
-
 
 cxx_compiler_flags = []
 nvcc_compiler_flags = []
@@ -45,8 +40,11 @@ if os.name == 'nt':
 
 setup(
     name="gaussian_splatting",
-    packages=[key for key in package_dir],
-    package_dir=package_dir,
+    packages=packages + list(rasterizor_packages.keys()),
+    package_dir={
+        'gaussian_splatting': 'gaussian_splatting',
+        **rasterizor_packages
+    },
     ext_modules=[
         CUDAExtension(
             name="gaussian_splatting.diff_gaussian_rasterization._C",

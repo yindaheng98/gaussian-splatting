@@ -37,27 +37,29 @@ pip install --upgrade git+https://github.com/yindaheng98/gaussian-splatting.git@
 
 1. Train 3DGS with densification (same with original 3DGS)
 ```shell
-python train.py -s data/truck -d output/truck -i 30000 --mode densify
+python -m gaussian_splatting.train -s data/truck -d output/truck -i 30000 --mode densify
 ```
 
 2. Render it
 ```shell
-python render.py -s data/truck -d output/truck -i 30000 --mode densify
+python -m gaussian_splatting.render -s data/truck -d output/truck -i 30000 --mode densify
 ```
 
 3. Joint training 3DGS and camera (load the trained 3DGS)
 ```shell
-python train.py -s data/truck -d output/truck-camera -i 30000 --mode camera -l output/truck/point_cloud/iteration_30000/point_cloud.ply
+python -m gaussian_splatting.train -s data/truck -d output/truck-camera -i 30000 --mode camera -l output/truck/point_cloud/iteration_30000/point_cloud.ply
 ```
 
 4. Render it with trained 3DGS
 ```shell
-python render.py -s data/truck -d output/truck-camera -i 30000 --mode camera --load_camera output/truck-camera/cameras.json
+python -m gaussian_splatting.render -s data/truck -d output/truck-camera -i 30000 --mode camera --load_camera output/truck-camera/cameras.json
 ```
 
 ## Usage
 
-**See [train.py](train.py) and [render.py](render.py) for full example.**
+**See [.vscode/launch.json](.vscode/launch.json) for more example.**
+
+**See [gaussian_splatting.train](gaussian_splatting/train.py) and [gaussian_splatting.render](gaussian_splatting/render.py) for full options.**
 
 ### Gaussian models
 

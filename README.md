@@ -29,6 +29,8 @@ pip install --target . --upgrade . --no-deps
 
 ### Pip Install
 
+You can download wheel from [Releases](https://github.com/yindaheng98/gaussian-splatting/releases), or
+install latest from source:
 ```shell
 pip install --upgrade git+https://github.com/yindaheng98/gaussian-splatting.git@master
 ```

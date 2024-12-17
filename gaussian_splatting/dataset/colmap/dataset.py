@@ -25,19 +25,8 @@ class ColmapCamera(NamedTuple):
     image_path: str
 
 
-def read_colmap_cameras(colmap_folder):
+def parse_colmap_camera(cam_extrinsics, cam_intrinsics, image_dir):
     cameras = []
-    path = colmap_folder
-    try:
-        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
-        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
-        cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
-        cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
-    except:
-        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.txt")
-        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
-        cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
-        cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
     for _, key in enumerate(cam_extrinsics):
         extr = cam_extrinsics[key]
         intr = cam_intrinsics[extr.camera_id]
@@ -57,7 +46,7 @@ def read_colmap_cameras(colmap_folder):
         else:
             raise ValueError("Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!")
 
-        image_path = os.path.join(os.path.join(path, "images"), extr.name)
+        image_path = os.path.join(image_dir, extr.name)
         cameras.append(ColmapCamera(
             image_height=height, image_width=width,
             R=torch.from_numpy(R), T=torch.from_numpy(T),
@@ -65,6 +54,31 @@ def read_colmap_cameras(colmap_folder):
             image_path=image_path
         ))
     return cameras
+
+
+def read_cameras_binary(cameras_extrinsic_file, cameras_intrinsic_file, image_dir):
+    cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
+    cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
+    return parse_colmap_camera(cam_extrinsics, cam_intrinsics, image_dir)
+
+
+def read_cameras_text(cameras_extrinsic_file, cameras_intrinsic_file, image_dir):
+    cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
+    cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
+    return parse_colmap_camera(cam_extrinsics, cam_intrinsics, image_dir)
+
+
+def read_colmap_cameras(colmap_folder):
+    path = colmap_folder
+    image_dir = os.path.join(path, "images")
+    try:
+        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
+        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
+        return read_cameras_binary(cameras_extrinsic_file, cameras_intrinsic_file, image_dir)
+    except:
+        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.txt")
+        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
+        return read_cameras_text(cameras_extrinsic_file, cameras_intrinsic_file, image_dir)
 
 
 class ColmapCameraDataset(CameraDataset):

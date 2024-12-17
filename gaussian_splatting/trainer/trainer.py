@@ -140,6 +140,15 @@ class BaseTrainer(AbstractTrainer):
 
 
 class TrainerWrapper(AbstractTrainer):
+    '''
+    This class is designed to wrap a trainer and add additional functionality.
+    Without this class, you should modify the trainer class directly.
+    
+    e.g.
+    2 trainer in this package are inherited from this class: Densifier and CameraOptimizer.
+    You can easily combine them to get a "DensifierCameraOptimizer" by Densifier(CameraOptimizer(AbstractTrainer(...), ...), ...),
+    rather than define a new class "DensifierCameraOptimizer" that inherents from Densifier and CameraOptimizer.
+    '''
     def __init__(self, base_trainer: AbstractTrainer):
         super().__init__()
         self.base_trainer = base_trainer

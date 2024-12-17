@@ -37,6 +37,8 @@ pip install --upgrade git+https://github.com/yindaheng98/gaussian-splatting.git@
 
 ## Running
 
+Download dataset [T&T+DB COLMAP (650MB)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/input/tandt_db.zip) and extract to `./data` directory.
+
 1. Train 3DGS with densification (same with original 3DGS)
 ```shell
 python -m gaussian_splatting.train -s data/truck -d output/truck -i 30000 --mode densify
@@ -56,6 +58,9 @@ python -m gaussian_splatting.train -s data/truck -d output/truck-camera -i 30000
 ```shell
 python -m gaussian_splatting.render -s data/truck -d output/truck-camera -i 30000 --mode camera --load_camera output/truck-camera/cameras.json
 ```
+
+This repo do not contrains code for initialization.
+If you want to create your own scene, please refer to [InstantSplat](https://github.com/yindaheng98/InstantSplat) or use [convert.py](https://github.com/graphdeco-inria/gaussian-splatting/blob/main/convert.py).
 
 ## Usage
 

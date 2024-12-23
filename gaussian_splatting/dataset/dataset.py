@@ -5,10 +5,9 @@ import torch
 
 from gaussian_splatting.utils import getWorld2View2
 from gaussian_splatting.camera import Camera, camera2dict, dict2camera
-from torch.utils.data import Dataset
 
 
-class CameraDataset(Dataset):
+class CameraDataset:
 
     @abstractmethod
     def to(self, device) -> 'CameraDataset':
@@ -31,7 +30,7 @@ class CameraDataset(Dataset):
         return scene_extent.item()
 
 
-class JSONCameraDataset(Dataset):
+class JSONCameraDataset(CameraDataset):
     def __init__(self, path):
         with open(path, 'r') as f:
             self.json_cameras = json.load(f)

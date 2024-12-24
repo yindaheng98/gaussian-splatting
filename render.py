@@ -5,6 +5,7 @@ from tqdm import tqdm
 from os import makedirs
 import torchvision
 from argparse import ArgumentParser, Namespace
+import matplotlib.pyplot as plt
 from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import TrainableCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapTrainableCameraDataset
@@ -22,6 +23,8 @@ parser.add_argument("-i", "--iteration", required=True, type=int)
 parser.add_argument("--load_camera", default=None, type=str)
 parser.add_argument("--mode", choices=["pure", "densify", "camera"], default="pure")
 parser.add_argument("--device", default="cuda", type=str)
+parser.add_argument("--trackdir", default=None, type=str)
+parser.add_argument("--frame_idx", default=None, type=int)
 
 
 def init_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply: str, load_camera: str = None):
@@ -62,9 +65,26 @@ def transform2d_pixel(H, W, device="cuda"):
     return xy_transformed, solution
 
 
+def transform2d_read(path, frame_idx, device="cuda"):
+    return torch.load(path, map_location=device)[frame_idx, ..., :2]
+
+
+def draw_motion(rendering, point_image, point_image_after, save_path):
+    import numpy as np
+    mask = ((point_image_after - point_image).abs() > 1).any(-1)
+    rendering = (rendering.cpu().numpy().transpose(1, 2, 0)*255).astype(np.uint8)
+    point_image = point_image[mask].cpu().numpy().astype(np.int32)
+    point_image_after = point_image_after[mask].cpu().numpy().astype(np.int32)
+    plt.imshow(rendering)
+    plt.quiver(point_image[:, 0], point_image[:, 1], point_image_after[:, 0], point_image_after[:, 1], angles='xy', scale_units='xy', width=0.001, headwidth=1, minshaft=1, minlength=1)
+    plt.xlim(0, rendering.shape[1])
+    plt.ylim(rendering.shape[0], 0)
+    plt.axis('off')
+    plt.savefig(save_path, dpi=2400, bbox_inches='tight')
+    plt.close()
+
+
 def main(sh_degree: int, source: str, destination: str, iteration: int, device: str, args):
-    with open(os.path.join(destination, "cfg_args"), 'w') as cfg_log_f:
-        cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
     dataset, gaussians = init_gaussians(
         sh_degree=sh_degree, source=source, device=device, mode=args.mode,
         load_ply=os.path.join(destination, "point_cloud", "iteration_" + str(iteration), "point_cloud.ply"),
@@ -74,14 +94,23 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     makedirs(render_path, exist_ok=True)
     makedirs(gt_path, exist_ok=True)
     pbar = tqdm(dataset, desc="Rendering progress")
-    for idx, camera in enumerate(pbar):
-        xy_transformed, solution = transform2d_pixel(camera.image_height, camera.image_width, device=device)
+    for camera in pbar:
+        idx = os.path.splitext(os.path.basename(camera.ground_truth_image_path))[0]
+        if args.trackdir is not None:
+            xy_transformed = transform2d_read(os.path.join(args.trackdir, idx + "track.pt"), args.frame_idx, device=device)
+            camera = camera._replace(image_height=xy_transformed.shape[0], image_width=xy_transformed.shape[1])
+        else:
+            xy_transformed, solution = transform2d_pixel(camera.image_height, camera.image_width, device=device)
         out = gaussians.motion_fusion(camera, xy_transformed)
         rendering = out["render"]
-        gt = camera.ground_truth_image
+        gt = torchvision.io.read_image(os.path.join(args.trackdir, idx + "video", "00.png")).to(device).float() / 255.0
         pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
-        torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
-        torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
+        torchvision.utils.save_image(rendering, os.path.join(render_path, idx.zfill(5) + ".png"))
+        torchvision.utils.save_image(gt, os.path.join(gt_path, idx.zfill(5) + ".png"))
+        x = torch.arange(camera.image_width, dtype=torch.float, device=device)
+        y = torch.arange(camera.image_height, dtype=torch.float, device=device)
+        xy = torch.stack(torch.meshgrid(x, y, indexing='xy'), dim=-1)
+        draw_motion(rendering, xy.reshape(-1, 2), xy_transformed.reshape(-1, 2), os.path.join(render_path, idx.zfill(5) + "_track.png"))
 
         print("\nframe", idx)
         valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-12) & (out['motion_alpha'] > 1e-3) & (out['pixhit'] > 1)
@@ -105,11 +134,14 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         # print("point_image", (point_image[point_image_.abs().sum(1) > 0] - point_image[point_image_.abs().sum(1) > 0]).abs().mean())
         A = compute_mean2D_equations(camera.full_proj_transform, camera.image_width, camera.image_height, point_image[valid_idx])
         print("point_image identical", (A[..., :3] @ gaussians.get_xyz[valid_idx].detach().unsqueeze(-1) + A[..., 3:]).abs().mean())
+        point_image_after = point_image[valid_idx] + b2D
+        draw_motion(rendering, point_image[valid_idx], point_image_after, os.path.join(render_path, idx.zfill(5) + "_motion.png"))
 
         # solve cov2D
         conv2D = compute_cov2D(T, unflatten_symmetry_3x3(conv3D))
         conv2D_transformed = transform_cov2D(A2D, conv2D)
 
+        continue  # !skip the following code
         # solve underdetermined system of equations
         X, Y = solve_cov3D(gaussians.get_xyz.detach()[valid_idx], camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.world_view_transform, conv2D_transformed)
         rank = torch.linalg.matrix_rank(X)

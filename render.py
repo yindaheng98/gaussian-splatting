@@ -136,6 +136,8 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         print("point_image identical", (A[..., :3] @ gaussians.get_xyz[valid_idx].detach().unsqueeze(-1) + A[..., 3:]).abs().mean())
         point_image_after = point_image[valid_idx] + b2D
         range_mask = (0 < point_image).all(-1) & (point_image[:, 0] < camera.image_width) & (point_image[:, 1] < camera.image_height)
+        # range_mask[valid_idx] &= (0 < point_image_after).all(-1) & (point_image_after[:, 0] < camera.image_width) & (point_image_after[:, 1] < camera.image_height)
+        # range_mask[valid_idx] &= (b2D.abs() < 100).all(-1)
         draw_motion(rendering, point_image[range_mask & valid_idx], point_image_after[range_mask[valid_idx]], os.path.join(render_path, idx.zfill(5) + "_motion.png"))
 
         # solve cov2D

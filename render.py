@@ -71,16 +71,16 @@ def transform2d_read(path, frame_idx, device="cuda"):
 
 def draw_motion(rendering, point_image, point_image_after, save_path):
     import numpy as np
-    mask = ((point_image_after - point_image).abs() > 1).any(-1)
+    mask = ((point_image_after - point_image).abs() > 4).any(-1)
     rendering = (rendering.cpu().numpy().transpose(1, 2, 0)*255).astype(np.uint8)
+    point_image_motion = (point_image_after[mask] - point_image[mask]).cpu().numpy().astype(np.int32)
     point_image = point_image[mask].cpu().numpy().astype(np.int32)
-    point_image_after = point_image_after[mask].cpu().numpy().astype(np.int32)
     plt.imshow(rendering)
-    plt.quiver(point_image[:, 0], point_image[:, 1], point_image_after[:, 0], point_image_after[:, 1], angles='xy', scale_units='xy', width=0.001, headwidth=1, minshaft=1, minlength=1)
+    plt.quiver(point_image[:, 0], point_image[:, 1], point_image_motion[:, 0], point_image_motion[:, 1], angles='xy', scale_units='xy', scale=1, width=0.0001, headwidth=1, minshaft=1, minlength=1)
     plt.xlim(0, rendering.shape[1])
     plt.ylim(rendering.shape[0], 0)
     plt.axis('off')
-    plt.savefig(save_path, dpi=2400, bbox_inches='tight')
+    plt.savefig(save_path, dpi=1200, bbox_inches='tight')
     plt.close()
 
 
@@ -135,7 +135,8 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         A = compute_mean2D_equations(camera.full_proj_transform, camera.image_width, camera.image_height, point_image[valid_idx])
         print("point_image identical", (A[..., :3] @ gaussians.get_xyz[valid_idx].detach().unsqueeze(-1) + A[..., 3:]).abs().mean())
         point_image_after = point_image[valid_idx] + b2D
-        draw_motion(rendering, point_image[valid_idx], point_image_after, os.path.join(render_path, idx.zfill(5) + "_motion.png"))
+        range_mask = (0 < point_image).all(-1) & (point_image[:, 0] < camera.image_width) & (point_image[:, 1] < camera.image_height)
+        draw_motion(rendering, point_image[range_mask & valid_idx], point_image_after[range_mask[valid_idx]], os.path.join(render_path, idx.zfill(5) + "_motion.png"))
 
         # solve cov2D
         conv2D = compute_cov2D(T, unflatten_symmetry_3x3(conv3D))

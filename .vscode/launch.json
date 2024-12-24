@@ -53,15 +53,17 @@
             "justMyCode": false,
             "args": [
                 "-s",
-                "data/truck",
+                "data/walking/frame60",
                 "-d",
-                "output/truck",
+                "output/walking/frame60",
                 "-i",
-                "30000",
+                "1000",
                 "--mode",
-                "densify",
-                "--load_camera",
-                "output/truck/cameras.json",
+                "pure",
+                "--trackdir",
+                "output/walking/tracks/frame60-frame69",
+                "--frame_idx",
+                "9",
             ]
         },
         {

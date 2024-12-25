@@ -48,8 +48,8 @@ def transform2d_pixel(H, W, device="cuda"):
     xy = torch.stack(torch.meshgrid(x, y, indexing='xy'), dim=-1)
     A = torch.rand((2, 2)).to(device) - 0.5
     A = torch.eye(2).to(device)
-    b = (torch.rand(2).to(device) - 0.5) * H
-    b = torch.zeros(2).to(device)
+    b = (torch.rand(2).to(device) - 0.5) * 100
+    # b = torch.zeros(2).to(device)
     solution = torch.cat([b[:, None], A], dim=1).T
     xy_transformed = (xy.view(-1, 2) @ A.T + b).view(xy.shape)
     X = torch.cat([torch.ones((xy.view(-1, 2).shape[0], 1)).to(device=xy.device), xy.view(-1, 2)], dim=1)
@@ -62,7 +62,8 @@ def transform2d_pixel(H, W, device="cuda"):
     print((v11 - X.T@X) / v11, (v12 - X.T@Y) / v12)
     randidx = torch.randint(0, X.shape[0], size=(30,), device=X.device)
     print(X[randidx].unsqueeze(-1).bmm(X[randidx].unsqueeze(-1).transpose(1, 2)).sum(dim=0) - X[randidx].T@X[randidx])
-    return xy_transformed, solution
+    xy[H*2//8:H*4//8, W*2//8:W*4//8] = xy_transformed[H*3//8:H*5//8, W*3//8:W*5//8]
+    return xy, solution
 
 
 def transform2d_read(path, frame_idx, device="cuda"):
@@ -96,14 +97,14 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
     pbar = tqdm(dataset, desc="Rendering progress")
     for camera in pbar:
         idx = os.path.splitext(os.path.basename(camera.ground_truth_image_path))[0]
-        if args.trackdir is not None:
+        gt = torchvision.io.read_image(os.path.join(args.trackdir, idx + "video", "00.png")).to(device).float() / 255.0
+        camera = camera._replace(image_height=gt.shape[1], image_width=gt.shape[2])
+        if args.frame_idx is not None:
             xy_transformed = transform2d_read(os.path.join(args.trackdir, idx + "track.pt"), args.frame_idx, device=device)
-            camera = camera._replace(image_height=xy_transformed.shape[0], image_width=xy_transformed.shape[1])
         else:
             xy_transformed, solution = transform2d_pixel(camera.image_height, camera.image_width, device=device)
         out = gaussians.motion_fusion(camera, xy_transformed)
         rendering = out["render"]
-        gt = torchvision.io.read_image(os.path.join(args.trackdir, idx + "video", "00.png")).to(device).float() / 255.0
         pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
         torchvision.utils.save_image(rendering, os.path.join(render_path, idx.zfill(5) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, idx.zfill(5) + ".png"))
@@ -113,7 +114,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         draw_motion(rendering, xy.reshape(-1, 2), xy_transformed.reshape(-1, 2), os.path.join(render_path, idx.zfill(5) + "_track.png"))
 
         print("\nframe", idx)
-        valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-12) & (out['motion_alpha'] > 1e-3) & (out['pixhit'] > 1)
+        valid_idx = (out['radii'] > 0) & (out['motion_det'] > 1e-12) & (out['motion_alpha'] > 1e-3) & (out['pixhit'] > 5)
         motion_det = out['motion_det'][valid_idx]
         motion_alpha = out['motion_alpha'][valid_idx]
         pixhit = out['pixhit'][valid_idx]
@@ -134,7 +135,7 @@ def main(sh_degree: int, source: str, destination: str, iteration: int, device: 
         # print("point_image", (point_image[point_image_.abs().sum(1) > 0] - point_image[point_image_.abs().sum(1) > 0]).abs().mean())
         A = compute_mean2D_equations(camera.full_proj_transform, camera.image_width, camera.image_height, point_image[valid_idx])
         print("point_image identical", (A[..., :3] @ gaussians.get_xyz[valid_idx].detach().unsqueeze(-1) + A[..., 3:]).abs().mean())
-        point_image_after = point_image[valid_idx] + b2D
+        point_image_after = ((A2D @ point_image[valid_idx].view(-1, 2).unsqueeze(-1)).squeeze(-1) + b2D).view(point_image[valid_idx].shape)
         range_mask = (0 < point_image).all(-1) & (point_image[:, 0] < camera.image_width) & (point_image[:, 1] < camera.image_height)
         # range_mask[valid_idx] &= (0 < point_image_after).all(-1) & (point_image_after[:, 0] < camera.image_width) & (point_image_after[:, 1] < camera.image_height)
         # range_mask[valid_idx] &= (b2D.abs() < 100).all(-1)

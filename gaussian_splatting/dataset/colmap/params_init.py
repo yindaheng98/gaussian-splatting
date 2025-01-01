@@ -1,12 +1,10 @@
 import os
 import struct
-from typing import List
 import numpy as np
 import torch
+from plyfile import PlyData
 
-from gaussian_splatting import Camera, GaussianModel
-from gaussian_splatting.utils import getWorld2View2
-from .dataset import CameraDataset
+from gaussian_splatting import GaussianModel
 
 
 def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="<"):
@@ -94,7 +92,19 @@ def read_points3D_binary(path_to_model_file):
     return xyzs, rgbs, errors
 
 
+def read_points3D_ply(path_to_model_file):
+    plydata = PlyData.read(path_to_model_file)
+    vertices = plydata['vertex']
+    xyz = np.vstack([vertices['x'], vertices['y'], vertices['z']]).T
+    rgb = np.vstack([vertices['red'], vertices['green'], vertices['blue']]).T
+    return xyz, rgb, None
+
+
 def read_colmap_points3D(colmap_folder: str):
+    init_path = os.path.join(colmap_folder, "sparse/0", "points3D.ply")
+    if os.path.exists(init_path):
+        xyz, rgb, errors = read_points3D_ply(init_path)
+        return xyz, rgb, errors
     try:
         init_path = os.path.join(colmap_folder, "sparse/0", "points3D.bin")
         xyz, rgb, errors = read_points3D_binary(init_path)

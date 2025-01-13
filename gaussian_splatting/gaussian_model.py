@@ -46,12 +46,12 @@ class GaussianModel(nn.Module):
         self.antialiasing = False
 
     def to(self, device):
-        self._xyz = self._xyz.to(device)
-        self._features_dc = self._features_dc.to(device)
-        self._features_rest = self._features_rest.to(device)
-        self._opacity = self._opacity.to(device)
-        self._scaling = self._scaling.to(device)
-        self._rotation = self._rotation.to(device)
+        self._xyz = nn.Parameter(self._xyz.to(device))
+        self._features_dc = nn.Parameter(self._features_dc.to(device))
+        self._features_rest = nn.Parameter(self._features_rest.to(device))
+        self._opacity = nn.Parameter(self._opacity.to(device))
+        self._scaling = nn.Parameter(self._scaling.to(device))
+        self._rotation = nn.Parameter(self._rotation.to(device))
         return self
 
     @property

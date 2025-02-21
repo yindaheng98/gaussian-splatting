@@ -1,4 +1,4 @@
-name: Python package
+name: Python package for Windows
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-2019]
+        os: [windows-2019]
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: python -m pip install --upgrade pip setuptools wheel
+        run: python -m pip install --upgrade pip setuptools wheel twine
       - name: Install pytorch
         run: pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
       - name: Setup CUDA
@@ -33,26 +33,9 @@ jobs:
           method: "network"
           sub-packages: '["nvcc", "cudart"]'
       - name: Build package
-        run: python setup.py bdist_wheel
+        run: python setup.py bdist_wheel sdist
         env:
           TORCH_CUDA_ARCH_LIST: Turing
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wheel-${{ matrix.os }}-${{ matrix.python-version }}
-          path: dist/*
-          retention-days: 1
-          compression-level: 0
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
       - name: Publish release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "wheel-*/*"
-          allowUpdates: true
-          makeLatest: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -m twine upload dist/* --username __token__ --password ${{ secrets.PIP_API_TOKEN }} --skip-existing

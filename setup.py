@@ -12,6 +12,10 @@
 from setuptools import setup, find_packages
 from torch.utils.cpp_extension import CUDAExtension, BuildExtension
 import os
+
+with open("README.md", "r", encoding='utf8') as fh:
+    long_description = fh.read()
+
 rasterizor_root = "submodules/diff-gaussian-rasterization"
 rasterizor_sources = [
     "cuda_rasterizer/rasterizer_impl.cu",

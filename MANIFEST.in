@@ -1,0 +1,6 @@
+include MANIFEST.in
+include LICENSE.md
+recursive-include submodules/diff-gaussian-rasterization/cuda_rasterizer *.*
+recursive-include submodules/diff-gaussian-rasterization/third_party *.*
+recursive-include submodules/simple-knn *.*
+prune */__pycache__

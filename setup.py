@@ -45,6 +45,17 @@ if os.name == 'nt':
 setup(
     name="gaussian_splatting",
     version='1.0',
+    author='yindaheng98',
+    author_email='yindaheng98@gmail.com',
+    url='https://github.com/yindaheng98/gaussian-splatting',
+    description=u'Refactored python training and inference code for 3D Gaussian Splatting',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: Gaussian-Splatting License",
+        "Operating System :: OS Independent",
+    ],
     packages=packages + list(rasterizor_packages.keys()),
     package_dir={
         'gaussian_splatting': 'gaussian_splatting',

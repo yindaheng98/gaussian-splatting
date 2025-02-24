@@ -1,4 +1,5 @@
-from typing import Dict
+from abc import ABC, abstractmethod
+from typing import Dict, NamedTuple
 import torch
 import torch.nn as nn
 from gaussian_splatting.utils import build_rotation
@@ -7,42 +8,56 @@ from gaussian_splatting.gaussian_model import GaussianModel
 from .trainer import AbstractTrainer, BaseTrainer, TrainerWrapper
 
 
-class _Densifier:
-    def __init__(self,
-                 model: GaussianModel, optimizer: torch.optim.Optimizer,
+class DensificationParams(NamedTuple):
+    new_xyz: torch.Tensor
+    new_features_dc: torch.Tensor
+    new_features_rest: torch.Tensor
+    new_opacities: torch.Tensor
+    new_scaling: torch.Tensor
+    new_rotation: torch.Tensor
+    remove_mask: torch.Tensor
+
+
+class AbstractDensifier(ABC):
+
+    @abstractmethod
+    def update_densification_stats(self, out):
+        raise NotImplementedError
+
+    @abstractmethod
+    def densify_and_prune(self) -> DensificationParams:
+        raise NotImplementedError
+
+
+class Densifier(AbstractDensifier):
+
+    def __init__(self, model: GaussianModel, scene_extent,
                  percent_dense=0.01,
+                 densify_grad_threshold=0.0002,
+                 densify_opacity_threshold=0.005,
+                 prune_screensize_threshold=20,
+                 prune_screensize_from_step=1000,
                  device=None):
         self.model = model
-        self.optimizer = optimizer
+        self.scene_extent = scene_extent
         self.percent_dense = percent_dense
-        device = device if device is not None else model._xyz.device
-        self.xyz_gradient_accum = torch.zeros((model.get_xyz.shape[0], 1), device=device)
-        self.denom = torch.zeros((model.get_xyz.shape[0], 1), device=device)
-        self.max_radii2D = torch.zeros((model.get_xyz.shape[0]), device=device)
+        self.densify_grad_threshold = densify_grad_threshold
+        self.densify_opacity_threshold = densify_opacity_threshold
+        self.prune_screensize_threshold = prune_screensize_threshold
+        self.prune_screensize_from_step = prune_screensize_from_step
+        self.update_counter = 0
 
-    def add_densification_stats(self, viewspace_point_tensor, update_filter):
-        self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter, :2], dim=-1, keepdim=True)
-        self.denom[update_filter] += 1
+        self.device = device if device is not None else model._xyz.device
+        self.xyz_gradient_accum = torch.zeros((model.get_xyz.shape[0], 1), device=self.device)
+        self.denom = torch.zeros((model.get_xyz.shape[0], 1), device=self.device)
+        self.max_radii2D = torch.zeros((model.get_xyz.shape[0]), device=self.device)
 
-    def update_densification_stats(self, radii, viewspace_points, visibility_filter):
+    def update_densification_stats(self, out):
+        viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
         self.max_radii2D[visibility_filter] = torch.max(self.max_radii2D[visibility_filter], radii[visibility_filter])
-        self.add_densification_stats(viewspace_points, visibility_filter)
-
-    def densify_and_prune(self, max_grad, min_opacity, extent, max_screen_size):
-        grads = self.xyz_gradient_accum / self.denom
-        grads[grads.isnan()] = 0.0
-
-        self.densify_and_clone(grads, max_grad, extent)
-        self.densify_and_split(grads, max_grad, extent)
-
-        prune_mask = (self.model.get_opacity < min_opacity).squeeze()
-        if max_screen_size:
-            big_points_vs = self.max_radii2D > max_screen_size
-            big_points_ws = self.model.get_scaling.max(dim=1).values > 0.1 * extent
-            prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
-        self.prune_points(prune_mask)
-
-        torch.cuda.empty_cache()
+        self.xyz_gradient_accum[visibility_filter] += torch.norm(viewspace_points.grad[visibility_filter, :2], dim=-1, keepdim=True)
+        self.denom[visibility_filter] += 1
+        self.update_counter += 1
 
     def densify_and_split(self, grads, grad_threshold, scene_extent, N=2):
         n_init_points = self.model.get_xyz.shape[0]
@@ -64,10 +79,15 @@ class _Densifier:
         new_features_rest = self.model._features_rest[selected_pts_mask].repeat(N, 1, 1)
         new_opacity = self.model._opacity[selected_pts_mask].repeat(N, 1)
 
-        self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation)
-
-        prune_filter = torch.cat((selected_pts_mask, torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
-        self.prune_points(prune_filter)
+        return DensificationParams(
+            new_xyz=new_xyz,
+            new_features_dc=new_features_dc,
+            new_features_rest=new_features_rest,
+            new_opacities=new_opacity,
+            new_scaling=new_scaling,
+            new_rotation=new_rotation,
+            remove_mask=selected_pts_mask
+        )
 
     def densify_and_clone(self, grads, grad_threshold, scene_extent):
         # Extract points that satisfy the gradient condition
@@ -82,103 +102,62 @@ class _Densifier:
         new_scaling = self.model._scaling[selected_pts_mask]
         new_rotation = self.model._rotation[selected_pts_mask]
 
-        self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation)
+        return DensificationParams(
+            new_xyz=new_xyz,
+            new_features_dc=new_features_dc,
+            new_features_rest=new_features_rest,
+            new_opacities=new_opacities,
+            new_scaling=new_scaling,
+            new_rotation=new_rotation,
+            remove_mask=None
+        )
 
-    def densification_postfix(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):
-        d = {"xyz": new_xyz,
-             "f_dc": new_features_dc,
-             "f_rest": new_features_rest,
-             "opacity": new_opacities,
-             "scaling": new_scaling,
-             "rotation": new_rotation}
+    def densify_and_prune(self):
+        grads = self.xyz_gradient_accum / self.denom
+        grads[grads.isnan()] = 0.0
 
-        optimizable_tensors = self.cat_tensors_to_optimizer(d)
-        self.model._xyz = optimizable_tensors["xyz"]
-        self.model._features_dc = optimizable_tensors["f_dc"]
-        self.model._features_rest = optimizable_tensors["f_rest"]
-        self.model._opacity = optimizable_tensors["opacity"]
-        self.model._scaling = optimizable_tensors["scaling"]
-        self.model._rotation = optimizable_tensors["rotation"]
+        clone = self.densify_and_clone(grads, self.densify_grad_threshold, self.scene_extent)
+        split = self.densify_and_split(grads, self.densify_grad_threshold, self.scene_extent)
 
-        self.xyz_gradient_accum = torch.zeros((self.model.get_xyz.shape[0], 1), device="cuda")
-        self.denom = torch.zeros((self.model.get_xyz.shape[0], 1), device="cuda")
-        self.max_radii2D = torch.zeros((self.model.get_xyz.shape[0]), device="cuda")
+        remove_mask = split.remove_mask
+        if self.update_counter > self.prune_screensize_from_step:
+            prune_mask = (self.model.get_opacity < self.densify_opacity_threshold).squeeze()
+            big_points_vs = self.max_radii2D > self.prune_screensize_threshold
+            big_points_ws = self.model.get_scaling.max(dim=1).values > 0.1 * self.scene_extent
+            prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
 
-    def cat_tensors_to_optimizer(self, tensors_dict):
-        optimizable_tensors = {}
-        for group in self.optimizer.param_groups:
-            assert len(group["params"]) == 1
-            extension_tensor = tensors_dict[group["name"]]
-            stored_state = self.optimizer.state.get(group['params'][0], None)
-            if stored_state is not None:
+            remove_mask = torch.logical_or(prune_mask, split.remove_mask)
 
-                stored_state["exp_avg"] = torch.cat((stored_state["exp_avg"], torch.zeros_like(extension_tensor)), dim=0)
-                stored_state["exp_avg_sq"] = torch.cat((stored_state["exp_avg_sq"], torch.zeros_like(extension_tensor)), dim=0)
+        new_size = self.model.get_xyz.shape[0] + clone.new_xyz.shape[0] + split.new_xyz.shape[0] - remove_mask.sum()
+        self.xyz_gradient_accum = torch.zeros((new_size, 1), device=self.device)
+        self.denom = torch.zeros((new_size, 1), device=self.device)
+        self.max_radii2D = torch.zeros((new_size), device=self.device)
 
-                del self.optimizer.state[group['params'][0]]
-                group["params"][0] = nn.Parameter(torch.cat((group["params"][0], extension_tensor), dim=0).requires_grad_(True))
-                self.optimizer.state[group['params'][0]] = stored_state
+        return DensificationParams(
+            new_xyz=torch.cat((clone.new_xyz, split.new_xyz), dim=0),
+            new_features_dc=torch.cat((clone.new_features_dc, split.new_features_dc), dim=0),
+            new_features_rest=torch.cat((clone.new_features_rest, split.new_features_rest), dim=0),
+            new_opacities=torch.cat((clone.new_opacities, split.new_opacities), dim=0),
+            new_scaling=torch.cat((clone.new_scaling, split.new_scaling), dim=0),
+            new_rotation=torch.cat((clone.new_rotation, split.new_rotation), dim=0),
+            remove_mask=remove_mask
+        )
 
-                optimizable_tensors[group["name"]] = group["params"][0]
-            else:
-                group["params"][0] = nn.Parameter(torch.cat((group["params"][0], extension_tensor), dim=0).requires_grad_(True))
-                optimizable_tensors[group["name"]] = group["params"][0]
 
-        return optimizable_tensors
+def replace_tensor_to_optimizer(optimizer: torch.optim.Optimizer, tensor, name):
+    optimizable_tensors = {}
+    for group in optimizer.param_groups:
+        if group["name"] == name:
+            stored_state = optimizer.state.get(group['params'][0], None)
+            stored_state["exp_avg"] = torch.zeros_like(tensor)
+            stored_state["exp_avg_sq"] = torch.zeros_like(tensor)
 
-    def prune_points(self, mask):
-        valid_points_mask = ~mask
-        optimizable_tensors = self._prune_optimizer(valid_points_mask)
+            del optimizer.state[group['params'][0]]
+            group["params"][0] = nn.Parameter(tensor.requires_grad_(True))
+            optimizer.state[group['params'][0]] = stored_state
 
-        self.model._xyz = optimizable_tensors["xyz"]
-        self.model._features_dc = optimizable_tensors["f_dc"]
-        self.model._features_rest = optimizable_tensors["f_rest"]
-        self.model._opacity = optimizable_tensors["opacity"]
-        self.model._scaling = optimizable_tensors["scaling"]
-        self.model._rotation = optimizable_tensors["rotation"]
-
-        self.xyz_gradient_accum = self.xyz_gradient_accum[valid_points_mask]
-
-        self.denom = self.denom[valid_points_mask]
-        self.max_radii2D = self.max_radii2D[valid_points_mask]
-
-    def _prune_optimizer(self, mask):
-        optimizable_tensors = {}
-        for group in self.optimizer.param_groups:
-            stored_state = self.optimizer.state.get(group['params'][0], None)
-            if stored_state is not None:
-                stored_state["exp_avg"] = stored_state["exp_avg"][mask]
-                stored_state["exp_avg_sq"] = stored_state["exp_avg_sq"][mask]
-
-                del self.optimizer.state[group['params'][0]]
-                group["params"][0] = nn.Parameter((group["params"][0][mask].requires_grad_(True)))
-                self.optimizer.state[group['params'][0]] = stored_state
-
-                optimizable_tensors[group["name"]] = group["params"][0]
-            else:
-                group["params"][0] = nn.Parameter(group["params"][0][mask].requires_grad_(True))
-                optimizable_tensors[group["name"]] = group["params"][0]
-        return optimizable_tensors
-
-    def reset_opacity(self):
-        opacities_new = self.model.inverse_opacity_activation(torch.min(self.model.get_opacity, torch.ones_like(self.model.get_opacity)*0.01))
-        optimizable_tensors = self.replace_tensor_to_optimizer(opacities_new, "opacity")
-        self.model._opacity = optimizable_tensors["opacity"]
-
-    def replace_tensor_to_optimizer(self, tensor, name):
-        optimizable_tensors = {}
-        for group in self.optimizer.param_groups:
-            if group["name"] == name:
-                stored_state = self.optimizer.state.get(group['params'][0], None)
-                stored_state["exp_avg"] = torch.zeros_like(tensor)
-                stored_state["exp_avg_sq"] = torch.zeros_like(tensor)
-
-                del self.optimizer.state[group['params'][0]]
-                group["params"][0] = nn.Parameter(tensor.requires_grad_(True))
-                self.optimizer.state[group['params'][0]] = stored_state
-
-                optimizable_tensors[group["name"]] = group["params"][0]
-        return optimizable_tensors
+            optimizable_tensors[group["name"]] = group["params"][0]
+    return optimizable_tensors
 
 
 def cat_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dict[str, torch.Tensor]):
@@ -227,26 +206,21 @@ def mask_tensors_in_optimizer(optimizer: torch.optim.Optimizer, prune_mask: torc
     return optimizable_tensors
 
 
-class Densifier(TrainerWrapper):
+class DensificationTrainer(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
+            densifier: AbstractDensifier,
             densify_from_iter: int,
             densify_until_iter: int,
             densification_interval: int,
             opacity_reset_interval: int,
-            scene_extent: float,
-            densify_grad_threshold=0.0002,
-            percent_dense=0.01
     ):
         super().__init__(base_trainer)
-        self.densifier = _Densifier(self.model, self.optimizer)
-        self.scene_extent = scene_extent
+        self.densifier = densifier
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
         self.densification_interval = densification_interval
         self.opacity_reset_interval = opacity_reset_interval
-        self.densify_grad_threshold = densify_grad_threshold
-        self.percent_dense = percent_dense
 
     def add_points(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):
         optimizable_tensors = cat_tensors_to_optimizer(self.optimizer, {
@@ -274,33 +248,51 @@ class Densifier(TrainerWrapper):
         self.model._scaling = optimizable_tensors["scaling"]
         self.model._rotation = optimizable_tensors["rotation"]
 
+    def densify_and_prune(self, params: DensificationParams):
+        self.remove_points(params.remove_mask)
+        self.add_points(
+            params.new_xyz,
+            params.new_features_dc,
+            params.new_features_rest,
+            params.new_opacities,
+            params.new_scaling,
+            params.new_rotation)
+
     def step(self, camera):
         self.update_learning_rate()
         loss, out = self.forward_backward(camera)
-        viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
         with torch.no_grad():
             if self.curr_step < self.densify_until_iter:
-                self.densifier.update_densification_stats(radii, viewspace_points, visibility_filter)
+                self.densifier.update_densification_stats(out)
                 if self.curr_step >= self.densify_from_iter and self.curr_step % self.densification_interval == 0:
-                    size_threshold = 20 if self.curr_step > self.opacity_reset_interval else None
-                    self.densifier.densify_and_prune(self.densify_grad_threshold, 0.005, self.scene_extent, size_threshold)
+                    self.densify_and_prune(self.densifier.densify_and_prune())
+                    torch.cuda.empty_cache()
                 if self.curr_step % self.opacity_reset_interval == 0:
-                    self.densifier.reset_opacity()
+                    opacities_new = self.model.inverse_opacity_activation(torch.min(self.model.get_opacity, torch.ones_like(self.model.get_opacity)*0.01))
+                    optimizable_tensors = replace_tensor_to_optimizer(self.optimizer, opacities_new, "opacity")
+                    self.model._opacity = optimizable_tensors["opacity"]
+                    torch.cuda.empty_cache()
         self.optim_step()
         return loss, out
 
 
-def DensificationTrainer(
+def BaseDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
         densify_from_iter=500,
         densify_until_iter=15000,
         densification_interval=100,
         opacity_reset_interval=3000,
-        densify_grad_threshold=0.0002,
         percent_dense=0.01,
+        densify_grad_threshold=0.0002,
+        densify_opacity_threshold=0.005,
+        prune_screensize_threshold=20,
+        prune_screensize_from_step=1000,
         *args, **kwargs):
-    return Densifier(
+    return DensificationTrainer(
         BaseTrainer(model, scene_extent, *args, **kwargs),
-        densify_from_iter, densify_until_iter, densification_interval, opacity_reset_interval, scene_extent, densify_grad_threshold, percent_dense
+        Densifier(model, scene_extent, percent_dense,
+                  densify_grad_threshold, densify_opacity_threshold,
+                  prune_screensize_threshold, prune_screensize_from_step),
+        densify_from_iter, densify_until_iter, densification_interval, opacity_reset_interval
     )

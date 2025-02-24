@@ -162,7 +162,7 @@ class TrainerWrapper(AbstractTrainer):
         self.base_trainer.curr_step = v
 
     @property
-    def model(self) -> nn.Module:
+    def model(self) -> GaussianModel:
         return self.base_trainer.model
 
     @property

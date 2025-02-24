@@ -1,3 +1,4 @@
+from typing import Dict
 import torch
 import torch.nn as nn
 from gaussian_splatting.utils import build_rotation
@@ -180,6 +181,52 @@ class _Densifier:
         return optimizable_tensors
 
 
+def cat_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dict[str, torch.Tensor]):
+    optimizable_tensors = {}
+    for group in optimizer.param_groups:
+        assert len(group["params"]) == 1
+        extension_tensor = tensors_dict[group["name"]]
+        stored_state = optimizer.state.get(group['params'][0], None)
+        if stored_state is not None:
+
+            stored_state["exp_avg"] = torch.cat((stored_state["exp_avg"], torch.zeros_like(extension_tensor)), dim=0)
+            stored_state["exp_avg_sq"] = torch.cat((stored_state["exp_avg_sq"], torch.zeros_like(extension_tensor)), dim=0)
+
+            del optimizer.state[group['params'][0]]
+            group["params"][0] = nn.Parameter(torch.cat((group["params"][0], extension_tensor), dim=0).requires_grad_(True))
+            optimizer.state[group['params'][0]] = stored_state
+
+            optimizable_tensors[group["name"]] = group["params"][0]
+        else:
+            group["params"][0] = nn.Parameter(torch.cat((group["params"][0], extension_tensor), dim=0).requires_grad_(True))
+            optimizable_tensors[group["name"]] = group["params"][0]
+
+    return optimizable_tensors
+
+
+def mask_tensors_in_optimizer(optimizer: torch.optim.Optimizer, prune_mask: torch.Tensor):
+    optimizable_tensors = {}
+    for group in optimizer.param_groups:
+        assert len(group["params"]) == 1
+        mask = ~prune_mask
+        stored_state = optimizer.state.get(group['params'][0], None)
+        if stored_state is not None:
+
+            stored_state["exp_avg"] = stored_state["exp_avg"][mask]
+            stored_state["exp_avg_sq"] = stored_state["exp_avg_sq"][mask]
+
+            del optimizer.state[group['params'][0]]
+            group["params"][0] = nn.Parameter((group["params"][0][mask].requires_grad_(True)))
+            optimizer.state[group['params'][0]] = stored_state
+
+            optimizable_tensors[group["name"]] = group["params"][0]
+        else:
+            group["params"][0] = nn.Parameter(group["params"][0][mask].requires_grad_(True))
+            optimizable_tensors[group["name"]] = group["params"][0]
+
+    return optimizable_tensors
+
+
 class Densifier(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
@@ -200,6 +247,32 @@ class Densifier(TrainerWrapper):
         self.opacity_reset_interval = opacity_reset_interval
         self.densify_grad_threshold = densify_grad_threshold
         self.percent_dense = percent_dense
+
+    def add_points(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):
+        optimizable_tensors = cat_tensors_to_optimizer(self.optimizer, {
+            "xyz": new_xyz,
+            "f_dc": new_features_dc,
+            "f_rest": new_features_rest,
+            "opacity": new_opacities,
+            "scaling": new_scaling,
+            "rotation": new_rotation})
+
+        self.model._xyz = optimizable_tensors["xyz"]
+        self.model._features_dc = optimizable_tensors["f_dc"]
+        self.model._features_rest = optimizable_tensors["f_rest"]
+        self.model._opacity = optimizable_tensors["opacity"]
+        self.model._scaling = optimizable_tensors["scaling"]
+        self.model._rotation = optimizable_tensors["rotation"]
+
+    def remove_points(self, rm_mask):
+        optimizable_tensors = mask_tensors_in_optimizer(self.optimizer, rm_mask)
+
+        self.model._xyz = optimizable_tensors["xyz"]
+        self.model._features_dc = optimizable_tensors["f_dc"]
+        self.model._features_rest = optimizable_tensors["f_rest"]
+        self.model._opacity = optimizable_tensors["opacity"]
+        self.model._scaling = optimizable_tensors["scaling"]
+        self.model._rotation = optimizable_tensors["rotation"]
 
     def step(self, camera):
         self.update_learning_rate()

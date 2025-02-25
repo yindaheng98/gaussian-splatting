@@ -35,8 +35,8 @@ class Densifier(AbstractDensifier):
                  percent_dense=0.01,
                  densify_grad_threshold=0.0002,
                  densify_opacity_threshold=0.005,
+                 prune_from_iter=1000,
                  prune_screensize_threshold=20,
-                 prune_screensize_from_step=1000,
                  device=None):
         self.model = model
         self.scene_extent = scene_extent
@@ -44,7 +44,7 @@ class Densifier(AbstractDensifier):
         self.densify_grad_threshold = densify_grad_threshold
         self.densify_opacity_threshold = densify_opacity_threshold
         self.prune_screensize_threshold = prune_screensize_threshold
-        self.prune_screensize_from_step = prune_screensize_from_step
+        self.prune_from_iter = prune_from_iter
         self.update_counter = 0
 
         self.device = device if device is not None else model._xyz.device
@@ -120,7 +120,7 @@ class Densifier(AbstractDensifier):
         split = self.densify_and_split(grads, self.densify_grad_threshold, self.scene_extent)
 
         remove_mask = split.remove_mask
-        if self.update_counter > self.prune_screensize_from_step:
+        if self.update_counter > self.prune_from_iter:
             prune_mask = (self.model.get_opacity < self.densify_opacity_threshold).squeeze()
             big_points_vs = self.max_radii2D > self.prune_screensize_threshold
             big_points_ws = self.model.get_scaling.max(dim=1).values > 0.1 * self.scene_extent
@@ -248,7 +248,8 @@ class DensificationTrainer(TrainerWrapper):
         self.model._scaling = optimizable_tensors["scaling"]
         self.model._rotation = optimizable_tensors["rotation"]
 
-    def densify_and_prune(self, params: DensificationParams):
+    def densify_and_prune(self):
+        params = self.densifier.densify_and_prune()
         self.remove_points(params.remove_mask)
         self.add_points(
             params.new_xyz,
@@ -257,6 +258,7 @@ class DensificationTrainer(TrainerWrapper):
             params.new_opacities,
             params.new_scaling,
             params.new_rotation)
+        torch.cuda.empty_cache()
 
     def step(self, camera):
         self.update_learning_rate()
@@ -265,8 +267,7 @@ class DensificationTrainer(TrainerWrapper):
             if self.curr_step < self.densify_until_iter:
                 self.densifier.update_densification_stats(out)
                 if self.curr_step >= self.densify_from_iter and self.curr_step % self.densification_interval == 0:
-                    self.densify_and_prune(self.densifier.densify_and_prune())
-                    torch.cuda.empty_cache()
+                    self.densify_and_prune()
                 if self.curr_step % self.opacity_reset_interval == 0:
                     opacities_new = self.model.inverse_opacity_activation(torch.min(self.model.get_opacity, torch.ones_like(self.model.get_opacity)*0.01))
                     optimizable_tensors = replace_tensor_to_optimizer(self.optimizer, opacities_new, "opacity")
@@ -286,13 +287,15 @@ def BaseDensificationTrainer(
         percent_dense=0.01,
         densify_grad_threshold=0.0002,
         densify_opacity_threshold=0.005,
+        prune_from_iter=1000,
         prune_screensize_threshold=20,
-        prune_screensize_from_step=1000,
+        device=None,
         *args, **kwargs):
     return DensificationTrainer(
         BaseTrainer(model, scene_extent, *args, **kwargs),
         Densifier(model, scene_extent, percent_dense,
                   densify_grad_threshold, densify_opacity_threshold,
-                  prune_screensize_threshold, prune_screensize_from_step),
+                  prune_from_iter, prune_screensize_threshold,
+                  device=device),
         densify_from_iter, densify_until_iter, densification_interval, opacity_reset_interval
     )

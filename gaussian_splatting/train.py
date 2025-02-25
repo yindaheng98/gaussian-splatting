@@ -29,7 +29,8 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
             trainer = BaseDensificationTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
-                **configs
+                **configs,
+                device=device
             )
         case "camera":
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
@@ -106,6 +107,7 @@ if __name__ == "__main__":
         sh_degree=args.sh_degree, source=args.source, device=args.device, mode=args.mode,
         load_ply=args.load_ply, load_camera=args.load_camera, configs=configs)
     dataset.save_cameras(os.path.join(args.destination, "cameras.json"))
+    torch.cuda.empty_cache()
     training(
         dataset=dataset, gaussians=gaussians, trainer=trainer,
         destination=args.destination, iteration=args.iteration, save_iterations=args.save_iterations,

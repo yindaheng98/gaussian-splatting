@@ -143,16 +143,18 @@ class TrainerWrapper(AbstractTrainer):
     '''
     This class is designed to wrap a trainer and add additional functionality.
     Without this class, you should modify the trainer class directly.
-    
+
     e.g.
     2 trainer in this package are inherited from this class: Densifier and CameraOptimizer.
     You can easily combine them to get a "DensifierCameraOptimizer" by Densifier(CameraOptimizer(AbstractTrainer(...), ...), ...),
     rather than define a new class "DensifierCameraOptimizer" that inherents from Densifier and CameraOptimizer.
     '''
+
     def __init__(self, base_trainer: AbstractTrainer):
         super().__init__()
         self.base_trainer = base_trainer
 
+    # Implement the abstract methods of `AbstractTrainer`
     @property
     def curr_step(self) -> int:
         return self.base_trainer.curr_step
@@ -175,3 +177,15 @@ class TrainerWrapper(AbstractTrainer):
 
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         return self.base_trainer.loss(out, camera)
+
+    # Override the methods of `AbstractTrainer`
+    def update_learning_rate(self):
+        return self.base_trainer.update_learning_rate()
+
+    def optim_step(self):
+        return self.base_trainer.optim_step()
+
+    """
+    The top-level methods `forward_backward` and `step` should call the overrided `loss`, `update_learning_rate` and `optim_step`.
+    So do not override them to be `self.base_trainer.forward_backward` and `self.base_trainer.step`.
+    """

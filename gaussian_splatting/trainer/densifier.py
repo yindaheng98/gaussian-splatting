@@ -6,6 +6,7 @@ from gaussian_splatting.utils import build_rotation
 from gaussian_splatting.gaussian_model import GaussianModel
 
 from .trainer import AbstractTrainer, BaseTrainer, TrainerWrapper
+from .opacity_reset import OpacityResetTrainer
 
 
 class DensificationParams(NamedTuple):
@@ -144,22 +145,6 @@ class Densifier(AbstractDensifier):
         )
 
 
-def replace_tensor_to_optimizer(optimizer: torch.optim.Optimizer, tensor, name):
-    optimizable_tensors = {}
-    for group in optimizer.param_groups:
-        if group["name"] == name:
-            stored_state = optimizer.state.get(group['params'][0], None)
-            stored_state["exp_avg"] = torch.zeros_like(tensor)
-            stored_state["exp_avg_sq"] = torch.zeros_like(tensor)
-
-            del optimizer.state[group['params'][0]]
-            group["params"][0] = nn.Parameter(tensor.requires_grad_(True))
-            optimizer.state[group['params'][0]] = stored_state
-
-            optimizable_tensors[group["name"]] = group["params"][0]
-    return optimizable_tensors
-
-
 def cat_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dict[str, torch.Tensor]):
     optimizable_tensors = {}
     for group in optimizer.param_groups:
@@ -213,14 +198,12 @@ class DensificationTrainer(TrainerWrapper):
             densify_from_iter: int,
             densify_until_iter: int,
             densification_interval: int,
-            opacity_reset_interval: int,
     ):
         super().__init__(base_trainer)
         self.densifier = densifier
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
         self.densification_interval = densification_interval
-        self.opacity_reset_interval = opacity_reset_interval
 
     def add_points(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):
         optimizable_tensors = cat_tensors_to_optimizer(self.optimizer, {
@@ -268,11 +251,6 @@ class DensificationTrainer(TrainerWrapper):
                 self.densifier.update_densification_stats(out)
                 if self.curr_step >= self.densify_from_iter and self.curr_step % self.densification_interval == 0:
                     self.densify_and_prune()
-                if self.curr_step % self.opacity_reset_interval == 0:
-                    opacities_new = self.model.inverse_opacity_activation(torch.min(self.model.get_opacity, torch.ones_like(self.model.get_opacity)*0.01))
-                    optimizable_tensors = replace_tensor_to_optimizer(self.optimizer, opacities_new, "opacity")
-                    self.model._opacity = optimizable_tensors["opacity"]
-                    torch.cuda.empty_cache()
         self.optim_step()
         return loss, out
 
@@ -292,10 +270,13 @@ def BaseDensificationTrainer(
         device=None,
         *args, **kwargs):
     return DensificationTrainer(
-        BaseTrainer(model, scene_extent, *args, **kwargs),
+        OpacityResetTrainer(
+            BaseTrainer(model, scene_extent, *args, **kwargs),
+            opacity_reset_until_iter=densify_until_iter,
+            opacity_reset_interval=opacity_reset_interval),
         Densifier(model, scene_extent, percent_dense,
                   densify_grad_threshold, densify_opacity_threshold,
                   prune_from_iter, prune_screensize_threshold,
                   device=device),
-        densify_from_iter, densify_until_iter, densification_interval, opacity_reset_interval
+        densify_from_iter, densify_until_iter, densification_interval
     )

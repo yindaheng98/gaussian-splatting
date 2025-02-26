@@ -54,15 +54,15 @@ class AbstractTrainer(ABC):
         out = self.model(camera)
         loss = self.loss(out, camera)
         loss.backward()
-        self.before_optim_hook(out, camera)
+        self.before_optim_hook(loss=loss, out=out, camera=camera)
         self.optim_step()
-        self.after_optim_hook(out, camera)
+        self.after_optim_hook(loss=loss, out=out, camera=camera)
         return loss, out
 
-    def before_optim_hook(self, out, camera: Camera):
+    def before_optim_hook(self, loss: torch.Tensor, out: dict, camera: Camera):
         pass
 
-    def after_optim_hook(self, out, camera: Camera):
+    def after_optim_hook(self, loss: torch.Tensor, out: dict, camera: Camera):
         pass
 
 
@@ -179,11 +179,11 @@ class TrainerWrapper(AbstractTrainer):
     def optim_step(self):
         return self.base_trainer.optim_step()
 
-    def before_optim_hook(self, out, camera: Camera):
-        return self.base_trainer.before_optim_hook(out, camera)
+    def before_optim_hook(self, loss: torch.Tensor, out: dict, camera: Camera):
+        return self.base_trainer.before_optim_hook(loss=loss, out=out, camera=camera)
 
-    def after_optim_hook(self, out, camera: Camera):
-        return self.base_trainer.after_optim_hook(out, camera)
+    def after_optim_hook(self, loss: torch.Tensor, out: dict, camera: Camera):
+        return self.base_trainer.after_optim_hook(loss=loss, out=out, camera=camera)
 
     """
     The top-level methods `step` should call the overrided `loss`, `update_learning_rate` and `optim_step`.

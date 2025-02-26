@@ -254,7 +254,7 @@ class DensificationTrainer(BaseTrainer):
             params.new_rotation)
         torch.cuda.empty_cache()
 
-    def before_optim_hook(self, out, _):
+    def before_optim_hook(self, loss, out, camera):
         with torch.no_grad():
             if self.curr_step < self.densify_until_iter:
                 self.densifier.update_densification_stats(out)

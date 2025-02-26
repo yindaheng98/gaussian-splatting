@@ -248,7 +248,3 @@ class GaussianModel(nn.Module):
         self._opacity = nn.Parameter(torch.tensor(opacities, dtype=torch.float, device=device).requires_grad_(True))
         self._scaling = nn.Parameter(torch.tensor(scales, dtype=torch.float, device=device).requires_grad_(True))
         self._rotation = nn.Parameter(torch.tensor(rots, dtype=torch.float, device=device).requires_grad_(True))
-        self.activate_all_sh_degree()
-
-    def activate_all_sh_degree(self):
-        self.active_sh_degree = self.max_sh_degree

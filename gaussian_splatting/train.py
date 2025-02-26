@@ -8,7 +8,20 @@ from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
-from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, BaseDensificationTrainer, CameraTrainer
+from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, IncrementalSHTrainer, BaseDensificationTrainer, CameraTrainer
+
+
+def IncrementalSHTrainerWrapper(
+        BaseTrainerConstructor,
+        model: GaussianModel,
+        sh_degree_up_interval=1000,
+        initial_sh_degree=0,
+        *args, **kwargs):
+    return IncrementalSHTrainer(
+        BaseTrainerConstructor(model, *args, **kwargs),
+        sh_degree_up_interval=sh_degree_up_interval,
+        initial_sh_degree=initial_sh_degree
+    )
 
 
 def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
@@ -21,6 +34,11 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 gaussians,
                 spatial_lr_scale=dataset.scene_extent(),
                 **configs
+            ) if load_ply else IncrementalSHTrainerWrapper(
+                BaseTrainer,
+                gaussians,
+                spatial_lr_scale=dataset.scene_extent(),
+                **configs
             )
         case "densify":
             gaussians = GaussianModel(sh_degree).to(device)
@@ -29,8 +47,14 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
             trainer = BaseDensificationTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
-                **configs,
-                device=device
+                device=device,
+                **configs
+            ) if load_ply else IncrementalSHTrainerWrapper(
+                BaseDensificationTrainer,
+                gaussians,
+                scene_extent=dataset.scene_extent(),
+                device=device,
+                **configs
             )
         case "camera":
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
@@ -41,11 +65,15 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,
                 **configs
+            ) if load_ply else IncrementalSHTrainerWrapper(
+                CameraTrainer,
+                gaussians,
+                scene_extent=dataset.scene_extent(),
+                dataset=dataset,
+                **configs
             )
         case _:
             raise ValueError(f"Unknown mode: {mode}")
-    if load_ply:
-        gaussians.activate_all_sh_degree()
     return dataset, gaussians, trainer
 
 

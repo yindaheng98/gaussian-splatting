@@ -76,10 +76,8 @@ class BaseTrainer(AbstractTrainer):
             opacity_lr=0.025,
             scaling_lr=0.005,
             rotation_lr=0.001,
-            sh_degree_up_interval=1000
     ):
         super().__init__()
-        self.sh_degree_up_interval = sh_degree_up_interval
         self.lambda_dssim = lambda_dssim
         params = [
             {'params': [model._xyz], 'lr': position_lr_init * spatial_lr_scale, "name": "xyz"},
@@ -102,7 +100,6 @@ class BaseTrainer(AbstractTrainer):
         self._optimizer = optimizer
         self._schedulers = schedulers
         self._curr_step = 0
-        self.model.active_sh_degree = 0
 
     @property
     def curr_step(self) -> int:
@@ -124,13 +121,7 @@ class BaseTrainer(AbstractTrainer):
     def schedulers(self) -> Dict[str, Callable[[int], float]]:
         return self._schedulers
 
-    def oneupSHdegree(self):
-        if self.model.active_sh_degree < self.model.max_sh_degree:
-            self.model.active_sh_degree += 1
-
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:
-        if self.curr_step % self.sh_degree_up_interval == 0:
-            self.oneupSHdegree()
         render = out["render"]
         gt = camera.ground_truth_image
         Ll1 = l1_loss(render, gt)

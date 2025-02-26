@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Callable, Dict
 
 import torch
-import torch.nn as nn
 
 from gaussian_splatting import GaussianModel, Camera
 from gaussian_splatting.utils import l1_loss, ssim
@@ -40,12 +39,6 @@ class AbstractTrainer(ABC):
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         pass
 
-    def forward_backward(self, camera: Camera):
-        out = self.model(camera)
-        loss = self.loss(out, camera)
-        loss.backward()
-        return loss, out
-
     def update_learning_rate(self):
         self.curr_step += 1
         for param_group in self.optimizer.param_groups:
@@ -58,9 +51,19 @@ class AbstractTrainer(ABC):
 
     def step(self, camera: Camera):
         self.update_learning_rate()
-        loss, out = self.forward_backward(camera)
+        out = self.model(camera)
+        loss = self.loss(out, camera)
+        loss.backward()
+        self.before_optim_hook(out, camera)
         self.optim_step()
+        self.after_optim_hook(out, camera)
         return loss, out
+
+    def before_optim_hook(self, out, camera: Camera):
+        pass
+
+    def after_optim_hook(self, out, camera: Camera):
+        pass
 
 
 class BaseTrainer(AbstractTrainer):
@@ -176,7 +179,13 @@ class TrainerWrapper(AbstractTrainer):
     def optim_step(self):
         return self.base_trainer.optim_step()
 
+    def before_optim_hook(self, out, camera: Camera):
+        return self.base_trainer.before_optim_hook(out, camera)
+
+    def after_optim_hook(self, out, camera: Camera):
+        return self.base_trainer.after_optim_hook(out, camera)
+
     """
-    The top-level methods `forward_backward` and `step` should call the overrided `loss`, `update_learning_rate` and `optim_step`.
-    So do not override them to be `self.base_trainer.forward_backward` and `self.base_trainer.step`.
+    The top-level methods `step` should call the overrided `loss`, `update_learning_rate` and `optim_step`.
+    So do not override them to be `self.base_trainer.step`.
     """

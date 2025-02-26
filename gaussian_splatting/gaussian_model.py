@@ -248,3 +248,57 @@ class GaussianModel(nn.Module):
         self._opacity = nn.Parameter(torch.tensor(opacities, dtype=torch.float, device=device).requires_grad_(True))
         self._scaling = nn.Parameter(torch.tensor(scales, dtype=torch.float, device=device).requires_grad_(True))
         self._rotation = nn.Parameter(torch.tensor(rots, dtype=torch.float, device=device).requires_grad_(True))
+
+    def update_points_novalidate(
+            self,
+            xyz: nn.Parameter,
+            features_dc: nn.Parameter,
+            features_rest: nn.Parameter,
+            scaling: nn.Parameter,
+            rotation: nn.Parameter,
+            opacity: nn.Parameter,
+    ):
+        self._xyz = xyz
+        self._features_dc = features_dc
+        self._features_rest = features_rest
+        self._scaling = scaling
+        self._rotation = rotation
+        self._opacity = opacity
+
+    def update_points_add(
+            self,
+            xyz: nn.Parameter,
+            features_dc: nn.Parameter,
+            features_rest: nn.Parameter,
+            scaling: nn.Parameter,
+            rotation: nn.Parameter,
+            opacity: nn.Parameter,
+    ):
+        def is_same_prefix(attr: nn.Parameter, ref: nn.Parameter):
+            return (attr[:ref.shape[0]] == ref).all()
+        assert is_same_prefix(xyz, self._xyz)
+        assert is_same_prefix(features_dc, self._features_dc)
+        assert is_same_prefix(features_rest, self._features_rest)
+        assert is_same_prefix(scaling, self._scaling)
+        assert is_same_prefix(rotation, self._rotation)
+        assert is_same_prefix(opacity, self._opacity)
+        self.update_points_novalidate(xyz, features_dc, features_rest, scaling, rotation, opacity)
+
+    def update_points_remove(
+            self, removed_mask: torch.Tensor,
+            xyz: nn.Parameter,
+            features_dc: nn.Parameter,
+            features_rest: nn.Parameter,
+            scaling: nn.Parameter,
+            rotation: nn.Parameter,
+            opacity: nn.Parameter,
+    ):
+        def is_same_rest(attr: nn.Parameter, ref: nn.Parameter):
+            return (attr == ref[~removed_mask, ...]).all()
+        assert is_same_rest(xyz, self._xyz)
+        assert is_same_rest(features_dc, self._features_dc)
+        assert is_same_rest(features_rest, self._features_rest)
+        assert is_same_rest(scaling, self._scaling)
+        assert is_same_rest(rotation, self._rotation)
+        assert is_same_rest(opacity, self._opacity)
+        self.update_points_novalidate(xyz, features_dc, features_rest, scaling, rotation, opacity)

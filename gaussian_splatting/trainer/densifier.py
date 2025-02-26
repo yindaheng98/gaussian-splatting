@@ -191,15 +191,22 @@ def mask_tensors_in_optimizer(optimizer: torch.optim.Optimizer, prune_mask: torc
     return optimizable_tensors
 
 
-class DensificationTrainer(TrainerWrapper):
+class DensificationTrainer(BaseTrainer):
+    '''
+    Trainer that densifies the model.
+    !This class must inherent from BaseTrainer rather than TrainerWrapper, since it should modify the tensors in the optimizer.
+    '''
+
     def __init__(
-            self, base_trainer: AbstractTrainer,
+            self, model: GaussianModel,
+            spatial_lr_scale: float,
             densifier: AbstractDensifier,
-            densify_from_iter: int,
-            densify_until_iter: int,
-            densification_interval: int,
+            densify_from_iter: int = 500,
+            densify_until_iter: int = 15000,
+            densification_interval: int = 100,
+            *args, **kwargs
     ):
-        super().__init__(base_trainer)
+        super().__init__(model, spatial_lr_scale, *args, **kwargs)
         self.densifier = densifier
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
@@ -214,22 +221,26 @@ class DensificationTrainer(TrainerWrapper):
             "scaling": new_scaling,
             "rotation": new_rotation})
 
-        self.model._xyz = optimizable_tensors["xyz"]
-        self.model._features_dc = optimizable_tensors["f_dc"]
-        self.model._features_rest = optimizable_tensors["f_rest"]
-        self.model._opacity = optimizable_tensors["opacity"]
-        self.model._scaling = optimizable_tensors["scaling"]
-        self.model._rotation = optimizable_tensors["rotation"]
+        self.model.update_points_novalidate(
+            xyz=optimizable_tensors["xyz"],
+            features_dc=optimizable_tensors["f_dc"],
+            features_rest=optimizable_tensors["f_rest"],
+            opacity=optimizable_tensors["opacity"],
+            scaling=optimizable_tensors["scaling"],
+            rotation=optimizable_tensors["rotation"],
+        )
 
     def remove_points(self, rm_mask):
         optimizable_tensors = mask_tensors_in_optimizer(self.optimizer, rm_mask)
 
-        self.model._xyz = optimizable_tensors["xyz"]
-        self.model._features_dc = optimizable_tensors["f_dc"]
-        self.model._features_rest = optimizable_tensors["f_rest"]
-        self.model._opacity = optimizable_tensors["opacity"]
-        self.model._scaling = optimizable_tensors["scaling"]
-        self.model._rotation = optimizable_tensors["rotation"]
+        self.model.update_points_novalidate(
+            xyz=optimizable_tensors["xyz"],
+            features_dc=optimizable_tensors["f_dc"],
+            features_rest=optimizable_tensors["f_rest"],
+            opacity=optimizable_tensors["opacity"],
+            scaling=optimizable_tensors["scaling"],
+            rotation=optimizable_tensors["rotation"],
+        )
 
     def densify_and_prune(self):
         params = self.densifier.densify_and_prune()
@@ -243,16 +254,12 @@ class DensificationTrainer(TrainerWrapper):
             params.new_rotation)
         torch.cuda.empty_cache()
 
-    def step(self, camera):
-        self.update_learning_rate()
-        loss, out = self.forward_backward(camera)
+    def before_optim_hook(self, out, _):
         with torch.no_grad():
             if self.curr_step < self.densify_until_iter:
                 self.densifier.update_densification_stats(out)
-                if self.curr_step >= self.densify_from_iter and self.curr_step % self.densification_interval == 0:
-                    self.densify_and_prune()
-        self.optim_step()
-        return loss, out
+            if self.densify_from_iter <= self.curr_step < self.densify_until_iter and self.curr_step % self.densification_interval == 0:
+                self.densify_and_prune()
 
 
 def BaseDensificationTrainer(
@@ -269,14 +276,16 @@ def BaseDensificationTrainer(
         prune_screensize_threshold=20,
         device=None,
         *args, **kwargs):
-    return DensificationTrainer(
-        OpacityResetTrainer(
-            BaseTrainer(model, scene_extent, *args, **kwargs),
-            opacity_reset_until_iter=densify_until_iter,
-            opacity_reset_interval=opacity_reset_interval),
-        Densifier(model, scene_extent, percent_dense,
-                  densify_grad_threshold, densify_opacity_threshold,
-                  prune_from_iter, prune_screensize_threshold,
-                  device=device),
-        densify_from_iter, densify_until_iter, densification_interval
+    return OpacityResetTrainer(
+        DensificationTrainer(
+            model, scene_extent,
+            Densifier(model, scene_extent, percent_dense,
+                      densify_grad_threshold, densify_opacity_threshold,
+                      prune_from_iter, prune_screensize_threshold,
+                      device=device),
+            densify_from_iter, densify_until_iter, densification_interval,
+            *args, **kwargs
+        ),
+        opacity_reset_until_iter=densify_until_iter,
+        opacity_reset_interval=opacity_reset_interval
     )

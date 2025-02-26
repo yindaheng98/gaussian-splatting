@@ -249,22 +249,6 @@ class GaussianModel(nn.Module):
         self._scaling = nn.Parameter(torch.tensor(scales, dtype=torch.float, device=device).requires_grad_(True))
         self._rotation = nn.Parameter(torch.tensor(rots, dtype=torch.float, device=device).requires_grad_(True))
 
-    def update_points_novalidate(
-            self,
-            xyz: nn.Parameter,
-            features_dc: nn.Parameter,
-            features_rest: nn.Parameter,
-            scaling: nn.Parameter,
-            rotation: nn.Parameter,
-            opacity: nn.Parameter,
-    ):
-        self._xyz = xyz
-        self._features_dc = features_dc
-        self._features_rest = features_rest
-        self._scaling = scaling
-        self._rotation = rotation
-        self._opacity = opacity
-
     def update_points_add(
             self,
             xyz: nn.Parameter,
@@ -282,7 +266,12 @@ class GaussianModel(nn.Module):
         assert is_same_prefix(scaling, self._scaling)
         assert is_same_prefix(rotation, self._rotation)
         assert is_same_prefix(opacity, self._opacity)
-        self.update_points_novalidate(xyz, features_dc, features_rest, scaling, rotation, opacity)
+        self._xyz = xyz
+        self._features_dc = features_dc
+        self._features_rest = features_rest
+        self._scaling = scaling
+        self._rotation = rotation
+        self._opacity = opacity
 
     def update_points_remove(
             self, removed_mask: torch.Tensor,
@@ -301,4 +290,9 @@ class GaussianModel(nn.Module):
         assert is_same_rest(scaling, self._scaling)
         assert is_same_rest(rotation, self._rotation)
         assert is_same_rest(opacity, self._opacity)
-        self.update_points_novalidate(xyz, features_dc, features_rest, scaling, rotation, opacity)
+        self._xyz = xyz
+        self._features_dc = features_dc
+        self._features_rest = features_rest
+        self._scaling = scaling
+        self._rotation = rotation
+        self._opacity = opacity

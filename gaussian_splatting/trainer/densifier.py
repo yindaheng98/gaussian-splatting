@@ -221,7 +221,7 @@ class DensificationTrainer(BaseTrainer):
             "scaling": new_scaling,
             "rotation": new_rotation})
 
-        self.model.update_points_novalidate(
+        self.model.update_points_add(
             xyz=optimizable_tensors["xyz"],
             features_dc=optimizable_tensors["f_dc"],
             features_rest=optimizable_tensors["f_rest"],
@@ -233,7 +233,8 @@ class DensificationTrainer(BaseTrainer):
     def remove_points(self, rm_mask):
         optimizable_tensors = mask_tensors_in_optimizer(self.optimizer, rm_mask)
 
-        self.model.update_points_novalidate(
+        self.model.update_points_remove(
+            removed_mask=rm_mask,
             xyz=optimizable_tensors["xyz"],
             features_dc=optimizable_tensors["f_dc"],
             features_rest=optimizable_tensors["f_rest"],

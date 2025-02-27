@@ -49,12 +49,17 @@ class Densifier(AbstractDensifier):
         self.update_counter = 0
 
         self.device = device if device is not None else model._xyz.device
-        self.xyz_gradient_accum = torch.zeros((model.get_xyz.shape[0], 1), device=self.device)
-        self.denom = torch.zeros((model.get_xyz.shape[0], 1), device=self.device)
-        self.max_radii2D = torch.zeros((model.get_xyz.shape[0]), device=self.device)
+        self.xyz_gradient_accum = None
+        self.denom = None
+        self.max_radii2D = None
 
     def update_densification_stats(self, out):
         viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
+        if self.xyz_gradient_accum is None or self.denom is None or self.max_radii2D is None:
+            new_size = self.model.get_xyz.shape[0]
+            self.xyz_gradient_accum = torch.zeros((new_size, 1), device=self.device)
+            self.denom = torch.zeros((new_size, 1), device=self.device)
+            self.max_radii2D = torch.zeros((new_size), device=self.device)
         self.max_radii2D[visibility_filter] = torch.max(self.max_radii2D[visibility_filter], radii[visibility_filter])
         self.xyz_gradient_accum[visibility_filter] += torch.norm(viewspace_points.grad[visibility_filter, :2], dim=-1, keepdim=True)
         self.denom[visibility_filter] += 1
@@ -128,10 +133,10 @@ class Densifier(AbstractDensifier):
 
             remove_mask = torch.logical_or(prune_mask, split.remove_mask)
 
-        new_size = self.model.get_xyz.shape[0] + clone.new_xyz.shape[0] + split.new_xyz.shape[0] - remove_mask.sum()
-        self.xyz_gradient_accum = torch.zeros((new_size, 1), device=self.device)
-        self.denom = torch.zeros((new_size, 1), device=self.device)
-        self.max_radii2D = torch.zeros((new_size), device=self.device)
+        self.xyz_gradient_accum = None
+        self.denom = None
+        self.max_radii2D = None
+        torch.cuda.empty_cache()
 
         return DensificationParams(
             new_xyz=torch.cat((clone.new_xyz, split.new_xyz), dim=0),

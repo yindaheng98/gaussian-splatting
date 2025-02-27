@@ -5,7 +5,7 @@ import torch.nn as nn
 from gaussian_splatting.utils import build_rotation
 from gaussian_splatting.gaussian_model import GaussianModel
 
-from .trainer import AbstractTrainer, BaseTrainer, TrainerWrapper
+from .trainer import BaseTrainer
 from .opacity_reset import OpacityResetTrainer
 
 

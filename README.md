@@ -18,6 +18,8 @@ We **refactored the original code following the standard Python package structur
 
 Install Pytorch and torchvision following the official guideline: [pytorch.org](https://pytorch.org/)
 
+Recommend: Pytorch version >= v2.4, CUDA version 12.4
+
 ### Local Install
 
 ```shell
@@ -63,7 +65,7 @@ python -m gaussian_splatting.train -s data/truck -d output/truck-camera -i 30000
 python -m gaussian_splatting.render -s data/truck -d output/truck-camera -i 30000 --mode camera --load_camera output/truck-camera/cameras.json
 ```
 
-This repo do not contrains code for initialization.
+This repo do not contains code for initialization.
 If you want to create your own scene, please refer to [InstantSplat](https://github.com/yindaheng98/InstantSplat) or use [convert.py](https://github.com/graphdeco-inria/gaussian-splatting/blob/main/convert.py).
 
 ## Usage

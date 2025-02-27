@@ -10,13 +10,13 @@ from .opacity_reset import OpacityResetTrainer
 
 
 class DensificationParams(NamedTuple):
-    new_xyz: torch.Tensor
-    new_features_dc: torch.Tensor
-    new_features_rest: torch.Tensor
-    new_opacities: torch.Tensor
-    new_scaling: torch.Tensor
-    new_rotation: torch.Tensor
-    remove_mask: torch.Tensor
+    new_xyz: torch.Tensor = None
+    new_features_dc: torch.Tensor = None
+    new_features_rest: torch.Tensor = None
+    new_opacities: torch.Tensor = None
+    new_scaling: torch.Tensor = None
+    new_rotation: torch.Tensor = None
+    remove_mask: torch.Tensor = None
 
 
 class AbstractDensifier(ABC):
@@ -110,7 +110,6 @@ class Densifier(AbstractDensifier):
             new_opacities=new_opacities,
             new_scaling=new_scaling,
             new_rotation=new_rotation,
-            remove_mask=None
         )
 
     def densify_and_prune(self):
@@ -245,14 +244,21 @@ class DensificationTrainer(BaseTrainer):
 
     def densify_and_prune(self):
         params = self.densifier.densify_and_prune()
-        self.remove_points(params.remove_mask)
-        self.add_points(
-            params.new_xyz,
-            params.new_features_dc,
-            params.new_features_rest,
-            params.new_opacities,
-            params.new_scaling,
-            params.new_rotation)
+        if params.remove_mask is not None:
+            self.remove_points(params.remove_mask)
+        if params.new_xyz is not None:
+            assert params.new_features_dc is not None
+            assert params.new_features_rest is not None
+            assert params.new_opacities is not None
+            assert params.new_scaling is not None
+            assert params.new_rotation is not None
+            self.add_points(
+                params.new_xyz,
+                params.new_features_dc,
+                params.new_features_rest,
+                params.new_opacities,
+                params.new_scaling,
+                params.new_rotation)
         torch.cuda.empty_cache()
 
     def before_optim_hook(self, loss, out, camera):

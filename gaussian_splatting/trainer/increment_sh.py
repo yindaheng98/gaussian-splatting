@@ -2,7 +2,8 @@
 import torch
 
 from gaussian_splatting import GaussianModel, Camera
-from .trainer import AbstractTrainer, TrainerWrapper, BaseTrainer
+from .abc import AbstractTrainer, TrainerWrapper
+from .base import BaseTrainer
 from .camera_trainable import CameraTrainer
 from .densifier import BaseDensificationTrainer
 from .opacity_reset import OpacityResetDensificationTrainer

@@ -1,7 +1,8 @@
 from gaussian_splatting import CameraTrainableGaussianModel
 from gaussian_splatting.dataset import TrainableCameraDataset
 from gaussian_splatting.utils import get_expon_lr_func
-from .trainer import AbstractTrainer, BaseTrainer, TrainerWrapper
+from .abc import AbstractTrainer, TrainerWrapper
+from .base import BaseTrainer
 
 
 class CameraOptimizer(TrainerWrapper):

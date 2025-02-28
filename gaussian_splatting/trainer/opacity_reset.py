@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from gaussian_splatting import GaussianModel
-from .trainer import AbstractTrainer, TrainerWrapper
+from .abc import AbstractTrainer, TrainerWrapper
 from .densifier import BaseDensificationTrainer
 
 

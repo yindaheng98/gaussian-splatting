@@ -2,8 +2,8 @@ name: Python package for Linux
 
 on:
   push:
-    tags:
-      - v*
+    paths:
+      - "setup.py"
   workflow_dispatch:
 
 jobs:

@@ -2,8 +2,8 @@ name: Python package for Windows
 
 on:
   push:
-    tags:
-      - v*
+    paths:
+      - "setup.py"
   workflow_dispatch:
 
 jobs:

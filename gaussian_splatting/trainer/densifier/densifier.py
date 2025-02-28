@@ -3,27 +3,10 @@ from typing import Dict, NamedTuple
 import torch
 import torch.nn as nn
 from gaussian_splatting.utils import build_rotation
-from gaussian_splatting.gaussian_model import GaussianModel
+from gaussian_splatting import GaussianModel
+from gaussian_splatting.trainer import BaseTrainer
 
-from .trainer import BaseTrainer
-from .opacity_reset import OpacityResetTrainer
-
-
-class DensificationInstruct(NamedTuple):
-    new_xyz: torch.Tensor = None
-    new_features_dc: torch.Tensor = None
-    new_features_rest: torch.Tensor = None
-    new_opacities: torch.Tensor = None
-    new_scaling: torch.Tensor = None
-    new_rotation: torch.Tensor = None
-    remove_mask: torch.Tensor = None
-
-
-class AbstractDensifier(ABC):
-
-    @abstractmethod
-    def densify_and_prune(self, loss, out, camera, step: int) -> DensificationInstruct:
-        raise NotImplementedError
+from .abc import AbstractDensifier, DensificationInstruct
 
 
 class Densifier(AbstractDensifier):
@@ -32,15 +15,15 @@ class Densifier(AbstractDensifier):
         self, model: GaussianModel, scene_extent,
         percent_dense=0.01,
 
-        densify_from_iter: int = 500,
-        densify_until_iter: int = 15000,
-        densify_interval: int = 100,
+        densify_from_iter=500,
+        densify_until_iter=15000,
+        densify_interval=100,
         densify_grad_threshold=0.0002,
         densify_opacity_threshold=0.005,
 
         prune_from_iter=1000,
         prune_until_iter=15000,
-        prune_interval: int = 100,
+        prune_interval=100,
         prune_screensize_threshold=20,
     ):
         self.model = model
@@ -288,28 +271,23 @@ def BaseDensificationTrainer(
         scene_extent: float,
         percent_dense=0.01,
 
-        densify_from_iter: int = 500,
-        densify_until_iter: int = 15000,
-        densify_interval: int = 100,
+        densify_from_iter=500,
+        densify_until_iter=15000,
+        densify_interval=100,
         densify_grad_threshold=0.0002,
         densify_opacity_threshold=0.005,
 
         prune_from_iter=1000,
         prune_until_iter=15000,
-        prune_interval: int = 100,
+        prune_interval=100,
         prune_screensize_threshold=20,
 
-        opacity_reset_interval=3000,
         *args, **kwargs):
-    return OpacityResetTrainer(
-        DensificationTrainer(
-            model, scene_extent,
-            Densifier(
-                model, scene_extent, percent_dense,
-                densify_from_iter, densify_until_iter, densify_interval, densify_grad_threshold, densify_opacity_threshold,
-                prune_from_iter, prune_until_iter, prune_interval, prune_screensize_threshold),
-            *args, **kwargs
-        ),
-        opacity_reset_until_iter=densify_until_iter,
-        opacity_reset_interval=opacity_reset_interval
+    return DensificationTrainer(
+        model, scene_extent,
+        Densifier(
+            model, scene_extent, percent_dense,
+            densify_from_iter, densify_until_iter, densify_interval, densify_grad_threshold, densify_opacity_threshold,
+            prune_from_iter, prune_until_iter, prune_interval, prune_screensize_threshold),
+        *args, **kwargs
     )

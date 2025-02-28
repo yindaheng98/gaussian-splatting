@@ -46,7 +46,7 @@ class CameraOptimizer(TrainerWrapper):
         )
 
 
-def CameraTrainer(
+def BaseCameraTrainer(
         model: CameraTrainableGaussianModel,
         scene_extent: float,
         dataset: TrainableCameraDataset,

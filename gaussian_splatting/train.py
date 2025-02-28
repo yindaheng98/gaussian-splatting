@@ -8,7 +8,7 @@ from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
-from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, OpacityResetDensificationTrainer, CameraTrainer
+from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, OpacityResetDensificationTrainer, BaseCameraTrainer
 from gaussian_splatting.trainer import LiftSHBaseTrainer, LiftSHOpacityResetDensificationTrainer, LiftSHCameraTrainer
 
 
@@ -44,7 +44,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
             dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source)).to(device)
-            trainer = CameraTrainer(
+            trainer = BaseCameraTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,

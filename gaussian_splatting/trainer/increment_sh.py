@@ -4,7 +4,7 @@ import torch
 from gaussian_splatting import GaussianModel, Camera
 from .abc import AbstractTrainer, TrainerWrapper
 from .base import BaseTrainer
-from .camera_trainable import CameraTrainer
+from .camera_trainable import BaseCameraTrainer
 from .densifier import BaseDensificationTrainer
 from .opacity_reset import OpacityResetDensificationTrainer
 
@@ -49,7 +49,7 @@ def LiftSHCameraTrainer(
         initial_sh_degree=0,
         *args, **kwargs):
     return LiftSHTrainer(
-        CameraTrainer(model, scene_extent, *args, **kwargs),
+        BaseCameraTrainer(model, scene_extent, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )

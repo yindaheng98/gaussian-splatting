@@ -9,7 +9,7 @@ from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, Trainab
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
 from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, OpacityResetDensificationTrainer, BaseCameraTrainer
-from gaussian_splatting.trainer import LiftSHBaseTrainer, LiftSHOpacityResetDensificationTrainer, LiftSHCameraTrainer
+from gaussian_splatting.trainer import SHLiftBaseTrainer, SHLiftOpacityResetDensificationTrainer, SHLiftCameraTrainer
 
 
 def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
@@ -22,7 +22,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 gaussians,
                 spatial_lr_scale=dataset.scene_extent(),
                 **configs
-            ) if load_ply else LiftSHBaseTrainer(
+            ) if load_ply else SHLiftBaseTrainer(
                 gaussians,
                 spatial_lr_scale=dataset.scene_extent(),
                 **configs
@@ -35,7 +35,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 **configs
-            ) if load_ply else LiftSHOpacityResetDensificationTrainer(
+            ) if load_ply else SHLiftOpacityResetDensificationTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 **configs
@@ -49,7 +49,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,
                 **configs
-            ) if load_ply else LiftSHCameraTrainer(
+            ) if load_ply else SHLiftCameraTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,

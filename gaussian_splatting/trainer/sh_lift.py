@@ -9,7 +9,7 @@ from .densifier import BaseDensificationTrainer
 from .opacity_reset import OpacityResetDensificationTrainer
 
 
-class LiftSHTrainer(TrainerWrapper):
+class SHLiftTrainer(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
             sh_degree_up_interval=1000,
@@ -29,52 +29,52 @@ class LiftSHTrainer(TrainerWrapper):
         return super().loss(out, camera)
 
 
-def LiftSHBaseTrainer(
+def SHLiftBaseTrainer(
         model: GaussianModel,
         spatial_lr_scale: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
-    return LiftSHTrainer(
+    return SHLiftTrainer(
         BaseTrainer(model, spatial_lr_scale, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
 
 
-def LiftSHCameraTrainer(
+def SHLiftCameraTrainer(
         model: GaussianModel,
         scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
-    return LiftSHTrainer(
+    return SHLiftTrainer(
         BaseCameraTrainer(model, scene_extent, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
 
 
-def LiftSHBaseDensificationTrainer(
+def SHLiftBaseDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
-    return LiftSHTrainer(
+    return SHLiftTrainer(
         BaseDensificationTrainer(model, scene_extent, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
 
 
-def LiftSHOpacityResetDensificationTrainer(
+def SHLiftOpacityResetDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
-    return LiftSHTrainer(
+    return SHLiftTrainer(
         OpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree

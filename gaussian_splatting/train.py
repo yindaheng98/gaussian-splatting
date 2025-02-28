@@ -8,20 +8,8 @@ from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
-from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, IncrementalSHTrainer, OpacityResetDensificationTrainer, CameraTrainer
-
-
-def IncrementalSHTrainerWrapper(
-        BaseTrainerConstructor,
-        model: GaussianModel,
-        sh_degree_up_interval=1000,
-        initial_sh_degree=0,
-        *args, **kwargs):
-    return IncrementalSHTrainer(
-        BaseTrainerConstructor(model, *args, **kwargs),
-        sh_degree_up_interval=sh_degree_up_interval,
-        initial_sh_degree=initial_sh_degree
-    )
+from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, OpacityResetDensificationTrainer, CameraTrainer
+from gaussian_splatting.trainer import IncrementalSHBaseTrainer, IncrementalSHOpacityResetDensificationTrainer, IncrementalSHCameraTrainer
 
 
 def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
@@ -34,8 +22,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 gaussians,
                 spatial_lr_scale=dataset.scene_extent(),
                 **configs
-            ) if load_ply else IncrementalSHTrainerWrapper(
-                BaseTrainer,
+            ) if load_ply else IncrementalSHBaseTrainer(
                 gaussians,
                 spatial_lr_scale=dataset.scene_extent(),
                 **configs
@@ -48,8 +35,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 **configs
-            ) if load_ply else IncrementalSHTrainerWrapper(
-                OpacityResetDensificationTrainer,
+            ) if load_ply else IncrementalSHOpacityResetDensificationTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 **configs
@@ -63,8 +49,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,
                 **configs
-            ) if load_ply else IncrementalSHTrainerWrapper(
-                CameraTrainer,
+            ) if load_ply else IncrementalSHCameraTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,

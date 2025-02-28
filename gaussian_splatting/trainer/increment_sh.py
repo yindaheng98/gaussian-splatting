@@ -3,6 +3,9 @@ import torch
 
 from gaussian_splatting import GaussianModel, Camera
 from .trainer import AbstractTrainer, TrainerWrapper, BaseTrainer
+from .camera_trainable import CameraTrainer
+from .densifier import BaseDensificationTrainer
+from .opacity_reset import OpacityResetDensificationTrainer
 
 
 class IncrementalSHTrainer(TrainerWrapper):
@@ -24,3 +27,54 @@ class IncrementalSHTrainer(TrainerWrapper):
             self.oneupSHdegree()
         return super().loss(out, camera)
 
+
+def IncrementalSHBaseTrainer(
+        model: GaussianModel,
+        spatial_lr_scale: float,
+        sh_degree_up_interval=1000,
+        initial_sh_degree=0,
+        *args, **kwargs):
+    return IncrementalSHTrainer(
+        BaseTrainer(model, spatial_lr_scale, *args, **kwargs),
+        sh_degree_up_interval=sh_degree_up_interval,
+        initial_sh_degree=initial_sh_degree
+    )
+
+
+def IncrementalSHCameraTrainer(
+        model: GaussianModel,
+        scene_extent: float,
+        sh_degree_up_interval=1000,
+        initial_sh_degree=0,
+        *args, **kwargs):
+    return IncrementalSHTrainer(
+        CameraTrainer(model, scene_extent, *args, **kwargs),
+        sh_degree_up_interval=sh_degree_up_interval,
+        initial_sh_degree=initial_sh_degree
+    )
+
+
+def IncrementalSHBaseDensificationTrainer(
+        model: GaussianModel,
+        scene_extent: float,
+        sh_degree_up_interval=1000,
+        initial_sh_degree=0,
+        *args, **kwargs):
+    return IncrementalSHTrainer(
+        BaseDensificationTrainer(model, scene_extent, *args, **kwargs),
+        sh_degree_up_interval=sh_degree_up_interval,
+        initial_sh_degree=initial_sh_degree
+    )
+
+
+def IncrementalSHOpacityResetDensificationTrainer(
+        model: GaussianModel,
+        scene_extent: float,
+        sh_degree_up_interval=1000,
+        initial_sh_degree=0,
+        *args, **kwargs):
+    return IncrementalSHTrainer(
+        OpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
+        sh_degree_up_interval=sh_degree_up_interval,
+        initial_sh_degree=initial_sh_degree
+    )

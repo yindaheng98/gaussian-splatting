@@ -8,7 +8,7 @@ from .densifier import BaseDensificationTrainer
 from .opacity_reset import OpacityResetDensificationTrainer
 
 
-class IncrementalSHTrainer(TrainerWrapper):
+class LiftSHTrainer(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
             sh_degree_up_interval=1000,
@@ -28,52 +28,52 @@ class IncrementalSHTrainer(TrainerWrapper):
         return super().loss(out, camera)
 
 
-def IncrementalSHBaseTrainer(
+def LiftSHBaseTrainer(
         model: GaussianModel,
         spatial_lr_scale: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
-    return IncrementalSHTrainer(
+    return LiftSHTrainer(
         BaseTrainer(model, spatial_lr_scale, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
 
 
-def IncrementalSHCameraTrainer(
+def LiftSHCameraTrainer(
         model: GaussianModel,
         scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
-    return IncrementalSHTrainer(
+    return LiftSHTrainer(
         CameraTrainer(model, scene_extent, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
 
 
-def IncrementalSHBaseDensificationTrainer(
+def LiftSHBaseDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
-    return IncrementalSHTrainer(
+    return LiftSHTrainer(
         BaseDensificationTrainer(model, scene_extent, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
 
 
-def IncrementalSHOpacityResetDensificationTrainer(
+def LiftSHOpacityResetDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
-    return IncrementalSHTrainer(
+    return LiftSHTrainer(
         OpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree

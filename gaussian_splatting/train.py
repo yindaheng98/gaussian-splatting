@@ -9,7 +9,7 @@ from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, Trainab
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
 from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, OpacityResetDensificationTrainer, CameraTrainer
-from gaussian_splatting.trainer import IncrementalSHBaseTrainer, IncrementalSHOpacityResetDensificationTrainer, IncrementalSHCameraTrainer
+from gaussian_splatting.trainer import LiftSHBaseTrainer, LiftSHOpacityResetDensificationTrainer, LiftSHCameraTrainer
 
 
 def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
@@ -22,7 +22,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 gaussians,
                 spatial_lr_scale=dataset.scene_extent(),
                 **configs
-            ) if load_ply else IncrementalSHBaseTrainer(
+            ) if load_ply else LiftSHBaseTrainer(
                 gaussians,
                 spatial_lr_scale=dataset.scene_extent(),
                 **configs
@@ -35,7 +35,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 **configs
-            ) if load_ply else IncrementalSHOpacityResetDensificationTrainer(
+            ) if load_ply else LiftSHOpacityResetDensificationTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 **configs
@@ -49,7 +49,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,
                 **configs
-            ) if load_ply else IncrementalSHCameraTrainer(
+            ) if load_ply else LiftSHCameraTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,

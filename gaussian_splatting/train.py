@@ -47,13 +47,11 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
             trainer = BaseDensificationTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
-                device=device,
                 **configs
             ) if load_ply else IncrementalSHTrainerWrapper(
                 BaseDensificationTrainer,
                 gaussians,
                 scene_extent=dataset.scene_extent(),
-                device=device,
                 **configs
             )
         case "camera":

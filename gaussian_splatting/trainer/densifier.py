@@ -37,6 +37,7 @@ class Densifier(AbstractDensifier):
                  densify_grad_threshold=0.0002,
                  densify_opacity_threshold=0.005,
                  prune_from_iter=1000,
+                 prune_until_iter=15000,
                  prune_screensize_threshold=20,
                  device=None):
         self.model = model
@@ -46,6 +47,7 @@ class Densifier(AbstractDensifier):
         self.densify_opacity_threshold = densify_opacity_threshold
         self.prune_screensize_threshold = prune_screensize_threshold
         self.prune_from_iter = prune_from_iter
+        self.prune_until_iter = prune_until_iter
         self.update_counter = 0
 
         self.device = device if device is not None else model._xyz.device
@@ -125,7 +127,7 @@ class Densifier(AbstractDensifier):
         split = self.densify_and_split(grads, self.densify_grad_threshold, self.scene_extent)
 
         remove_mask = split.remove_mask
-        if self.update_counter > self.prune_from_iter:
+        if self.prune_from_iter < self.update_counter < self.prune_until_iter:
             prune_mask = (self.model.get_opacity < self.densify_opacity_threshold).squeeze()
             big_points_vs = self.max_radii2D > self.prune_screensize_threshold
             big_points_ws = self.model.get_scaling.max(dim=1).values > 0.1 * self.scene_extent

@@ -209,14 +209,14 @@ class DensificationTrainer(BaseTrainer):
             densifier: AbstractDensifier,
             densify_from_iter: int = 500,
             densify_until_iter: int = 15000,
-            densification_interval: int = 100,
+            densify_interval: int = 100,
             *args, **kwargs
     ):
         super().__init__(model, spatial_lr_scale, *args, **kwargs)
         self.densifier = densifier
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
-        self.densification_interval = densification_interval
+        self.densify_interval = densify_interval
 
     def add_points(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):
         optimizable_tensors = cat_tensors_to_optimizer(self.optimizer, {
@@ -272,7 +272,7 @@ class DensificationTrainer(BaseTrainer):
         with torch.no_grad():
             if self.curr_step < self.densify_until_iter:
                 self.densifier.update_densification_stats(out)
-            if self.densify_from_iter <= self.curr_step < self.densify_until_iter and self.curr_step % self.densification_interval == 0:
+            if self.densify_from_iter <= self.curr_step < self.densify_until_iter and self.curr_step % self.densify_interval == 0:
                 self.densify_and_prune()
 
 
@@ -281,7 +281,7 @@ def BaseDensificationTrainer(
         scene_extent: float,
         densify_from_iter=500,
         densify_until_iter=15000,
-        densification_interval=100,
+        densify_interval=100,
         opacity_reset_interval=3000,
         percent_dense=0.01,
         densify_grad_threshold=0.0002,
@@ -297,7 +297,7 @@ def BaseDensificationTrainer(
                       densify_grad_threshold, densify_opacity_threshold,
                       prune_from_iter, prune_screensize_threshold,
                       device=device),
-            densify_from_iter, densify_until_iter, densification_interval,
+            densify_from_iter, densify_until_iter, densify_interval,
             *args, **kwargs
         ),
         opacity_reset_until_iter=densify_until_iter,

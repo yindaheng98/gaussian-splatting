@@ -3,4 +3,4 @@ from .base import BaseTrainer
 from .densifier import AbstractDensifier, Densifier, DensificationTrainer, BaseDensificationTrainer, DensificationInstruct
 from .camera_trainable import BaseCameraTrainer
 from .opacity_reset import OpacityResetTrainer, OpacityResetDensificationTrainer
-from .increment_sh import LiftSHTrainer, LiftSHBaseTrainer, LiftSHCameraTrainer, LiftSHBaseDensificationTrainer, LiftSHOpacityResetDensificationTrainer
+from .liftsh import LiftSHTrainer, LiftSHBaseTrainer, LiftSHCameraTrainer, LiftSHBaseDensificationTrainer, LiftSHOpacityResetDensificationTrainer

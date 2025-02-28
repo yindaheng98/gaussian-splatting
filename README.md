@@ -1,4 +1,4 @@
-# packaged 3D Gaussian Splatting
+# 3D Gaussian Splatting (Packaged Python Version)
 
 This repo is the **refactored python training and inference code for [3D Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting)**.
 Forked from commit [a2a91d9093fd791fb01f556fa717f8d9f2cfbdd7](https://github.com/graphdeco-inria/gaussian-splatting/tree/a2a91d9093fd791fb01f556fa717f8d9f2cfbdd7).
@@ -14,65 +14,66 @@ We **refactored the original code following the standard Python package structur
 
 ## Install
 
-### Requirements
+### Prerequisites
 
-Install Pytorch and torchvision following the official guideline: [pytorch.org](https://pytorch.org/)
-
-Recommend: Pytorch version >= v2.4, CUDA version 12.4
+* [Pytorch](https://pytorch.org/) (>= v2.4 recommended)
+* [CUDA Toolkit](https://developer.nvidia.com/cuda-12-4-0-download-archive) (12.4 recommended, match with PyTorch version)
 
 ### Local Install
 
 ```shell
-git clone https://github.com/yindaheng98/gaussian-splatting --recursive
+git clone --recursive https://github.com/yindaheng98/gaussian-splatting
 cd gaussian-splatting
 pip install tqdm plyfile
 pip install --target . --upgrade . --no-deps
 ```
 
-### Pip Install
+### PyPI Install
 
-You can install wheel from pipy:
 ```shell
 pip install --upgrade gaussian-splatting
 ```
 or
-install latest from source:
+build latest from source:
 ```shell
 pip install --upgrade git+https://github.com/yindaheng98/gaussian-splatting.git@master
 ```
 
-## Running
+## Quick Start
 
-Download dataset [T&T+DB COLMAP (650MB)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/input/tandt_db.zip) and extract to `./data` directory.
+1. Download dataset (T&T+DB COLMAP dataset, size 650MB):
 
-1. Train 3DGS with densification (same with original 3DGS)
+```shell
+wget https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/input/tandt_db.zip -P ./data
+unzip data/tandt_db.zip -d data/
+```
+
+2. Train 3DGS with densification (same with original 3DGS)
 ```shell
 python -m gaussian_splatting.train -s data/truck -d output/truck -i 30000 --mode densify
 ```
 
-2. Render it
+3. Render 3DGS
 ```shell
 python -m gaussian_splatting.render -s data/truck -d output/truck -i 30000 --mode densify
 ```
 
-3. Joint training 3DGS and camera (load the trained 3DGS)
+4. Joint training 3DGS and camera (load the trained 3DGS)
 ```shell
 python -m gaussian_splatting.train -s data/truck -d output/truck-camera -i 30000 --mode camera -l output/truck/point_cloud/iteration_30000/point_cloud.ply
 ```
 
-4. Render it with trained 3DGS
+5. Render 3DGS with optimized cameras
 ```shell
 python -m gaussian_splatting.render -s data/truck -d output/truck-camera -i 30000 --mode camera --load_camera output/truck-camera/cameras.json
 ```
 
-This repo do not contains code for initialization.
-If you want to create your own scene, please refer to [InstantSplat](https://github.com/yindaheng98/InstantSplat) or use [convert.py](https://github.com/graphdeco-inria/gaussian-splatting/blob/main/convert.py).
+> 💡 This repo does not contain code for creating dataset.
+> If you want to create your own dataset, please refer to [InstantSplat](https://github.com/yindaheng98/InstantSplat) or use [convert.py](https://github.com/graphdeco-inria/gaussian-splatting/blob/main/convert.py).
 
-## Usage
+> 💡 See [.vscode/launch.json](.vscode/launch.json) for more example. See [gaussian_splatting.train](gaussian_splatting/train.py) and [gaussian_splatting.render](gaussian_splatting/render.py) for full options.
 
-**See [.vscode/launch.json](.vscode/launch.json) for more example.**
-
-**See [gaussian_splatting.train](gaussian_splatting/train.py) and [gaussian_splatting.render](gaussian_splatting/render.py) for full options.**
+## API Usage
 
 ### Gaussian models
 
@@ -131,32 +132,39 @@ for camera in dataset:
   ... # compute loss, save image or others
 ```
 
-### Training
+### Trainers
 
-`BaseTrainer` only optimize the 3DGS parameters, without densification or joint training with cameras.
+`gaussian_splatting.trainer` contains a series of trainers for optimizing 3DGS models.
+
+#### Core Trainers
+
+Basic training methods​ that handle fundamental optimization tasks:
+
+`BaseTrainer` only optimize the 3DGS parameters, without densification or camera optimization.
+
 ```python
 from gaussian_splatting.trainer import BaseTrainer
 trainer = BaseTrainer(
     gaussians,
     spatial_lr_scale=dataset.scene_extent(),
-    ... # see gaussian_splatting/trainer/trainer.py for full options
+    ... # see gaussian_splatting/trainer/base.py for full options
 )
 ```
 
-`DensificationTrainer` optimize the 3DGS parameters and densify it.
+`BaseDensificationTrainer` optimize the 3DGS parameters with densification.
 ```python
-from gaussian_splatting.trainer import DensificationTrainer
-trainer = DensificationTrainer(
+from gaussian_splatting.trainer import BaseDensificationTrainer
+trainer = BaseDensificationTrainer(
     gaussians,
     scene_extent=dataset.scene_extent(),
-    ... # see gaussian_splatting/trainer/densifier.py for full options
+    ... # see gaussian_splatting/trainer/densifier/densifier.py for full options
 )
 ```
 
-`CameraTrainer` jointly optimize the 3DGS parameters and cameras, without densification
+`BaseCameraTrainer` jointly optimize the 3DGS parameters and cameras, without densification.
 ```python
-from gaussian_splatting.trainer import CameraTrainer
-trainer = CameraTrainer(
+from gaussian_splatting.trainer import BaseCameraTrainer
+trainer = BaseCameraTrainer(
     gaussians,
     scene_extent=dataset.scene_extent(),
     dataset=dataset,
@@ -164,7 +172,47 @@ trainer = CameraTrainer(
 )
 ```
 
-Train it:
+#### Enhanced Trainers
+
+Gaussian Splatting paper also introduce two tricks "opacity reset" and "lifting SH", they are also included.
+The basic methods can be combined with opacity reset and lifting SH. For example:
+
+`SHLiftBaseTrainer` integrated `BaseTrainer` with lifting SH
+```python
+from gaussian_splatting.trainer import SHLiftOpacityResetDensificationTrainer
+trainer = SHLiftOpacityResetDensificationTrainer(
+    gaussians,
+    spatial_lr_scale=dataset.scene_extent(),
+    dataset=dataset,
+    ... # see gaussian_splatting/trainer/sh_lift.py for full options
+)
+```
+
+`SHLiftOpacityResetDensificationTrainer` integrated `BaseDensificationTrainer` with opacity reset and lifting SH
+```python
+from gaussian_splatting.trainer import SHLiftOpacityResetDensificationTrainer
+trainer = SHLiftOpacityResetDensificationTrainer(
+    gaussians,
+    scene_extent=dataset.scene_extent(),
+    dataset=dataset,
+    ... # see gaussian_splatting/trainer/sh_lift.py for full options
+)
+```
+
+`SHLiftCameraTrainer` integrated `BaseCameraTrainer` with lifting SH
+```python
+from gaussian_splatting.trainer import SHLiftCameraTrainer
+trainer = SHLiftCameraTrainer(
+    gaussians,
+    scene_extent=dataset.scene_extent(),
+    dataset=dataset,
+    ... # see gaussian_splatting/trainer/sh_lift.py for full options
+)
+```
+
+### Training
+
+To use any trainer:
 ```python
 for camera in dataset:
     loss, out = trainer.step(camera)

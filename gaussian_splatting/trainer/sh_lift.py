@@ -6,7 +6,7 @@ from .base import BaseTrainer
 from .abc import AbstractTrainer, TrainerWrapper
 
 
-class SHLiftTrainer(TrainerWrapper):
+class SHLifter(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
             sh_degree_up_interval=1000,
@@ -26,13 +26,13 @@ class SHLiftTrainer(TrainerWrapper):
         return super().loss(out, camera)
 
 
-def SHLiftBaseTrainer(
+def BaseSHLiftTrainer(
         model: GaussianModel,
         spatial_lr_scale: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
-    return SHLiftTrainer(
+    return SHLifter(
         BaseTrainer(model, spatial_lr_scale, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree

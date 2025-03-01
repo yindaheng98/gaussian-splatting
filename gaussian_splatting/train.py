@@ -9,7 +9,7 @@ from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, Trainab
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
 from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, OpacityResetDensificationTrainer, BaseCameraTrainer, OpacityResetDensificationCameraTrainer
-from gaussian_splatting.trainer import SHLiftBaseTrainer, SHLiftOpacityResetDensificationTrainer, SHLiftCameraTrainer, SHLiftOpacityResetDensificationCameraTrainer
+from gaussian_splatting.trainer import BaseSHLiftTrainer, SHLiftOpacityResetDensificationTrainer, SHLiftCameraTrainer, SHLiftOpacityResetDensificationCameraTrainer
 
 
 def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
@@ -22,7 +22,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 gaussians,
                 spatial_lr_scale=dataset.scene_extent(),
                 **configs
-            ) if load_ply else SHLiftBaseTrainer(
+            ) if load_ply else BaseSHLiftTrainer(
                 gaussians,
                 spatial_lr_scale=dataset.scene_extent(),
                 **configs

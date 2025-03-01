@@ -20,7 +20,7 @@ def replace_tensor_to_optimizer(optimizer: torch.optim.Optimizer, tensor, name):
     return optimizable_tensors
 
 
-class OpacityResetTrainer(TrainerWrapper):
+class OpacityResetter(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
             opacity_reset_from_iter=3000,

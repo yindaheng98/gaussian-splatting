@@ -175,12 +175,12 @@ trainer = BaseCameraTrainer(
 #### Enhanced Trainers
 
 Gaussian Splatting paper also introduce two tricks "opacity reset" and "lifting SH", they are also included.
-The basic methods can be combined with opacity reset and lifting SH. For example:
+The basic methods can be integrated with opacity reset and lifting SH. For example:
 
-`SHLiftBaseTrainer` integrated `BaseTrainer` with lifting SH
+`BaseSHLiftTrainer` integrated `BaseTrainer` with lifting SH.
 ```python
-from gaussian_splatting.trainer import SHLiftOpacityResetDensificationTrainer
-trainer = SHLiftOpacityResetDensificationTrainer(
+from gaussian_splatting.trainer import BaseSHLiftTrainer
+trainer = BaseSHLiftTrainer(
     gaussians,
     spatial_lr_scale=dataset.scene_extent(),
     dataset=dataset,
@@ -188,25 +188,58 @@ trainer = SHLiftOpacityResetDensificationTrainer(
 )
 ```
 
-`SHLiftOpacityResetDensificationTrainer` integrated `BaseDensificationTrainer` with opacity reset and lifting SH
+`OpacityResetDensificationTrainer` integrated `BaseDensificationTrainer` with opacity reset.
+```python
+from gaussian_splatting.trainer import BaseCameraTrainer
+trainer = OpacityResetDensificationTrainer(
+    gaussians,
+    scene_extent=dataset.scene_extent(),
+    dataset=dataset,
+    ... # see gaussian_splatting/trainer/combinations.py for full options
+)
+```
+
+`SHLiftOpacityResetDensificationTrainer` integrated `BaseDensificationTrainer` with opacity reset and lifting SH.
 ```python
 from gaussian_splatting.trainer import SHLiftOpacityResetDensificationTrainer
 trainer = SHLiftOpacityResetDensificationTrainer(
     gaussians,
     scene_extent=dataset.scene_extent(),
     dataset=dataset,
-    ... # see gaussian_splatting/trainer/sh_lift.py for full options
+    ... # see gaussian_splatting/trainer/combinations.py for full options
 )
 ```
 
-`SHLiftCameraTrainer` integrated `BaseCameraTrainer` with lifting SH
+`SHLiftCameraTrainer` integrated `BaseCameraTrainer` with lifting SH.
 ```python
 from gaussian_splatting.trainer import SHLiftCameraTrainer
 trainer = SHLiftCameraTrainer(
     gaussians,
     scene_extent=dataset.scene_extent(),
     dataset=dataset,
-    ... # see gaussian_splatting/trainer/sh_lift.py for full options
+    ... # see gaussian_splatting/trainer/combinations.py for full options
+)
+```
+
+`OpacityResetDensificationCameraTrainer` integrated `BaseCameraTrainer` with lifting SH.
+```python
+from gaussian_splatting.trainer import OpacityResetDensificationCameraTrainer
+trainer = OpacityResetDensificationCameraTrainer(
+    gaussians,
+    scene_extent=dataset.scene_extent(),
+    dataset=dataset,
+    ... # see gaussian_splatting/trainer/combinations.py for full options
+)
+```
+
+`SHLiftOpacityResetDensificationCameraTrainer` integrated `BaseCameraTrainer` with lifting SH.
+```python
+from gaussian_splatting.trainer import SHLiftOpacityResetDensificationCameraTrainer
+trainer = SHLiftOpacityResetDensificationCameraTrainer(
+    gaussians,
+    scene_extent=dataset.scene_extent(),
+    dataset=dataset,
+    ... # see gaussian_splatting/trainer/combinations.py for full options
 )
 ```
 

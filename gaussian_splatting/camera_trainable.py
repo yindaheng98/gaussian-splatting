@@ -54,8 +54,8 @@ class CameraTrainableGaussianModel(GaussianModel):
         rel_w2c[:3, :3] = quaternion_to_matrix(normalize_quaternion(quaternion.unsqueeze(0))).squeeze(0)
         rel_w2c[:3, 3] = viewpoint_camera.T
         # Transform mean and rot of Gaussians to camera frame
-        gaussians_xyz = self._xyz.clone()
-        gaussians_rot = self._rotation.clone()
+        gaussians_xyz = self.get_xyz.clone()
+        gaussians_rot = self.get_rotation.clone()
 
         xyz_ones = torch.ones(gaussians_xyz.shape[0], 1).cuda().float()
         xyz_homo = torch.cat((gaussians_xyz, xyz_ones), dim=1)

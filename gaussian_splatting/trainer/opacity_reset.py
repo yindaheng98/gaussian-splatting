@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 
-from gaussian_splatting import GaussianModel
 from .abc import AbstractTrainer, TrainerWrapper
-from .densifier import BaseDensificationTrainer
 
 
 def replace_tensor_to_optimizer(optimizer: torch.optim.Optimizer, tensor, name):
@@ -42,21 +40,3 @@ class OpacityResetTrainer(TrainerWrapper):
                 self.model._opacity = optimizable_tensors["opacity"]
                 torch.cuda.empty_cache()
         return super().optim_step()
-
-
-def OpacityResetDensificationTrainer(
-        model: GaussianModel,
-        scene_extent: float,
-        opacity_reset_from_iter=3000,
-        opacity_reset_until_iter=15000,
-        opacity_reset_interval=3000,
-        *args, **kwargs):
-    return OpacityResetTrainer(
-        BaseDensificationTrainer(
-            model, scene_extent,
-            *args, **kwargs
-        ),
-        opacity_reset_from_iter=opacity_reset_from_iter,
-        opacity_reset_until_iter=opacity_reset_until_iter,
-        opacity_reset_interval=opacity_reset_interval
-    )

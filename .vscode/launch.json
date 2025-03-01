@@ -42,6 +42,24 @@
             ]
         },
         {
+            "name": "train camera-densify",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gaussian_splatting.train",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-s",
+                "data/truck",
+                "-d",
+                "output/truck-camera-densify",
+                "-i",
+                "30000",
+                "--mode",
+                "camera-densify",
+            ]
+        },
+        {
             "name": "render",
             "type": "debugpy",
             "request": "launch",
@@ -79,6 +97,26 @@
                 "camera",
                 "--load_camera",
                 "output/truck-camera/cameras.json",
+            ]
+        },
+        {
+            "name": "render camera-densify",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gaussian_splatting.render",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-s",
+                "data/truck",
+                "-d",
+                "output/truck-camera-densify",
+                "-i",
+                "30000",
+                "--mode",
+                "camera-densify",
+                "--load_camera",
+                "output/truck-camera-densify/cameras.json",
             ]
         },
     ]

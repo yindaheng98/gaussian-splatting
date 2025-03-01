@@ -8,8 +8,8 @@ from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
-from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, OpacityResetDensificationTrainer, BaseCameraTrainer
-from gaussian_splatting.trainer import SHLiftBaseTrainer, SHLiftOpacityResetDensificationTrainer, SHLiftCameraTrainer
+from gaussian_splatting.trainer import AbstractTrainer, BaseTrainer, OpacityResetDensificationTrainer, BaseCameraTrainer, OpacityResetDensificationCameraTrainer
+from gaussian_splatting.trainer import SHLiftBaseTrainer, SHLiftOpacityResetDensificationTrainer, SHLiftCameraTrainer, SHLiftOpacityResetDensificationCameraTrainer
 
 
 def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
@@ -50,6 +50,21 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
                 dataset=dataset,
                 **configs
             ) if load_ply else SHLiftCameraTrainer(
+                gaussians,
+                scene_extent=dataset.scene_extent(),
+                dataset=dataset,
+                **configs
+            )
+        case "camera-densify":
+            gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
+            gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
+            dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source)).to(device)
+            trainer = OpacityResetDensificationCameraTrainer(
+                gaussians,
+                scene_extent=dataset.scene_extent(),
+                dataset=dataset,
+                **configs
+            ) if load_ply else SHLiftOpacityResetDensificationCameraTrainer(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,

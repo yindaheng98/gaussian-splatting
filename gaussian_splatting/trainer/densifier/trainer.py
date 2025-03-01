@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 import torch
 import torch.nn as nn
 from gaussian_splatting import GaussianModel
@@ -11,6 +11,8 @@ def cat_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dic
     optimizable_tensors = {}
     for group in optimizer.param_groups:
         assert len(group["params"]) == 1
+        if group["name"] not in tensors_dict:
+            continue
         extension_tensor = tensors_dict[group["name"]]
         stored_state = optimizer.state.get(group['params'][0], None)
         if stored_state is not None:
@@ -30,10 +32,12 @@ def cat_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dic
     return optimizable_tensors
 
 
-def mask_tensors_in_optimizer(optimizer: torch.optim.Optimizer, prune_mask: torch.Tensor):
+def mask_tensors_in_optimizer(optimizer: torch.optim.Optimizer, prune_mask: torch.Tensor, tensors_names: List[str]):
     optimizable_tensors = {}
     for group in optimizer.param_groups:
         assert len(group["params"]) == 1
+        if group["name"] not in tensors_names:
+            continue
         mask = ~prune_mask
         stored_state = optimizer.state.get(group['params'][0], None)
         if stored_state is not None:
@@ -87,7 +91,7 @@ class DensificationTrainer(BaseTrainer):
         )
 
     def remove_points(self, rm_mask):
-        optimizable_tensors = mask_tensors_in_optimizer(self.optimizer, rm_mask)
+        optimizable_tensors = mask_tensors_in_optimizer(self.optimizer, rm_mask, ["xyz", "f_dc", "f_rest", "opacity", "scaling", "rotation"])
 
         self.model.update_points_remove(
             removed_mask=rm_mask,

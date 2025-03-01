@@ -13,11 +13,11 @@ from gaussian_splatting.utils.lpipsPyTorch import lpips
 
 def prepare_rendering(sh_degree: int, source: str, device: str, mode: str, load_ply: str, load_camera: str = None) -> Tuple[CameraDataset, GaussianModel]:
     match mode:
-        case "pure" | "densify":
+        case "base" | "densify":
             gaussians = GaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply)
             dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
-        case "camera":
+        case "camera" | "camera-densify":
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply)
             dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source)).to(device)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--destination", required=True, type=str)
     parser.add_argument("-i", "--iteration", required=True, type=int)
     parser.add_argument("--load_camera", default=None, type=str)
-    parser.add_argument("--mode", choices=["pure", "densify", "camera"], default="pure")
+    parser.add_argument("--mode", choices=["base", "densify", "camera", "camera-densify"], default="pure")
     parser.add_argument("--device", default="cuda", type=str)
     args = parser.parse_args()
     load_ply = os.path.join(args.destination, "point_cloud", "iteration_" + str(args.iteration), "point_cloud.ply")

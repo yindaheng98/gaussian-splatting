@@ -1,2 +1,3 @@
 from .abc import AbstractDensifier, DensificationInstruct
-from .densifier import Densifier, DensificationTrainer, BaseDensificationTrainer
+from .trainer import DensificationTrainer
+from .densifier import Densifier, BaseDensificationTrainer

@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from gaussian_splatting.camera import camera2dict
-from gaussian_splatting.utils import quaternion_to_matrix
+from gaussian_splatting.utils import normalize_quaternion, quaternion_to_matrix
 from .dataset import CameraDataset, JSONCameraDataset
 
 
@@ -32,8 +32,24 @@ class TrainableCameraDataset(CameraDataset):
         return len(self.cameras)
 
     def __getitem__(self, idx) -> Camera:
+        viewpoint_camera: Camera = self.cameras[idx]
+        rel_w2c = torch.eye(4, device=self.quaternions.device)
+        quaternion = self.quaternions[idx, ...]
+        rel_w2c[:3, :3] = quaternion_to_matrix(normalize_quaternion(quaternion.unsqueeze(0))).squeeze(0)
+        rel_w2c[:3, 3] = self.Ts[idx, ...]
+
+        # use the computed camera matrices rather than the ones from the dataset
+        w2c = rel_w2c.T
+        projmatrix = (
+            w2c.unsqueeze(0).bmm(viewpoint_camera.projection_matrix.unsqueeze(0))
+        ).squeeze(0)
+        campos = w2c.inverse()[3, :3]
+
         return Camera(**{
             **self.cameras[idx]._asdict(),
+            'world_view_transform': w2c,
+            'full_proj_transform': projmatrix,
+            'camera_center': campos,
             'quaternion': self.quaternions[idx, ...],
             'T': self.Ts[idx, ...],
             'postprocess': exposure_postprocess,

@@ -21,12 +21,7 @@ class CameraTrainableGaussianModel(GaussianModel):
         tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
         tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
 
-        # Set camera pose as identity. Then, we will transform the Gaussians around camera_pose
-        w2c = torch.eye(4, device=self._xyz.device)
-        projmatrix = (
-            w2c.unsqueeze(0).bmm(viewpoint_camera.projection_matrix.unsqueeze(0))
-        ).squeeze(0)
-        campos = w2c.inverse()[3, :3]
+        # use the computed camera matrices rather than the ones from the dataset
         raster_settings = GaussianRasterizationSettings(
             image_height=int(viewpoint_camera.image_height),
             image_width=int(viewpoint_camera.image_width),
@@ -34,13 +29,10 @@ class CameraTrainableGaussianModel(GaussianModel):
             tanfovy=tanfovy,
             bg=viewpoint_camera.bg_color.to(self._xyz.device),
             scale_modifier=self.scale_modifier,
-            # viewmatrix=viewpoint_camera.world_view_transform,
-            # projmatrix=viewpoint_camera.full_proj_transform,
-            viewmatrix=w2c,
-            projmatrix=projmatrix,
+            viewmatrix=viewpoint_camera.world_view_transform,
+            projmatrix=viewpoint_camera.full_proj_transform,
             sh_degree=self.active_sh_degree,
-            # campos=viewpoint_camera.camera_center,
-            campos=campos,
+            campos=viewpoint_camera.camera_center,
             prefiltered=False,
             debug=self.debug,
             antialiasing=self.antialiasing
@@ -59,8 +51,8 @@ class CameraTrainableGaussianModel(GaussianModel):
 
         xyz_ones = torch.ones(gaussians_xyz.shape[0], 1).cuda().float()
         xyz_homo = torch.cat((gaussians_xyz, xyz_ones), dim=1)
-        gaussians_xyz_trans = (rel_w2c @ xyz_homo.T).T[:, :3]
-        gaussians_rot_trans = quaternion_raw_multiply(quaternion, gaussians_rot)
+        gaussians_xyz_trans = (rel_w2c.detach().inverse() @ rel_w2c @ xyz_homo.T).T[:, :3]
+        gaussians_rot_trans = quaternion_raw_multiply(quaternion.detach() * torch.tensor([1, -1, -1, -1], device=quaternion.device), quaternion_raw_multiply(quaternion, gaussians_rot))
         means3D = gaussians_xyz_trans
         means2D = screenspace_points
         opacity = self.get_opacity

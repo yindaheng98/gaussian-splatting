@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from typing import NamedTuple
 import torch
 
+from gaussian_splatting import GaussianModel
+
 
 class DensificationInstruct(NamedTuple):
     new_xyz: torch.Tensor = None
@@ -14,6 +16,11 @@ class DensificationInstruct(NamedTuple):
 
 
 class AbstractDensifier(ABC):
+
+    @property
+    @abstractmethod
+    def model(self) -> GaussianModel:
+        raise ValueError("Model is not set")
 
     @abstractmethod
     def densify_and_prune(self, loss, out, camera, step: int) -> DensificationInstruct:

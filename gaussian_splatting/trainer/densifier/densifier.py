@@ -23,7 +23,7 @@ class Densifier(AbstractDensifier):
         prune_interval=100,
         prune_screensize_threshold=20,
     ):
-        self.model = model
+        self._model = model
         self.scene_extent = scene_extent
         self.percent_dense = percent_dense
         self.densify_from_iter = densify_from_iter
@@ -39,6 +39,10 @@ class Densifier(AbstractDensifier):
         self.xyz_gradient_accum = None
         self.denom = None
         self.max_radii2D = None
+
+    @property
+    def model(self) -> GaussianModel:
+        return self._model
 
     def update_densification_stats(self, out):
         viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]

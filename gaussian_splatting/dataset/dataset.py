@@ -14,8 +14,12 @@ class CameraDataset:
         return self
 
     @abstractmethod
+    def __len__(self) -> int:
+        raise NotImplementedError
+
+    @abstractmethod
     def __getitem__(self, idx) -> Camera:
-        pass
+        raise NotImplementedError
 
     def save_cameras(self, path):
         cameras = []

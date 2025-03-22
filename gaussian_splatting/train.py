@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 from typing import List, Tuple
 import torch
 from tqdm import tqdm
@@ -82,6 +83,7 @@ def save_cfg_args(destination: str, sh_degree: int, source: str):
 
 
 def training(dataset: CameraDataset, gaussians: GaussianModel, trainer: AbstractTrainer, destination: str, iteration: int, save_iterations: List[int], device: str):
+    shutil.rmtree(os.path.join(destination, "point_cloud"), ignore_errors=True)  # remove the previous point cloud
     pbar = tqdm(range(1, iteration+1))
     epoch = list(range(len(dataset)))
     epoch_psnr = torch.empty(3, 0, device=device)

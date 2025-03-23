@@ -107,7 +107,7 @@ class Densifier(AbstractDensifier):
             new_rotation=new_rotation,
         )
 
-    def prune(self) -> DensificationInstruct:
+    def prune(self) -> torch.Tensor:
         prune_mask = (self.model.get_opacity < self.densify_opacity_threshold).squeeze()
         big_points_vs = self.max_radii2D > self.prune_screensize_threshold
         big_points_ws = self.model.get_scaling.max(dim=1).values > 0.1 * self.scene_extent

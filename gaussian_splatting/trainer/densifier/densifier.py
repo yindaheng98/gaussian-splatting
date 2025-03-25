@@ -10,33 +10,35 @@ class Densifier(AbstractDensifier):
 
     def __init__(
         self, model: GaussianModel, scene_extent,
-        percent_dense=0.01,
-        percent_too_big=1,
 
         densify_from_iter=500,
         densify_until_iter=15000,
         densify_interval=100,
         densify_grad_threshold=0.0002,
         densify_opacity_threshold=0.005,
+        densify_percent_dense=0.01,
+        densify_percent_too_big=0.8,
 
         prune_from_iter=1000,
         prune_until_iter=15000,
         prune_interval=100,
         prune_screensize_threshold=20,
+        prune_percent_too_big=1,
     ):
         self._model = model
         self.scene_extent = scene_extent
-        self.percent_dense = percent_dense
-        self.percent_too_big = percent_too_big
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
         self.densify_interval = densify_interval
         self.densify_grad_threshold = densify_grad_threshold
         self.densify_opacity_threshold = densify_opacity_threshold
+        self.densify_percent_dense = densify_percent_dense
+        self.densify_percent_too_big = densify_percent_too_big
         self.prune_from_iter = prune_from_iter
         self.prune_until_iter = prune_until_iter
         self.prune_interval = prune_interval
         self.prune_screensize_threshold = prune_screensize_threshold
+        self.prune_percent_too_big = prune_percent_too_big
 
         self.xyz_gradient_accum = None
         self.denom = None
@@ -65,10 +67,10 @@ class Densifier(AbstractDensifier):
         selected_pts_mask = torch.where(padded_grad >= grad_threshold, True, False)
         selected_pts_mask = torch.logical_and(
             selected_pts_mask,
-            torch.max(self.model.get_scaling, dim=1).values > self.percent_dense*scene_extent)
+            torch.max(self.model.get_scaling, dim=1).values > self.densify_percent_dense*scene_extent)
         selected_pts_mask = torch.logical_or(
             selected_pts_mask,
-            torch.max(self.model.get_scaling, dim=1).values > self.percent_too_big*scene_extent)
+            torch.max(self.model.get_scaling, dim=1).values > self.densify_percent_too_big*scene_extent)
 
         stds = self.model.get_scaling[selected_pts_mask].repeat(N, 1)
         means = torch.zeros((stds.size(0), 3), device=self.model._xyz.device)
@@ -95,7 +97,7 @@ class Densifier(AbstractDensifier):
         # Extract points that satisfy the gradient condition
         selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
         selected_pts_mask = torch.logical_and(selected_pts_mask,
-                                              torch.max(self.model.get_scaling, dim=1).values <= self.percent_dense*scene_extent)
+                                              torch.max(self.model.get_scaling, dim=1).values <= self.densify_percent_dense*scene_extent)
 
         new_xyz = self.model._xyz[selected_pts_mask]
         new_features_dc = self.model._features_dc[selected_pts_mask]
@@ -116,7 +118,7 @@ class Densifier(AbstractDensifier):
     def prune(self) -> torch.Tensor:
         prune_mask = (self.model.get_opacity < self.densify_opacity_threshold).squeeze()
         big_points_vs = self.max_radii2D > self.prune_screensize_threshold
-        big_points_ws = self.model.get_scaling.max(dim=1).values > 0.1 * self.scene_extent
+        big_points_ws = self.model.get_scaling.max(dim=1).values > self.prune_percent_too_big * self.scene_extent
         prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
         return prune_mask
 
@@ -159,26 +161,27 @@ class Densifier(AbstractDensifier):
 def BaseDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
-        percent_dense=0.01,
-        percent_too_big=1,
 
         densify_from_iter=500,
         densify_until_iter=15000,
         densify_interval=100,
         densify_grad_threshold=0.0002,
         densify_opacity_threshold=0.005,
+        densify_percent_dense=0.01,
+        densify_percent_too_big=0.8,
 
         prune_from_iter=1000,
         prune_until_iter=15000,
         prune_interval=100,
         prune_screensize_threshold=20,
+        prune_percent_too_big=1,
 
         *args, **kwargs):
     return DensificationTrainer(
         model, scene_extent,
         Densifier(
-            model, scene_extent, percent_dense, percent_too_big,
-            densify_from_iter, densify_until_iter, densify_interval, densify_grad_threshold, densify_opacity_threshold,
-            prune_from_iter, prune_until_iter, prune_interval, prune_screensize_threshold),
+            model, scene_extent,
+            densify_from_iter, densify_until_iter, densify_interval, densify_grad_threshold, densify_opacity_threshold, densify_percent_dense, densify_percent_too_big,
+            prune_from_iter, prune_until_iter, prune_interval, prune_screensize_threshold, prune_percent_too_big),
         *args, **kwargs
     )

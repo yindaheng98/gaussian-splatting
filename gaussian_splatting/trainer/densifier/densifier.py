@@ -11,6 +11,7 @@ class Densifier(AbstractDensifier):
     def __init__(
         self, model: GaussianModel, scene_extent,
         percent_dense=0.01,
+        percent_too_big=1,
 
         densify_from_iter=500,
         densify_until_iter=15000,
@@ -26,6 +27,7 @@ class Densifier(AbstractDensifier):
         self._model = model
         self.scene_extent = scene_extent
         self.percent_dense = percent_dense
+        self.percent_too_big = percent_too_big
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
         self.densify_interval = densify_interval
@@ -61,8 +63,12 @@ class Densifier(AbstractDensifier):
         padded_grad = torch.zeros((n_init_points), device=self.model._xyz.device)
         padded_grad[:grads.shape[0]] = grads.squeeze()
         selected_pts_mask = torch.where(padded_grad >= grad_threshold, True, False)
-        selected_pts_mask = torch.logical_and(selected_pts_mask,
-                                              torch.max(self.model.get_scaling, dim=1).values > self.percent_dense*scene_extent)
+        selected_pts_mask = torch.logical_and(
+            selected_pts_mask,
+            torch.max(self.model.get_scaling, dim=1).values > self.percent_dense*scene_extent)
+        selected_pts_mask = torch.logical_or(
+            selected_pts_mask,
+            torch.max(self.model.get_scaling, dim=1).values > self.percent_too_big*scene_extent)
 
         stds = self.model.get_scaling[selected_pts_mask].repeat(N, 1)
         means = torch.zeros((stds.size(0), 3), device=self.model._xyz.device)
@@ -154,6 +160,7 @@ def BaseDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
         percent_dense=0.01,
+        percent_too_big=1,
 
         densify_from_iter=500,
         densify_until_iter=15000,
@@ -170,7 +177,7 @@ def BaseDensificationTrainer(
     return DensificationTrainer(
         model, scene_extent,
         Densifier(
-            model, scene_extent, percent_dense,
+            model, scene_extent, percent_dense, percent_too_big,
             densify_from_iter, densify_until_iter, densify_interval, densify_grad_threshold, densify_opacity_threshold,
             prune_from_iter, prune_until_iter, prune_interval, prune_screensize_threshold),
         *args, **kwargs

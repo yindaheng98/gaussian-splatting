@@ -30,9 +30,9 @@ def camera2dict(camera: Camera, id):
     Rt[:3, 3] = camera.T
     Rt[3, 3] = 1.0
 
-    W2C = torch.linalg.inv(Rt)
-    pos = W2C[:3, 3]
-    rot = W2C[:3, :3]
+    C2W = torch.linalg.inv(Rt)
+    pos = C2W[:3, 3]
+    rot = C2W[:3, :3]
     serializable_array_2d = [x.tolist() for x in rot]
     camera_entry = {
         'id': id,
@@ -87,11 +87,11 @@ def build_camera(
 
 
 def dict2camera(camera_dict, device="cuda"):
-    W2C = torch.zeros((4, 4))
-    W2C[:3, 3] = torch.tensor(camera_dict['position'])
-    W2C[:3, :3] = torch.tensor(camera_dict['rotation'])
-    W2C[3, 3] = 1.0
-    Rt = torch.linalg.inv(W2C)
+    C2W = torch.zeros((4, 4))
+    C2W[:3, 3] = torch.tensor(camera_dict['position'])
+    C2W[:3, :3] = torch.tensor(camera_dict['rotation'])
+    C2W[3, 3] = 1.0
+    Rt = torch.linalg.inv(C2W)
     T = Rt[:3, 3]
     R = Rt[:3, :3]
     return build_camera(

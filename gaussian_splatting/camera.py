@@ -40,8 +40,8 @@ def camera2dict(camera: Camera, id):
         'height': camera.image_height,
         'position': pos.tolist(),
         'rotation': serializable_array_2d,
-        'fy': fov2focal(camera.FoVx, camera.image_height),
-        'fx': fov2focal(camera.FoVy, camera.image_width),
+        'fx': fov2focal(camera.FoVx, camera.image_width),
+        'fy': fov2focal(camera.FoVy, camera.image_height),
         'ground_truth_image_path': camera.ground_truth_image_path.replace("\\", "/"),
         "img_name": os.path.basename(camera.ground_truth_image_path),
     }
@@ -97,8 +97,8 @@ def dict2camera(camera_dict, device="cuda"):
     return build_camera(
         image_width=camera_dict['width'],
         image_height=camera_dict['height'],
-        FoVx=focal2fov(camera_dict['fy'], camera_dict['height']),
-        FoVy=focal2fov(camera_dict['fx'], camera_dict['width']),
+        FoVx=focal2fov(camera_dict['fx'], camera_dict['width']),
+        FoVy=focal2fov(camera_dict['fy'], camera_dict['height']),
         R=R,
         T=T,
         image_path=camera_dict['ground_truth_image_path'],

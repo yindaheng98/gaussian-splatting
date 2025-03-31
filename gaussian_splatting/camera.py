@@ -2,7 +2,7 @@ import os
 from typing import NamedTuple, Callable
 import torch
 from PIL import Image
-from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, PILtoTorch, matrix_to_quaternion
+from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, read_image, matrix_to_quaternion
 
 
 class Camera(NamedTuple):
@@ -65,9 +65,7 @@ def build_camera(
     quaternion = matrix_to_quaternion(R)
     gt_image = None
     if image_path is not None:
-        pil_image = Image.open(image_path)
-        torch_image = PILtoTorch(pil_image)
-        gt_image = torch_image[:3, ...].clamp(0.0, 1.0).to(device)
+        gt_image = read_image(image_path).to(device)
         image_height = gt_image.shape[1]
         image_width = gt_image.shape[2]
     return Camera(

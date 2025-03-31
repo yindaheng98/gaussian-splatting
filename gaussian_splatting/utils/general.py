@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from PIL import Image
 
 
 def inverse_sigmoid(x):
@@ -12,6 +13,12 @@ def PILtoTorch(pil_image):
         return resized_image.permute(2, 0, 1)
     else:
         return resized_image.unsqueeze(dim=-1).permute(2, 0, 1)
+
+
+def read_image(image_path):
+    pil_image = Image.open(image_path)
+    torch_image = PILtoTorch(pil_image)
+    return torch_image[:3, ...].clamp(0.0, 1.0)
 
 
 def strip_lowerdiag(L):

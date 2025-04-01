@@ -42,8 +42,8 @@ def camera2dict(camera: Camera, id):
         'rotation': serializable_array_2d,
         'fx': fov2focal(camera.FoVx, camera.image_width),
         'fy': fov2focal(camera.FoVy, camera.image_height),
-        'ground_truth_image_path': camera.ground_truth_image_path.replace("\\", "/"),
-        "img_name": os.path.basename(camera.ground_truth_image_path),
+        'ground_truth_image_path': camera.ground_truth_image_path.replace("\\", "/") if camera.ground_truth_image_path else None,
+        "img_name": os.path.basename(camera.ground_truth_image_path) if camera.ground_truth_image_path else None,
     }
     return camera_entry
 

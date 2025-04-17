@@ -4,6 +4,7 @@ import os
 from tqdm import tqdm
 from os import makedirs
 import torchvision
+import tifffile
 from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, TrainableCameraDataset
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, ColmapTrainableCameraDataset
@@ -39,6 +40,8 @@ def rendering(dataset: CameraDataset, gaussians: GaussianModel, save: str):
         pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
+        depth = out["depth"]
+        tifffile.imwrite(os.path.join(render_path, '{0:05d}'.format(idx) + "_depth.tiff"), depth.cpu().numpy())
 
 
 if __name__ == "__main__":

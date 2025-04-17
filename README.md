@@ -75,11 +75,18 @@ python -m gaussian_splatting.render -s data/truck -d output/truck-camera -i 3000
 
 ### (Optional) Generate depth maps before training
 
-1. Generate depth maps
+1. Prepare Depth-Anything-V2
 ```shell
 git clone https://github.com/DepthAnything/Depth-Anything-V2.git
 mkdir checkpoints
 wget -O checkpoints/depth_anything_v2_vitl.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth?download=true
+```
+
+2. Generate depth maps
+```shell
+# (Recommanded) save depth map as floating-point tiff file
+python tools/run_depth_anything_v2.py --encoder vitl --img-path data/truck/images --outdir data/truck/depths
+# (not Recommanded) save depth map as uint8 png file
 python Depth-Anything-V2/run.py --encoder vitl --pred-only --grayscale --img-path data/truck/images --outdir data/truck/depths
 ```
 

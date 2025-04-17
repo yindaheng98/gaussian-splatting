@@ -48,7 +48,9 @@ def parse_colmap_camera(cameras, images, image_dir, depth_dir):
             raise ValueError("Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!")
 
         image_path = os.path.join(image_dir, extr.name)
-        depth_path = os.path.join(depth_dir, os.path.splitext(extr.name)[0] + '.png')
+        depth_path = os.path.join(depth_dir, os.path.splitext(extr.name)[0] + '.tiff')
+        if not os.path.exists(depth_path):
+            depth_path = os.path.splitext(depth_path)[0] + '.png'
         parsed_cameras.append(ColmapCamera(
             image_height=height, image_width=width,
             R=torch.from_numpy(R), T=torch.from_numpy(T),

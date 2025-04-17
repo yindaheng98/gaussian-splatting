@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from PIL import Image
 import cv2
+import tifffile
 
 
 def inverse_sigmoid(x):
@@ -22,12 +23,26 @@ def read_image(image_path):
     return torch_image[:3, ...].clamp(0.0, 1.0)
 
 
-def read_depth(depth_path):
+def read_png_depth(depth_path):
     cv2_depth = cv2.imread(depth_path, cv2.IMREAD_UNCHANGED)
     if cv2_depth.ndim != 2:
         cv2_depth = cv2_depth[..., 0]
-    torch_image = torch.from_numpy(cv2_depth.astype(np.float32)) / 255.0
+    torch_image = torch.from_numpy(cv2_depth.astype(np.float32))
     return torch_image
+
+
+def read_tiff_depth(depth_path):
+    tiff_depth = tifffile.imread(depth_path)
+    if tiff_depth.ndim != 2:
+        tiff_depth = tiff_depth[..., 0]
+    torch_image = torch.from_numpy(tiff_depth)
+    return torch_image
+
+
+def read_depth(depth_path):
+    if depth_path.endswith('.tiff'):
+        return read_tiff_depth(depth_path)
+    return read_png_depth(depth_path)
 
 
 def strip_lowerdiag(L):

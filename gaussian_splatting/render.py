@@ -1,4 +1,6 @@
 from typing import Tuple
+import cv2
+import numpy as np
 import torch
 import os
 from tqdm import tqdm
@@ -41,7 +43,9 @@ def rendering(dataset: CameraDataset, gaussians: GaussianModel, save: str):
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
         depth = out["depth"]
-        tifffile.imwrite(os.path.join(render_path, '{0:05d}'.format(idx) + "_depth.tiff"), depth.cpu().numpy())
+        tifffile.imwrite(os.path.join(render_path, '{0:05d}'.format(idx) + "_depth.tiff"), depth.permute(1, 2, 0).cpu().numpy())
+        depth = ((depth - depth.min()) / (depth.max() - depth.min()) * 255.0).type(torch.uint8).repeat(3, 1, 1)
+        cv2.imwrite(os.path.join(render_path, '{0:05d}'.format(idx) + "_depth.png"), depth.permute(1, 2, 0).cpu().numpy())
 
 
 if __name__ == "__main__":

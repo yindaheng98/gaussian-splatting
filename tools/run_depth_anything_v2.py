@@ -2,6 +2,7 @@ import argparse
 import cv2
 import glob
 import os
+import numpy as np
 import torch
 import sys
 import tifffile
@@ -52,3 +53,8 @@ if __name__ == '__main__':
         depth = depth_anything.infer_image(raw_image, args.input_size)
 
         tifffile.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '.tiff'), depth)
+
+        depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+        depth = depth.astype(np.uint8)
+        depth = np.repeat(depth[..., np.newaxis], 3, axis=-1)
+        cv2.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '.png'), depth)

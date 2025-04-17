@@ -51,8 +51,6 @@
                 "camera",
                 "-l",
                 "output/truck/point_cloud/iteration_30000/point_cloud.ply",
-                "--load_camera",
-                "output/truck/cameras.json",
             ]
         },
         {

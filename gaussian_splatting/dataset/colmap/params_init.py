@@ -29,11 +29,11 @@ def read_colmap_points3D(colmap_folder: str):
     pts_indices = np.array([points3D[key].id for key in points3D])
     xyz = np.zeros([pts_indices.max()+1, 3])
     rgb = np.zeros([pts_indices.max()+1, 3])
-    error = np.zeros([pts_indices.max()+1, 3])
+    error = np.zeros([pts_indices.max()+1])
     xyz[pts_indices] = np.array([points3D[key].xyz for key in points3D])
     rgb[pts_indices] = np.array([points3D[key].rgb for key in points3D])
     error[pts_indices] = np.array([points3D[key].error for key in points3D])
-    return xyz, rgb, error
+    return xyz[pts_indices], rgb[pts_indices], error[pts_indices]
 
 
 def colmap_init(model: GaussianModel, colmap_folder: str):

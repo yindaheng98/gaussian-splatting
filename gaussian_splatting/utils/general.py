@@ -26,7 +26,7 @@ def read_depth(depth_path):
     cv2_depth = cv2.imread(depth_path, cv2.IMREAD_UNCHANGED)
     if cv2_depth.ndim != 2:
         cv2_depth = cv2_depth[..., 0]
-    torch_image = torch.from_numpy(cv2_depth.astype(np.float32)) / (2**16)
+    torch_image = torch.from_numpy(cv2_depth.astype(np.float32)) / 255.0
     return torch_image
 
 

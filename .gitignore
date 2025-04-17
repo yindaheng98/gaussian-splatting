@@ -3,6 +3,8 @@ output
 *.dist-info
 gaussian_splatting/diff_gaussian_rasterization
 gaussian_splatting/simple_knn
+Depth-Anything-V2
+checkpoints
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -73,6 +73,16 @@ python -m gaussian_splatting.render -s data/truck -d output/truck-camera -i 3000
 
 > 💡 See [.vscode/launch.json](.vscode/launch.json) for more example. See [gaussian_splatting.train](gaussian_splatting/train.py) and [gaussian_splatting.render](gaussian_splatting/render.py) for full options.
 
+### (Optional) Generate depth maps before training
+
+1. Generate depth maps
+```shell
+git clone https://github.com/DepthAnything/Depth-Anything-V2.git
+mkdir checkpoints
+wget -O checkpoints/depth_anything_v2_vitl.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth?download=true
+python Depth-Anything-V2/run.py --encoder vitl --pred-only --grayscale --img-path data/truck/images --outdir data/truck/depths
+```
+
 ## API Usage
 
 ### Gaussian models

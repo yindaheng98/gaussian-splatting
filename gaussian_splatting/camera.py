@@ -1,8 +1,9 @@
 import os
 from typing import NamedTuple, Callable
+import numpy as np
 import torch
-from PIL import Image
-from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, read_image, matrix_to_quaternion
+import cv2
+from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, read_image, read_depth, matrix_to_quaternion
 
 
 class Camera(NamedTuple):
@@ -18,7 +19,9 @@ class Camera(NamedTuple):
     camera_center: torch.Tensor
     quaternion: torch.Tensor
     ground_truth_image_path: str
+    ground_truth_depth_path: str
     ground_truth_image: torch.Tensor = None
+    ground_truth_depth: torch.Tensor = None
     postprocess: Callable[['Camera', torch.Tensor], torch.Tensor] = lambda camera, x: x
     bg_color: torch.Tensor = torch.tensor([0., 0., 0.])
     custom_data: dict = {}
@@ -43,6 +46,7 @@ def camera2dict(camera: Camera, id):
         'fx': fov2focal(camera.FoVx, camera.image_width),
         'fy': fov2focal(camera.FoVy, camera.image_height),
         'ground_truth_image_path': camera.ground_truth_image_path.replace("\\", "/") if camera.ground_truth_image_path else None,
+        'ground_truth_depth_path': camera.ground_truth_depth_path.replace("\\", "/") if camera.ground_truth_depth_path else None,
         "img_name": os.path.basename(camera.ground_truth_image_path) if camera.ground_truth_image_path else None,
     }
     return camera_entry
@@ -52,7 +56,8 @@ def build_camera(
         image_height: int, image_width: int,
         FoVx: float, FoVy: float,
         R: torch.Tensor, T: torch.Tensor,
-        image_path: str = None, device="cuda"
+        image_path: str = None, depth_path: str = None,
+        device="cuda"
 ):
     zfar = 100.0
     znear = 0.01
@@ -68,6 +73,10 @@ def build_camera(
         gt_image = read_image(image_path).to(device)
         image_height = gt_image.shape[1]
         image_width = gt_image.shape[2]
+    gt_depth = None
+    if depth_path is not None and os.path.exists(depth_path):
+        gt_depth = read_depth(depth_path).to(device)
+        assert gt_depth.shape == (image_height, image_width), f"gt_depth shape {gt_depth.shape} does not match gt_image shape {image_height}x{image_width}"
     return Camera(
         # image_height=colmap_camera.image_height, # colmap_camera.image_height is read from cameras.bin, maybe dfferent from the actual image size
         # image_width=colmap_camera.image_width, # colmap_camera.image_width is read from cameras.bin, maybe dfferent from the actual image size
@@ -80,7 +89,9 @@ def build_camera(
         camera_center=camera_center,
         quaternion=quaternion.to(device),
         ground_truth_image_path=image_path,
-        ground_truth_image=gt_image
+        ground_truth_image=gt_image,
+        ground_truth_depth_path=depth_path,
+        ground_truth_depth=gt_depth,
     )
 
 
@@ -99,6 +110,7 @@ def dict2camera(camera_dict, device="cuda"):
         FoVy=focal2fov(camera_dict['fy'], camera_dict['height']),
         R=R,
         T=T,
-        image_path=camera_dict['ground_truth_image_path'],
+        image_path=camera_dict['ground_truth_image_path'] if 'ground_truth_image_path' in camera_dict else None,
+        depth_path=camera_dict['ground_truth_depth_path'] if 'ground_truth_depth_path' in camera_dict else None,
         device=device
     )

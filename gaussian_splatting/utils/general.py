@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from PIL import Image
+import cv2
 
 
 def inverse_sigmoid(x):
@@ -19,6 +20,14 @@ def read_image(image_path):
     pil_image = Image.open(image_path)
     torch_image = PILtoTorch(pil_image)
     return torch_image[:3, ...].clamp(0.0, 1.0)
+
+
+def read_depth(depth_path):
+    cv2_depth = cv2.imread(depth_path, cv2.IMREAD_UNCHANGED)
+    if cv2_depth.ndim != 2:
+        cv2_depth = cv2_depth[..., 0]
+    torch_image = torch.from_numpy(cv2_depth.astype(np.float32)) / (2**16)
+    return torch_image
 
 
 def strip_lowerdiag(L):

@@ -23,9 +23,10 @@ class ColmapCamera(NamedTuple):
     R: torch.Tensor
     T: torch.Tensor
     image_path: str
+    depth_path: str
 
 
-def parse_colmap_camera(cameras, images, image_dir):
+def parse_colmap_camera(cameras, images, image_dir, depth_dir):
     parsed_cameras = []
     for _, key in enumerate(cameras):
         extr = cameras[key]
@@ -47,11 +48,13 @@ def parse_colmap_camera(cameras, images, image_dir):
             raise ValueError("Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!")
 
         image_path = os.path.join(image_dir, extr.name)
+        depth_path = os.path.join(depth_dir, os.path.splitext(extr.name)[0] + '.png')
         parsed_cameras.append(ColmapCamera(
             image_height=height, image_width=width,
             R=torch.from_numpy(R), T=torch.from_numpy(T),
             FoVy=FovY, FoVx=FovX,
-            image_path=image_path
+            image_path=image_path,
+            depth_path=depth_path,
         ))
     return parsed_cameras
 
@@ -59,6 +62,7 @@ def parse_colmap_camera(cameras, images, image_dir):
 def read_colmap_cameras(colmap_folder):
     path = colmap_folder
     image_dir = os.path.join(path, "images")
+    depth_dir = os.path.join(path, "depths")
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -69,7 +73,7 @@ def read_colmap_cameras(colmap_folder):
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
         cam_extrinsics = read_images_text(cameras_extrinsic_file)
         cam_intrinsics = read_cameras_text(cameras_intrinsic_file)
-    return parse_colmap_camera(cam_extrinsics, cam_intrinsics, image_dir)
+    return parse_colmap_camera(cam_extrinsics, cam_intrinsics, image_dir, depth_dir)
 
 
 class ColmapCameraDataset(CameraDataset):

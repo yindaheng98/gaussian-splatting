@@ -2,20 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "make depth scale",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gaussian_splatting.dataset.make_depth_scale",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "args": [
-                "--base_dir",
-                "data/truck",
-                "--depths_dir",
-                "data/truck/depths",
-            ]
-        },
-        {
             "name": "train",
             "type": "debugpy",
             "request": "launch",
@@ -54,6 +40,7 @@
                 "output/truck/point_cloud/iteration_30000/point_cloud.ply",
                 "--load_camera",
                 "output/truck/cameras.json",
+                "--with_depth",
             ]
         },
         {

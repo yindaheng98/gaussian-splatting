@@ -11,60 +11,56 @@ from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
 from gaussian_splatting.trainer import *
 
+basemodes = {
+    "base": BaseTrainer,
+    "densify": OpacityResetDensificationTrainer,
+    "camera": BaseCameraTrainer,
+    "camera-densify": OpacityResetDensificationCameraTrainer,
+}
+shliftmodes = {
+    "base": BaseSHLiftTrainer,
+    "densify": SHLiftOpacityResetDensificationTrainer,
+    "camera": SHLiftCameraTrainer,
+    "camera-densify": SHLiftOpacityResetDensificationCameraTrainer,
+}
+depthmodes = {
+    "base": BaseDepthTrainer,
+    "densify": DepthOpacityResetDensificationTrainer,
+    "camera": DepthCameraTrainer,
+    "camera-densify": DepthOpacityResetDensificationCameraTrainer,
+}
+depthshliftmodes = {
+    "base": DepthSHLiftTrainer,
+    "densify": DepthSHLiftOpacityResetDensificationTrainer,
+    "camera": DepthSHLiftCameraTrainer,
+    "camera-densify": DepthSHLiftOpacityResetDensificationCameraTrainer,
+}
+
 
 def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, with_depth=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
+    modes = basemodes
+    if load_ply and with_depth:
+        modes = depthshliftmodes
+    elif with_depth:
+        modes = depthmodes
+    elif load_ply:
+        modes = shliftmodes
+    moder = modes[mode]
     match mode:
-        case "base":
+        case "base" | "densify":
             gaussians = GaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
             dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
-            trainer = (BaseTrainer if not with_depth else BaseDepthTrainer)(
-                gaussians,
-                scene_extent=dataset.scene_extent(),
-                **configs
-            ) if load_ply else (BaseSHLiftTrainer if not with_depth else DepthSHLiftTrainer)(
+            trainer = moder(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 **configs
             )
-        case "densify":
-            gaussians = GaussianModel(sh_degree).to(device)
-            gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-            dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
-            trainer = (OpacityResetDensificationTrainer if not with_depth else DepthOpacityResetDensificationTrainer)(
-                gaussians,
-                scene_extent=dataset.scene_extent(),
-                **configs
-            ) if load_ply else (SHLiftOpacityResetDensificationTrainer if not with_depth else DepthSHLiftOpacityResetDensificationTrainer)(
-                gaussians,
-                scene_extent=dataset.scene_extent(),
-                **configs
-            )
-        case "camera":
+        case "camera" | "camera-densify":
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
             dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source)).to(device)
-            trainer = (BaseCameraTrainer if not with_depth else DepthCameraTrainer)(
-                gaussians,
-                scene_extent=dataset.scene_extent(),
-                dataset=dataset,
-                **configs
-            ) if load_ply else (SHLiftCameraTrainer if not with_depth else DepthSHLiftCameraTrainer)(
-                gaussians,
-                scene_extent=dataset.scene_extent(),
-                dataset=dataset,
-                **configs
-            )
-        case "camera-densify":
-            gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
-            gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-            dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source)).to(device)
-            trainer = (OpacityResetDensificationCameraTrainer if not with_depth else DepthOpacityResetDensificationCameraTrainer)(
-                gaussians,
-                scene_extent=dataset.scene_extent(),
-                dataset=dataset,
-                **configs
-            ) if load_ply else (SHLiftOpacityResetDensificationCameraTrainer if not with_depth else DepthSHLiftOpacityResetDensificationCameraTrainer)(
+            trainer = moder(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 dataset=dataset,

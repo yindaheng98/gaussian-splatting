@@ -12,13 +12,13 @@ from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, 
 from gaussian_splatting.trainer import *
 
 basemodes = {
-    "base": BaseDepthTrainer,
+    "base": Trainer,
     "densify": OpacityResetDensificationTrainer,
-    "camera": DepthCameraTrainer,
+    "camera": CameraTrainer,
     "camera-densify": OpacityResetDensificationCameraTrainer,
 }
 shliftmodes = {
-    "base": DepthSHLiftTrainer,
+    "base": SHLiftTrainer,
     "densify": SHLiftOpacityResetDensificationTrainer,
     "camera": SHLiftCameraTrainer,
     "camera-densify": SHLiftOpacityResetDensificationCameraTrainer,

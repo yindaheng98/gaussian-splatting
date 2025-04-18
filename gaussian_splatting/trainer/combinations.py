@@ -8,24 +8,10 @@ from .sh_lift import SHLifter, BaseSHLiftTrainer
 from .depth import DepthTrainer
 
 
-def DepthTrainerWrapper(
-    base_constructor,
-        model: GaussianModel,
-        scene_extent: float,
-        depth_l1_weight_init=1.0,
-        depth_l1_weight_final=0.01,
-        depth_l1_weight_max_steps=30_000,
-        *args, **kwargs):
-    return DepthTrainer(
-        base_constructor(model, scene_extent, *args, **kwargs),
-        depth_l1_weight_init=depth_l1_weight_init,
-        depth_l1_weight_final=depth_l1_weight_final,
-        depth_l1_weight_max_steps=depth_l1_weight_max_steps,
-    )
+# Camera trainer
 
 
-def DepthCameraTrainerWrapper(
-    base_constructor,
+def DepthCameraTrainer(
         model: GaussianModel,
         scene_extent: float,
         dataset: TrainableCameraDataset,
@@ -34,25 +20,30 @@ def DepthCameraTrainerWrapper(
         depth_l1_weight_max_steps=30_000,
         *args, **kwargs):
     return DepthTrainer(
-        base_constructor(model, scene_extent, dataset, *args, **kwargs),
+        BaseCameraTrainer(model, scene_extent, dataset, *args, **kwargs),
         depth_l1_weight_init=depth_l1_weight_init,
         depth_l1_weight_final=depth_l1_weight_final,
         depth_l1_weight_max_steps=depth_l1_weight_max_steps,
     )
 
 
-def DepthCameraTrainer(*args, **kwargs):
-    return DepthCameraTrainerWrapper(BaseCameraTrainer, *args, **kwargs)
+# Densification trainers
 
 
 def OpacityResetDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
+
         opacity_reset_from_iter=3000,
         opacity_reset_until_iter=15000,
         opacity_reset_interval=3000,
+
+        depth_l1_weight_init=1.0,
+        depth_l1_weight_final=0.01,
+        depth_l1_weight_max_steps=30_000,
+
         *args, **kwargs):
-    return OpacityResetter(
+    base_trainer = OpacityResetter(
         BaseDensificationTrainer(
             model, scene_extent,
             *args, **kwargs
@@ -61,10 +52,13 @@ def OpacityResetDensificationTrainer(
         opacity_reset_until_iter=opacity_reset_until_iter,
         opacity_reset_interval=opacity_reset_interval
     )
-
-
-def DepthOpacityResetDensificationTrainer(*args, **kwargs):
-    return DepthTrainerWrapper(OpacityResetDensificationTrainer, *args, **kwargs)
+    depth_trainer = DepthTrainer(
+        base_trainer,
+        depth_l1_weight_init=depth_l1_weight_init,
+        depth_l1_weight_final=depth_l1_weight_final,
+        depth_l1_weight_max_steps=depth_l1_weight_max_steps,
+    )
+    return depth_trainer
 
 
 def OpacityResetDensificationCameraTrainer(
@@ -94,12 +88,22 @@ def OpacityResetDensificationCameraTrainer(
     )
 
 
-def DepthOpacityResetDensificationCameraTrainer(*args, **kwargs):
-    return DepthCameraTrainerWrapper(OpacityResetDensificationCameraTrainer, *args, **kwargs)
+# SHLift trainers
 
 
-def DepthSHLiftTrainer(*args, **kwargs):
-    return DepthTrainerWrapper(BaseSHLiftTrainer, *args, **kwargs)
+def DepthSHLiftTrainer(
+        model: GaussianModel,
+        scene_extent: float,
+        depth_l1_weight_init=1.0,
+        depth_l1_weight_final=0.01,
+        depth_l1_weight_max_steps=30_000,
+        *args, **kwargs):
+    return DepthTrainer(
+        BaseSHLiftTrainer(model, scene_extent, *args, **kwargs),
+        depth_l1_weight_init=depth_l1_weight_init,
+        depth_l1_weight_final=depth_l1_weight_final,
+        depth_l1_weight_max_steps=depth_l1_weight_max_steps,
+    )
 
 
 def SHLiftCameraTrainer(
@@ -110,31 +114,10 @@ def SHLiftCameraTrainer(
         initial_sh_degree=0,
         *args, **kwargs):
     return SHLifter(
-        BaseCameraTrainer(model, scene_extent, dataset, *args, **kwargs),
+        DepthCameraTrainer(model, scene_extent, dataset, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
-
-
-def DepthSHLiftCameraTrainer(*args, **kwargs):
-    return DepthCameraTrainerWrapper(SHLiftCameraTrainer, *args, **kwargs)
-
-
-def SHLiftDensificationTrainer(
-        model: GaussianModel,
-        scene_extent: float,
-        sh_degree_up_interval=1000,
-        initial_sh_degree=0,
-        *args, **kwargs):
-    return SHLifter(
-        BaseDensificationTrainer(model, scene_extent, *args, **kwargs),
-        sh_degree_up_interval=sh_degree_up_interval,
-        initial_sh_degree=initial_sh_degree
-    )
-
-
-def DepthSHLiftDensificationTrainer(*args, **kwargs):
-    return DepthTrainerWrapper(SHLiftDensificationTrainer, *args, **kwargs)
 
 
 def SHLiftOpacityResetDensificationTrainer(
@@ -150,10 +133,6 @@ def SHLiftOpacityResetDensificationTrainer(
     )
 
 
-def DepthSHLiftOpacityResetDensificationTrainer(*args, **kwargs):
-    return DepthTrainerWrapper(SHLiftOpacityResetDensificationTrainer, *args, **kwargs)
-
-
 def SHLiftOpacityResetDensificationCameraTrainer(
         model: GaussianModel,
         scene_extent: float,
@@ -166,7 +145,3 @@ def SHLiftOpacityResetDensificationCameraTrainer(
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
-
-
-def DepthSHLiftOpacityResetDensificationCameraTrainer(*args, **kwargs):
-    return DepthCameraTrainerWrapper(SHLiftOpacityResetDensificationCameraTrainer, *args, **kwargs)

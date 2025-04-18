@@ -97,9 +97,9 @@ class ColmapCameraDataset(CameraDataset):
         return self.cameras[idx]
 
 
-def ColmapTrainableCameraDataset(colmap_folder):
-    return TrainableCameraDataset(ColmapCameraDataset(colmap_folder))
+def ColmapTrainableCameraDataset(colmap_folder, load_depth=False):
+    return TrainableCameraDataset(ColmapCameraDataset(colmap_folder, load_depth=load_depth))
 
 
-def ColmapCameraTrainableGaussianModel(colmap_folder, *args, **kwargs):
-    return CameraTrainableGaussianModel(dataset=ColmapTrainableCameraDataset(colmap_folder), *args, **kwargs)
+def ColmapCameraTrainableGaussianModel(colmap_folder, load_depth=False, *args, **kwargs):
+    return CameraTrainableGaussianModel(dataset=ColmapTrainableCameraDataset(colmap_folder, load_depth=load_depth), *args, **kwargs)

@@ -12,7 +12,7 @@ from .abc import AbstractTrainer
 class BaseTrainer(AbstractTrainer):
     def __init__(
             self, model: GaussianModel,
-            spatial_lr_scale: float,
+            scene_extent: float,
             lambda_dssim=0.2,
             position_lr_init=0.00016,
             position_lr_final=0.0000016,
@@ -26,7 +26,7 @@ class BaseTrainer(AbstractTrainer):
         super().__init__()
         self.lambda_dssim = lambda_dssim
         params = [
-            {'params': [model._xyz], 'lr': position_lr_init * spatial_lr_scale, "name": "xyz"},
+            {'params': [model._xyz], 'lr': position_lr_init * scene_extent, "name": "xyz"},
             {'params': [model._features_dc], 'lr': feature_lr, "name": "f_dc"},
             {'params': [model._features_rest], 'lr': feature_lr / 20.0, "name": "f_rest"},
             {'params': [model._opacity], 'lr': opacity_lr, "name": "opacity"},
@@ -36,8 +36,8 @@ class BaseTrainer(AbstractTrainer):
         optimizer = torch.optim.Adam(params, lr=0.0, eps=1e-15)
         schedulers = {
             "xyz": get_expon_lr_func(
-                lr_init=position_lr_init*spatial_lr_scale,
-                lr_final=position_lr_final*spatial_lr_scale,
+                lr_init=position_lr_init*scene_extent,
+                lr_final=position_lr_final*scene_extent,
                 lr_delay_mult=position_lr_delay_mult,
                 max_steps=position_lr_max_steps,
             )

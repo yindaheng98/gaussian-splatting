@@ -65,11 +65,11 @@ class DensificationTrainer(BaseTrainer):
 
     def __init__(
             self, model: GaussianModel,
-            spatial_lr_scale: float,
+            scene_extent: float,
             densifier: AbstractDensifier,
             *args, **kwargs
     ):
-        super().__init__(model, spatial_lr_scale, *args, **kwargs)
+        super().__init__(model, scene_extent, *args, **kwargs)
         self.densifier = densifier
 
     def add_points(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):

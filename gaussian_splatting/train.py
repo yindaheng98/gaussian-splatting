@@ -20,11 +20,11 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
             dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
             trainer = (BaseTrainer if not with_depth else BaseDepthTrainer)(
                 gaussians,
-                spatial_lr_scale=dataset.scene_extent(),
+                scene_extent=dataset.scene_extent(),
                 **configs
             ) if load_ply else (BaseSHLiftTrainer if not with_depth else DepthSHLiftTrainer)(
                 gaussians,
-                spatial_lr_scale=dataset.scene_extent(),
+                scene_extent=dataset.scene_extent(),
                 **configs
             )
         case "densify":

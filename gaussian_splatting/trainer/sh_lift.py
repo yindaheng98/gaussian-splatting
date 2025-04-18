@@ -28,12 +28,12 @@ class SHLifter(TrainerWrapper):
 
 def BaseSHLiftTrainer(
         model: GaussianModel,
-        spatial_lr_scale: float,
+        scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         *args, **kwargs):
     return SHLifter(
-        BaseTrainer(model, spatial_lr_scale, *args, **kwargs),
+        BaseTrainer(model, scene_extent, *args, **kwargs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )

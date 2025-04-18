@@ -27,6 +27,8 @@ class DepthTrainer(TrainerWrapper):
 
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         loss = super().loss(out, camera)
+        if camera.ground_truth_depth is None:
+            return loss
         inv_depth = out["depth"]
         inv_depth_gt = camera.ground_truth_depth
         norm_depth = (inv_depth - inv_depth.mean()) / (inv_depth.std() + 1e-6)

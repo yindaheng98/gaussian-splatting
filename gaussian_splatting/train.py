@@ -10,6 +10,7 @@ from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, Trainab
 from gaussian_splatting.utils import psnr
 from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
 from gaussian_splatting.trainer import *
+from gaussian_splatting.trainer.extensions import ScaleRegularizeTrainerWrapper
 
 basemodes = {
     "base": Trainer,
@@ -25,8 +26,10 @@ shliftmodes = {
 }
 
 
-def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, with_depth=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
+def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, with_depth=False, with_scale_reg=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
     modes = shliftmodes if load_ply else basemodes
+    if with_scale_reg:
+        modes = {k: lambda *args, **kwargs: ScaleRegularizeTrainerWrapper(v, *args, **kwargs) for k, v in modes.items()}
     match mode:
         case "base" | "densify":
             gaussians = GaussianModel(sh_degree).to(device)
@@ -99,6 +102,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--load_ply", default=None, type=str)
     parser.add_argument("--load_camera", default=None, type=str)
     parser.add_argument("--with_depth", action="store_true")
+    parser.add_argument("--with_scale_reg", action="store_true")
     parser.add_argument("--mode", choices=["base", "densify", "camera", "camera-densify"], default="base")
     parser.add_argument("--save_iterations", nargs="+", type=int, default=[7000, 30000])
     parser.add_argument("--device", default="cuda", type=str)
@@ -110,7 +114,7 @@ if __name__ == "__main__":
     configs = {o.split("=", 1)[0]: eval(o.split("=", 1)[1]) for o in args.option}
     dataset, gaussians, trainer = prepare_training(
         sh_degree=args.sh_degree, source=args.source, device=args.device, mode=args.mode,
-        load_ply=args.load_ply, load_camera=args.load_camera, with_depth=args.with_depth, configs=configs)
+        load_ply=args.load_ply, load_camera=args.load_camera, with_depth=args.with_depth, with_scale_reg=args.with_scale_reg, configs=configs)
     dataset.save_cameras(os.path.join(args.destination, "cameras.json"))
     torch.cuda.empty_cache()
     training(

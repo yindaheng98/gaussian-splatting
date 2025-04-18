@@ -41,6 +41,7 @@
                 "--load_camera",
                 "output/truck/cameras.json",
                 "--with_depth",
+                "--with_scale_reg"
             ]
         },
         {

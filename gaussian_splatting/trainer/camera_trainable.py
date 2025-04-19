@@ -64,7 +64,8 @@ def CameraTrainerWrapper(
         camera_rotation_lr_max_steps=30_000,
         *args, **kwargs):
     return CameraOptimizer(
-        base_trainer_constructor(model, scene_extent, *args, **kwargs),
+        # the same params as itself
+        base_trainer_constructor(model, scene_extent, dataset, *args, **kwargs),
         dataset, scene_extent,
         camera_position_lr_init=camera_position_lr_init,
         camera_position_lr_final=camera_position_lr_final,
@@ -82,33 +83,7 @@ def BaseCameraTrainer(
         scene_extent: float,
         dataset: TrainableCameraDataset,
         *args, **kwargs):
-    return CameraTrainerWrapper(BaseTrainer, model, scene_extent, dataset, *args, **kwargs)
-
-
-# sometimes we want to deliver the dataset to the trainer
-def CameraTrainerWithDatasetWrapper(
-    base_trainer_constructor: Callable[..., AbstractTrainer],
-        model: CameraTrainableGaussianModel,
-        scene_extent: float,
-        dataset: TrainableCameraDataset,
-        camera_position_lr_init=0.00016,
-        camera_position_lr_final=0.0000016,
-        camera_position_lr_delay_mult=0.01,
-        camera_position_lr_max_steps=30_000,
-        camera_rotation_lr_init=0.0001,
-        camera_rotation_lr_final=0.000001,
-        camera_rotation_lr_delay_mult=0.01,
-        camera_rotation_lr_max_steps=30_000,
-        *args, **kwargs):
-    return CameraOptimizer(
-        base_trainer_constructor(model, scene_extent, dataset, *args, **kwargs),
-        dataset, scene_extent,
-        camera_position_lr_init=camera_position_lr_init,
-        camera_position_lr_final=camera_position_lr_final,
-        camera_position_lr_delay_mult=camera_position_lr_delay_mult,
-        camera_position_lr_max_steps=camera_position_lr_max_steps,
-        camera_rotation_lr_init=camera_rotation_lr_init,
-        camera_rotation_lr_final=camera_rotation_lr_final,
-        camera_rotation_lr_delay_mult=camera_rotation_lr_delay_mult,
-        camera_rotation_lr_max_steps=camera_rotation_lr_max_steps
+    return CameraTrainerWrapper(
+        lambda model, scene_extent, dataset, *args, **kwargs: BaseTrainer(model, scene_extent, *args, **kwargs),
+        model, scene_extent, dataset, *args, **kwargs
     )

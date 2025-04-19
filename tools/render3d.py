@@ -32,15 +32,15 @@ def build_K(FoVx, FoVy, width, height):
     return K
 
 
-def build_pcd(color: torch.Tensor, depth: torch.Tensor, FoVx, FoVy, width, height, R_c2w: torch.Tensor, T_c2w: torch.Tensor) -> torch.Tensor:
-    assert color.shape[-2:] == depth.shape[-2:], ValueError("Size of depth map should match color image")
-    color = color.permute(1, 2, 0) * 255
-    K = build_K(FoVx, FoVy, width, height).to(depth.device)
-    xyz = reconstruction(K, R_c2w.to(depth.dtype), T_c2w.to(depth.dtype), depth)
+def build_pcd(color: torch.Tensor, invdepth: torch.Tensor, FoVx, FoVy, width, height, R_c2w: torch.Tensor, T_c2w: torch.Tensor) -> torch.Tensor:
+    assert color.shape[-2:] == invdepth.shape[-2:], ValueError("Size of depth map should match color image")
+    mask = (invdepth > 0).squeeze(0)
+    K = build_K(FoVx, FoVy, width, height).to(invdepth.device)
+    xyz = reconstruction(K, R_c2w.to(invdepth.dtype), T_c2w.to(invdepth.dtype), 1 / invdepth)
+    color = color.permute(1, 2, 0)
     pcd = o3d.geometry.PointCloud()
-    idx = torch.abs(xyz).sum(axis=-1) < 1000
-    pcd.points = o3d.utility.Vector3dVector(xyz[idx, ...].cpu().numpy())
-    pcd.colors = o3d.utility.Vector3dVector(color[idx, ...].cpu().numpy().astype(np.float32)/255)
+    pcd.points = o3d.utility.Vector3dVector(xyz[mask, ...].cpu().numpy())
+    pcd.colors = o3d.utility.Vector3dVector(color[mask, ...].cpu().numpy())
     return pcd
 
 
@@ -50,10 +50,10 @@ def rendering(dataset: CameraDataset, gaussians: GaussianModel, save: str):
         out = gaussians(camera)
         rendering = out["render"]
         gt = camera.ground_truth_image
-        depth = out["depth"]
-        depth_gt = camera.ground_truth_depth
-        pcd = build_pcd(rendering, 1 / depth.squeeze(0), camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
-        pcd_gt = build_pcd(gt, depth_gt, camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
+        invdepth = out["depth"].squeeze(0)
+        invdepth_gt = camera.ground_truth_depth
+        pcd = build_pcd(rendering, invdepth, camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
+        pcd_gt = build_pcd(gt, invdepth_gt, camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
         o3d.visualization.draw_geometries([pcd])
 
 

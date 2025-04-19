@@ -123,7 +123,7 @@
             ]
         },
         {
-            "name": "render3D camera",
+            "name": "render3D",
             "type": "debugpy",
             "request": "launch",
             "program": "tools/render3d.py",
@@ -133,13 +133,11 @@
                 "-s",
                 "data/truck",
                 "-d",
-                "output/truck-camera",
+                "output/truck",
                 "-i",
                 "30000",
                 "--mode",
-                "camera",
-                "--load_camera",
-                "output/truck-camera/cameras.json",
+                "densify",
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}",

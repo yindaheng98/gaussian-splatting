@@ -9,12 +9,14 @@ from gaussian_splatting.render import prepare_rendering
 from gaussian_splatting.utils import fov2focal
 
 
-def depth2xyz(depth: torch.Tensor, K: torch.Tensor, R_c2w: torch.Tensor, T_c2w: torch.Tensor) -> torch.Tensor:
+def reconstruction(K, R_c2w, T_c2w, depth):
+    """Reconstruct point cloud from camera and depth map"""
     height, width = depth.shape
-    uv = torch.ones((3, height, width), dtype=torch.float32, device=depth.device)
-    uv[0, ...] = torch.arange(0, width, dtype=torch.float32).unsqueeze(0).expand(height, -1)
-    uv[1, ...] = torch.arange(0, height, dtype=torch.float32).unsqueeze(1).expand(-1, width)
-    xyz_camera = torch.inverse(K) @ uv.reshape(3, -1) * depth.reshape(-1)
+    uv = torch.ones((height, width, 3), dtype=torch.float32, device=depth.device)
+    uv[..., 0] = torch.arange(0, width, dtype=torch.float32).unsqueeze(0).expand(height, -1)
+    uv[..., 1] = torch.arange(0, height, dtype=torch.float32).unsqueeze(1).expand(-1, width)
+    xyz_camera = torch.inverse(K) @ uv.reshape(-1, 3).T * depth.reshape(-1)
+    # xyz_camera = torch.from_numpy(np.asarray(pcd.points, dtype=np.float32)).T*1000
     xyz_world = R_c2w @ xyz_camera + T_c2w.unsqueeze(1)
     return xyz_world.T.reshape(*uv.shape)
 
@@ -32,9 +34,9 @@ def build_K(FoVx, FoVy, width, height):
 
 def build_pcd(color: torch.Tensor, depth: torch.Tensor, FoVx, FoVy, width, height, R_c2w: torch.Tensor, T_c2w: torch.Tensor) -> torch.Tensor:
     assert color.shape[-2:] == depth.shape[-2:], ValueError("Size of depth map should match color image")
-    K = build_K(FoVx, FoVy, width, height).to(depth.device)
-    xyz = depth2xyz(depth, K, R_c2w, T_c2w).permute(1, 2, 0)
     color = color.permute(1, 2, 0) * 255
+    K = build_K(FoVx, FoVy, width, height).to(depth.device)
+    xyz = reconstruction(K, R_c2w.to(depth.dtype), T_c2w.to(depth.dtype), depth)
     pcd = o3d.geometry.PointCloud()
     idx = torch.abs(xyz).sum(axis=-1) < 1000
     pcd.points = o3d.utility.Vector3dVector(xyz[idx, ...].cpu().numpy())

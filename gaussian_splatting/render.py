@@ -83,7 +83,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--destination", required=True, type=str)
     parser.add_argument("-i", "--iteration", required=True, type=int)
     parser.add_argument("--load_camera", default=None, type=str)
-    parser.add_argument("--mode", choices=["base", "densify", "camera", "camera-densify"], default="pure")
+    parser.add_argument("--mode", choices=["base", "densify", "camera", "camera-densify"], default="base")
     parser.add_argument("--device", default="cuda", type=str)
     parser.add_argument("--save_depth_pcd", action="store_true")
     args = parser.parse_args()

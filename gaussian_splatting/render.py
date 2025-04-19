@@ -14,16 +14,16 @@ from gaussian_splatting.utils import psnr
 from gaussian_splatting.utils.lpipsPyTorch import lpips
 
 
-def prepare_rendering(sh_degree: int, source: str, device: str, mode: str, load_ply: str, load_camera: str = None) -> Tuple[CameraDataset, GaussianModel]:
+def prepare_rendering(sh_degree: int, source: str, device: str, mode: str, load_ply: str, load_camera: str = None, with_depth = False) -> Tuple[CameraDataset, GaussianModel]:
     match mode:
         case "base" | "densify":
             gaussians = GaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply)
-            dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source)).to(device)
+            dataset = (JSONCameraDataset(load_camera, load_depth=with_depth) if load_camera else ColmapCameraDataset(source, load_depth=with_depth)).to(device)
         case "camera" | "camera-densify":
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply)
-            dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source)).to(device)
+            dataset = (TrainableCameraDataset.from_json(load_camera, load_depth=with_depth) if load_camera else ColmapTrainableCameraDataset(source, load_depth=with_depth)).to(device)
         case _:
             raise ValueError(f"Unknown mode: {mode}")
     return dataset, gaussians

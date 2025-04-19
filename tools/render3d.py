@@ -42,8 +42,11 @@ def build_pcd(color: torch.Tensor, invdepth: torch.Tensor, FoVx, FoVy, width, he
 
 def build_o3d(color: torch.Tensor, color_gt: torch.Tensor, invdepth: torch.Tensor, invdepth_gt: torch.Tensor, FoVx, FoVy, width, height, R_c2w: torch.Tensor, T_c2w: torch.Tensor) -> torch.Tensor:
     mask = (invdepth > 0).squeeze(0) & (invdepth_gt > 1).squeeze(0)
+    mean_gt, std_gt = invdepth_gt[mask].mean(), invdepth_gt[mask].std()
+    mean, std = invdepth[mask].mean(), invdepth[mask].std()
+    invdepth_gt_rescale = (invdepth_gt - mean_gt) / std_gt * std + mean
     xyz, color = build_pcd(color, invdepth, FoVx, FoVy, width, height, R_c2w, T_c2w)
-    xyz_gt, color_gt = build_pcd(color_gt, invdepth_gt, FoVx, FoVy, width, height, R_c2w, T_c2w)
+    xyz_gt, color_gt = build_pcd(color_gt, invdepth_gt_rescale, FoVx, FoVy, width, height, R_c2w, T_c2w)
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(xyz[mask, ...].cpu().numpy())
     pcd.colors = o3d.utility.Vector3dVector(color[mask, ...].cpu().numpy())

@@ -43,8 +43,8 @@ def ScaleRegularizeTrainerWrapper(
 ) -> ScaleRegularizer:
     return ScaleRegularizer(
         base_constructor(
-            model=model,
-            scene_extent=scene_extent,
+            model,
+            scene_extent,
             *args, **kwargs
         ),
         scene_extent=scene_extent,

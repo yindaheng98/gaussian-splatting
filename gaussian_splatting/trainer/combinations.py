@@ -1,6 +1,7 @@
-
+from typing import Callable
 from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import TrainableCameraDataset
+from .abc import AbstractTrainer
 from .camera_trainable import CameraOptimizer, BaseCameraTrainer
 from .densifier import BaseDensificationTrainer
 from .opacity_reset import OpacityResetter
@@ -11,8 +12,12 @@ from .depth import DepthTrainer, DepthTrainerWrapper, BaseDepthTrainer
 # Camera trainer
 
 
+def DepthCameraTrainerWrapper(base_trainer_constructor: Callable[..., AbstractTrainer], model: GaussianModel, scene_extent: float, dataset: TrainableCameraDataset, *args, **kwargs):
+    return DepthTrainerWrapper(base_trainer_constructor, model, scene_extent, *args, dataset=dataset, **kwargs)
+
+
 def DepthCameraTrainer(model: GaussianModel, scene_extent: float, dataset: TrainableCameraDataset, *args, **kwargs):
-    return DepthTrainerWrapper(BaseCameraTrainer(model, scene_extent, dataset, *args, **kwargs))
+    return DepthCameraTrainerWrapper(BaseCameraTrainer, model, scene_extent, dataset, *args, **kwargs)
 
 
 # Densification trainers
@@ -80,7 +85,7 @@ def DepthOpacityResetDensificationCameraTrainer(
 
 
 def DepthSHLiftTrainer(model: GaussianModel, scene_extent: float, *args, **kwargs):
-    return DepthTrainerWrapper(BaseSHLiftTrainer(model, scene_extent, *args, **kwargs))
+    return DepthTrainerWrapper(BaseSHLiftTrainer, model, scene_extent, *args, **kwargs)
 
 
 def SHLiftDepthCameraTrainer(

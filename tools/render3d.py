@@ -40,22 +40,17 @@ def build_pcd(color: torch.Tensor, invdepth: torch.Tensor, FoVx, FoVy, width, he
     return xyz, color
 
 
-def build_o3d(color: torch.Tensor, invdepth: torch.Tensor, FoVx, FoVy, width, height, R_c2w: torch.Tensor, T_c2w: torch.Tensor) -> torch.Tensor:
+def build_o3d(color: torch.Tensor, color_gt: torch.Tensor, invdepth: torch.Tensor, invdepth_gt: torch.Tensor, FoVx, FoVy, width, height, R_c2w: torch.Tensor, T_c2w: torch.Tensor) -> torch.Tensor:
+    mask = (invdepth > 0).squeeze(0) & (invdepth_gt > 1).squeeze(0)
     xyz, color = build_pcd(color, invdepth, FoVx, FoVy, width, height, R_c2w, T_c2w)
-    mask = (invdepth > 0).squeeze(0)
+    xyz_gt, color_gt = build_pcd(color_gt, invdepth_gt, FoVx, FoVy, width, height, R_c2w, T_c2w)
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(xyz[mask, ...].cpu().numpy())
     pcd.colors = o3d.utility.Vector3dVector(color[mask, ...].cpu().numpy())
-    return pcd
-
-
-def build_o3d_gt(color: torch.Tensor, invdepth: torch.Tensor, FoVx, FoVy, width, height, R_c2w: torch.Tensor, T_c2w: torch.Tensor) -> torch.Tensor:
-    xyz, color = build_pcd(color, invdepth, FoVx, FoVy, width, height, R_c2w, T_c2w)
-    mask = (invdepth > 1).squeeze(0)
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(xyz[mask, ...].cpu().numpy())
-    pcd.colors = o3d.utility.Vector3dVector(color[mask, ...].cpu().numpy())
-    return pcd
+    pcd_gt = o3d.geometry.PointCloud()
+    pcd_gt.points = o3d.utility.Vector3dVector(xyz_gt[mask, ...].cpu().numpy())
+    pcd_gt.colors = o3d.utility.Vector3dVector(color_gt[mask, ...].cpu().numpy())
+    return pcd, pcd_gt
 
 
 def rendering(dataset: CameraDataset, gaussians: GaussianModel, save: str):
@@ -66,8 +61,7 @@ def rendering(dataset: CameraDataset, gaussians: GaussianModel, save: str):
         gt = camera.ground_truth_image
         invdepth = out["depth"].squeeze(0)
         invdepth_gt = camera.ground_truth_depth
-        pcd = build_o3d(rendering, invdepth, camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
-        pcd_gt = build_o3d_gt(gt, invdepth_gt, camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
+        pcd, pcd_gt = build_o3d(rendering, gt, invdepth, invdepth_gt, camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
         o3d.visualization.draw_geometries([pcd, pcd_gt])
 
 

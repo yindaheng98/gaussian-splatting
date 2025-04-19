@@ -54,6 +54,7 @@ def CameraTrainerWrapper(
         model: CameraTrainableGaussianModel,
         scene_extent: float,
         dataset: TrainableCameraDataset,
+        *args,
         camera_position_lr_init=0.00016,
         camera_position_lr_final=0.0000016,
         camera_position_lr_delay_mult=0.01,
@@ -62,7 +63,7 @@ def CameraTrainerWrapper(
         camera_rotation_lr_final=0.000001,
         camera_rotation_lr_delay_mult=0.01,
         camera_rotation_lr_max_steps=30_000,
-        *args, **kwargs):
+        **kwargs):
     return CameraOptimizer(
         # the same params as itself
         base_trainer_constructor(model, scene_extent, dataset, *args, **kwargs),

@@ -13,7 +13,7 @@ from .depth import DepthTrainer, DepthTrainerWrapper, BaseDepthTrainer
 
 
 def DepthCameraTrainer(model: GaussianModel, scene_extent: float, dataset: TrainableCameraDataset, *args, **kwargs):
-    return DepthTrainerWrapper(BaseCameraTrainer, model, scene_extent, *args, dataset=dataset, **kwargs)
+    return DepthTrainerWrapper(BaseCameraTrainer, model, scene_extent, dataset, *args, **kwargs)
 
 
 # Densification trainers

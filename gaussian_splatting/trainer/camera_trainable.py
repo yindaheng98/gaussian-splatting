@@ -1,3 +1,4 @@
+from typing import Callable
 from gaussian_splatting import CameraTrainableGaussianModel
 from gaussian_splatting.dataset import TrainableCameraDataset
 from gaussian_splatting.utils import get_expon_lr_func
@@ -46,7 +47,11 @@ class CameraOptimizer(TrainerWrapper):
         )
 
 
-def BaseCameraTrainer(
+# Training camera is the one of the core components of the Gaussian Splatting
+# so give it a wrapper to make it easier to use
+
+def CameraTrainerWrapper(
+    base_trainer_constructor: Callable[..., AbstractTrainer],
         model: CameraTrainableGaussianModel,
         scene_extent: float,
         dataset: TrainableCameraDataset,
@@ -60,7 +65,7 @@ def BaseCameraTrainer(
         camera_rotation_lr_max_steps=30_000,
         *args, **kwargs):
     return CameraOptimizer(
-        BaseTrainer(model, scene_extent, *args, **kwargs),
+        base_trainer_constructor(model, scene_extent, *args, **kwargs),
         dataset, scene_extent,
         camera_position_lr_init=camera_position_lr_init,
         camera_position_lr_final=camera_position_lr_final,
@@ -71,3 +76,11 @@ def BaseCameraTrainer(
         camera_rotation_lr_delay_mult=camera_rotation_lr_delay_mult,
         camera_rotation_lr_max_steps=camera_rotation_lr_max_steps
     )
+
+
+def BaseCameraTrainer(
+        model: CameraTrainableGaussianModel,
+        scene_extent: float,
+        dataset: TrainableCameraDataset,
+        *args, **kwargs):
+    return CameraTrainerWrapper(BaseTrainer, model, scene_extent, dataset, *args, **kwargs)

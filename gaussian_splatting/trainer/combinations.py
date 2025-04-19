@@ -12,12 +12,8 @@ from .depth import DepthTrainer, DepthTrainerWrapper, BaseDepthTrainer
 # Camera trainer
 
 
-def DepthCameraTrainerWrapper(base_trainer_constructor: Callable[..., AbstractTrainer], model: GaussianModel, scene_extent: float, dataset: TrainableCameraDataset, *args, **kwargs):
-    return DepthTrainerWrapper(base_trainer_constructor, model, scene_extent, *args, dataset=dataset, **kwargs)
-
-
 def DepthCameraTrainer(model: GaussianModel, scene_extent: float, dataset: TrainableCameraDataset, *args, **kwargs):
-    return DepthCameraTrainerWrapper(BaseCameraTrainer, model, scene_extent, dataset, *args, **kwargs)
+    return DepthTrainerWrapper(BaseCameraTrainer, model, scene_extent, *args, dataset=dataset, **kwargs)
 
 
 # Densification trainers

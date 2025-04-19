@@ -41,7 +41,6 @@ class DepthTrainer(TrainerWrapper):
 # Depth is the one of the core components of the Gaussian Splatting
 # but considering there are different methods for depth loss, implement this in BaseTrainer.loss is not a good idea
 # DepthTrainerWrapper is used to wrap the base trainer with depth loss
-
 def DepthTrainerWrapper(
     base_trainer_constructor: Callable[..., AbstractTrainer],
     model: GaussianModel,

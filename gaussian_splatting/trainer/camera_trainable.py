@@ -49,7 +49,6 @@ class CameraOptimizer(TrainerWrapper):
 
 # Training camera is the one of the core components of the Gaussian Splatting
 # so give it a wrapper to make it easier to use
-
 def CameraTrainerWrapper(
     base_trainer_constructor: Callable[..., AbstractTrainer],
         model: CameraTrainableGaussianModel,
@@ -84,3 +83,32 @@ def BaseCameraTrainer(
         dataset: TrainableCameraDataset,
         *args, **kwargs):
     return CameraTrainerWrapper(BaseTrainer, model, scene_extent, dataset, *args, **kwargs)
+
+
+# sometimes we want to deliver the dataset to the trainer
+def CameraTrainerWithDatasetWrapper(
+    base_trainer_constructor: Callable[..., AbstractTrainer],
+        model: CameraTrainableGaussianModel,
+        scene_extent: float,
+        dataset: TrainableCameraDataset,
+        camera_position_lr_init=0.00016,
+        camera_position_lr_final=0.0000016,
+        camera_position_lr_delay_mult=0.01,
+        camera_position_lr_max_steps=30_000,
+        camera_rotation_lr_init=0.0001,
+        camera_rotation_lr_final=0.000001,
+        camera_rotation_lr_delay_mult=0.01,
+        camera_rotation_lr_max_steps=30_000,
+        *args, **kwargs):
+    return CameraOptimizer(
+        base_trainer_constructor(model, scene_extent, *args, dataset=dataset, **kwargs),
+        dataset, scene_extent,
+        camera_position_lr_init=camera_position_lr_init,
+        camera_position_lr_final=camera_position_lr_final,
+        camera_position_lr_delay_mult=camera_position_lr_delay_mult,
+        camera_position_lr_max_steps=camera_position_lr_max_steps,
+        camera_rotation_lr_init=camera_rotation_lr_init,
+        camera_rotation_lr_final=camera_rotation_lr_final,
+        camera_rotation_lr_delay_mult=camera_rotation_lr_delay_mult,
+        camera_rotation_lr_max_steps=camera_rotation_lr_max_steps
+    )

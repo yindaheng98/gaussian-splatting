@@ -101,7 +101,7 @@ def CameraTrainerWithDatasetWrapper(
         camera_rotation_lr_max_steps=30_000,
         *args, **kwargs):
     return CameraOptimizer(
-        base_trainer_constructor(model, scene_extent, *args, dataset=dataset, **kwargs),
+        base_trainer_constructor(model, scene_extent, dataset, *args, **kwargs),
         dataset, scene_extent,
         camera_position_lr_init=camera_position_lr_init,
         camera_position_lr_final=camera_position_lr_final,

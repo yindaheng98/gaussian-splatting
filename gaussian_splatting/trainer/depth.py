@@ -1,4 +1,5 @@
 
+from typing import Callable
 import torch
 
 from gaussian_splatting import Camera, GaussianModel
@@ -37,21 +38,24 @@ class DepthTrainer(TrainerWrapper):
         return loss + depth_l1 * self.depth_l1_weight
 
 
-def BaseDepthTrainer(
-    model: GaussianModel,
-    scene_extent: float,
+# Depth is the one of the core components of the Gaussian Splatting
+# but considering there are different methods for depth loss, implement this in BaseTrainer.loss is not a good idea
+# DepthTrainerWrapper is used to wrap the base trainer with depth loss
+
+def DepthTrainerWrapper(
+    base_trainer_constructor: Callable[..., AbstractTrainer],
     depth_l1_weight_init=1.0,
     depth_l1_weight_final=0.01,
     depth_l1_weight_max_steps=30_000,
     *args, **kwargs
 ) -> DepthTrainer:
     return DepthTrainer(
-        BaseTrainer(
-            model=model,
-            scene_extent=scene_extent,
-            *args, **kwargs
-        ),
+        base_trainer=base_trainer_constructor(*args, **kwargs),
         depth_l1_weight_init=depth_l1_weight_init,
         depth_l1_weight_final=depth_l1_weight_final,
         depth_l1_weight_max_steps=depth_l1_weight_max_steps
     )
+
+
+def BaseDepthTrainer(model: GaussianModel, scene_extent: float, *args, **kwargs) -> DepthTrainer:
+    return DepthTrainerWrapper(BaseTrainer, model, scene_extent, *args, **kwargs)

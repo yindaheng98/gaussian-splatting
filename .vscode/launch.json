@@ -41,7 +41,7 @@
                 "--load_camera",
                 "output/truck/cameras.json",
                 "--with_depth",
-                "--with_scale_reg"
+                "--with_scale_reg",
             ]
         },
         {
@@ -60,6 +60,8 @@
                 "30000",
                 "--mode",
                 "camera-densify",
+                "--with_depth",
+                "--with_scale_reg",
             ]
         },
         {

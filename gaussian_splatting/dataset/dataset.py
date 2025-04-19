@@ -35,10 +35,11 @@ class CameraDataset:
 
 
 class JSONCameraDataset(CameraDataset):
-    def __init__(self, path):
+    def __init__(self, path, load_depth=False):
         with open(path, 'r') as f:
             self.json_cameras = json.load(f)
-        self.cameras = [dict2camera(camera) for camera in self.json_cameras]
+        self.load_depth = load_depth
+        self.cameras = [dict2camera(camera, load_depth=self.load_depth) for camera in self.json_cameras]
 
     def __len__(self):
         return len(self.cameras)
@@ -47,7 +48,7 @@ class JSONCameraDataset(CameraDataset):
         return self.cameras[idx]
 
     def to(self, device):
-        self.cameras = [dict2camera(camera, device=device) for camera in self.json_cameras]
+        self.cameras = [dict2camera(camera, load_depth=self.load_depth, device=device) for camera in self.json_cameras]
         return self
 
 

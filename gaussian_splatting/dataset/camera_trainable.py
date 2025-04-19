@@ -80,7 +80,7 @@ class TrainableCameraDataset(CameraDataset):
             json.dump(cameras, f, indent=2)
 
     @classmethod
-    def from_json(cls, path):
-        cameras = JSONCameraDataset(path)
+    def from_json(cls, path, load_depth=False):
+        cameras = JSONCameraDataset(path, load_depth=load_depth)
         exposures = [(torch.tensor(camera['exposure']) if 'exposure' in camera else torch.eye(3, 4)) for camera in cameras.json_cameras]
         return cls(cameras, exposures)

@@ -34,7 +34,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
         case "base" | "densify":
             gaussians = GaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-            dataset = (JSONCameraDataset(load_camera) if load_camera else ColmapCameraDataset(source, load_depth=with_depth)).to(device)
+            dataset = (JSONCameraDataset(load_camera, load_depth=with_depth) if load_camera else ColmapCameraDataset(source, load_depth=with_depth)).to(device)
             trainer = modes[mode](
                 gaussians,
                 scene_extent=dataset.scene_extent(),
@@ -43,7 +43,7 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
         case "camera" | "camera-densify":
             gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
             gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-            dataset = (TrainableCameraDataset.from_json(load_camera) if load_camera else ColmapTrainableCameraDataset(source, load_depth=with_depth)).to(device)
+            dataset = (TrainableCameraDataset.from_json(load_camera, load_depth=with_depth) if load_camera else ColmapTrainableCameraDataset(source, load_depth=with_depth)).to(device)
             trainer = modes[mode](
                 gaussians,
                 scene_extent=dataset.scene_extent(),

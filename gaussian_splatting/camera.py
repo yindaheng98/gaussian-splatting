@@ -95,7 +95,7 @@ def build_camera(
     )
 
 
-def dict2camera(camera_dict, device="cuda"):
+def dict2camera(camera_dict, load_depth=False, device="cuda"):
     C2W = torch.zeros((4, 4))
     C2W[:3, 3] = torch.tensor(camera_dict['position'])
     C2W[:3, :3] = torch.tensor(camera_dict['rotation'])
@@ -111,6 +111,6 @@ def dict2camera(camera_dict, device="cuda"):
         R=R,
         T=T,
         image_path=camera_dict['ground_truth_image_path'] if 'ground_truth_image_path' in camera_dict else None,
-        depth_path=camera_dict['ground_truth_depth_path'] if 'ground_truth_depth_path' in camera_dict else None,
+        depth_path=camera_dict['ground_truth_depth_path'] if (load_depth and 'ground_truth_depth_path' in camera_dict) else None,
         device=device
     )

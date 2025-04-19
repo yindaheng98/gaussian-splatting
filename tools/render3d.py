@@ -44,6 +44,23 @@ def build_pcd(color: torch.Tensor, invdepth: torch.Tensor, FoVx, FoVy, width, he
     return pcd
 
 
+def build_pcd_gt(color: torch.Tensor, invdepth: torch.Tensor, FoVx, FoVy, width, height, R_c2w: torch.Tensor, T_c2w: torch.Tensor) -> torch.Tensor:
+    assert color.shape[-2:] == invdepth.shape[-2:], ValueError("Size of depth map should match color image")
+    x, y = torch.meshgrid(torch.arange(width, device=invdepth.device), torch.arange(height, device=invdepth.device))
+    fx = fov2focal(FoVx, width)
+    fy = fov2focal(FoVy, height)
+    x = (x - width / 2) / fx
+    y = (y - height / 2) / fy
+    z = 1 / invdepth.T
+    mask = (invdepth > 1).T
+    xyz = torch.stack((x*z, y*z, z), axis=-1)
+    color = color.permute(2, 1, 0)
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(xyz[mask, ...].cpu().numpy())
+    pcd.colors = o3d.utility.Vector3dVector(color[mask, ...].cpu().numpy())
+    return pcd
+
+
 def rendering(dataset: CameraDataset, gaussians: GaussianModel, save: str):
     pbar = tqdm(dataset, desc="Rendering progress")
     for idx, camera in enumerate(pbar):
@@ -53,8 +70,8 @@ def rendering(dataset: CameraDataset, gaussians: GaussianModel, save: str):
         invdepth = out["depth"].squeeze(0)
         invdepth_gt = camera.ground_truth_depth
         pcd = build_pcd(rendering, invdepth, camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
-        pcd_gt = build_pcd(gt, invdepth_gt, camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
-        o3d.visualization.draw_geometries([pcd])
+        pcd_gt = build_pcd_gt(gt, invdepth_gt, camera.FoVx, camera.FoVy, camera.image_width, camera.image_height, camera.R, camera.T)
+        o3d.visualization.draw_geometries([pcd_gt])
 
 
 if __name__ == "__main__":

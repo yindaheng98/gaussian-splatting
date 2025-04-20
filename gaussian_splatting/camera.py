@@ -1,8 +1,7 @@
 import os
 from typing import NamedTuple, Callable
-import numpy as np
 import torch
-import cv2
+import logging
 from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, read_image, read_depth, matrix_to_quaternion
 
 
@@ -74,9 +73,12 @@ def build_camera(
         image_height = gt_image.shape[1]
         image_width = gt_image.shape[2]
     gt_depth = None
-    if depth_path is not None and os.path.exists(depth_path):
-        gt_depth = read_depth(depth_path).to(device)
-        assert gt_depth.shape == (image_height, image_width), f"gt_depth shape {gt_depth.shape} does not match gt_image shape {image_height}x{image_width}"
+    if depth_path is not None:
+        if os.path.exists(depth_path):
+            gt_depth = read_depth(depth_path).to(device)
+            assert gt_depth.shape == (image_height, image_width), f"gt_depth shape {gt_depth.shape} does not match gt_image shape {image_height}x{image_width}"
+        elif not os.path.exists(depth_path):
+            logging.warning(f"Depth path {depth_path} does not exist, skipping depth loading.")
     return Camera(
         # image_height=colmap_camera.image_height, # colmap_camera.image_height is read from cameras.bin, maybe dfferent from the actual image size
         # image_width=colmap_camera.image_width, # colmap_camera.image_width is read from cameras.bin, maybe dfferent from the actual image size

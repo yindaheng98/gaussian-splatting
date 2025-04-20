@@ -7,4 +7,6 @@ from .sh_lift import SHLifter, BaseSHLiftTrainer
 from .depth import DepthTrainer, DepthTrainerWrapper, BaseDepthTrainer
 from .combinations import Trainer, CameraTrainer
 from .combinations import OpacityResetDensificationTrainer, OpacityResetDensificationCameraTrainer
+from .combinations import BaseOpacityResetDensificationTrainer, BaseOpacityResetDensificationCameraTrainer
 from .combinations import SHLiftTrainer, SHLiftCameraTrainer, SHLiftOpacityResetDensificationTrainer, SHLiftOpacityResetDensificationCameraTrainer
+from .combinations import BaseSHLiftCameraTrainer, BaseSHLiftOpacityResetDensificationTrainer, BaseSHLiftOpacityResetDensificationCameraTrainer

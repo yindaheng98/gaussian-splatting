@@ -40,6 +40,7 @@ def BaseOpacityResetDensificationTrainer(
 def DepthOpacityResetDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
+        depth_from_iter=7500,
         depth_gt_max=1.0,
         depth_l1_weight_init=1.0,
         depth_l1_weight_final=0.01,
@@ -50,6 +51,7 @@ def DepthOpacityResetDensificationTrainer(
             model, scene_extent,
             *args, **kwargs
         ),
+        depth_from_iter=depth_from_iter,
         depth_gt_max=depth_gt_max,
         depth_l1_weight_init=depth_l1_weight_init,
         depth_l1_weight_final=depth_l1_weight_final,

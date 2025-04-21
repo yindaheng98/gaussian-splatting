@@ -11,12 +11,14 @@ from .base import BaseTrainer
 class DepthTrainer(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
+            depth_from_iter=7500,
             depth_gt_max=1.0,
             depth_l1_weight_init=1.0,
             depth_l1_weight_final=0.01,
             depth_l1_weight_max_steps=30_000,
     ):
         super().__init__(base_trainer)
+        self.depth_from_iter = depth_from_iter
         self.depth_gt_max = depth_gt_max
         self.depth_l1_weight_func = get_expon_lr_func(
             depth_l1_weight_init,
@@ -30,7 +32,7 @@ class DepthTrainer(TrainerWrapper):
 
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         loss = super().loss(out, camera)
-        if camera.ground_truth_depth is None:
+        if self.curr_step < self.depth_from_iter or camera.ground_truth_depth is None:
             return loss
         inv_depth = out["depth"].squeeze(0)
         inv_depth_gt = camera.ground_truth_depth
@@ -51,6 +53,7 @@ def DepthTrainerWrapper(
         model: GaussianModel,
         scene_extent: float,
         *args,
+        depth_from_iter=7500,
         depth_gt_max=1.0,
         depth_l1_weight_init=1.0,
         depth_l1_weight_final=0.01,
@@ -58,6 +61,7 @@ def DepthTrainerWrapper(
         **kwargs) -> DepthTrainer:
     return DepthTrainer(
         base_trainer=base_trainer_constructor(model, scene_extent, *args, **kwargs),
+        depth_from_iter=depth_from_iter,
         depth_gt_max=depth_gt_max,
         depth_l1_weight_init=depth_l1_weight_init,
         depth_l1_weight_final=depth_l1_weight_final,

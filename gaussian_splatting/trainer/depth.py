@@ -47,7 +47,10 @@ class DepthTrainer(TrainerWrapper):
             mean, std = mean_gt, std_gt
         norm_depth = (inv_depth - mean) / std
         norm_depth_gt = (inv_depth_gt - mean_gt) / std_gt
-        depth_l1 = torch.abs((norm_depth - norm_depth_gt)).mean()
+        depth_dist = torch.abs(norm_depth - norm_depth_gt)
+        if camera.ground_truth_depth_mask is not None:
+            depth_dist *= camera.ground_truth_depth_mask
+        depth_l1 = depth_dist.mean()
         return loss + depth_l1 * self.depth_l1_weight
 
 

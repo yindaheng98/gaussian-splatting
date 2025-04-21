@@ -53,8 +53,10 @@ if __name__ == '__main__':
         depth = depth_anything.infer_image(raw_image, args.input_size)
 
         tifffile.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '.tiff'), depth)
+        tifffile.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '_mask.tiff'), np.ones_like(depth))
 
         depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
         depth = depth.astype(np.uint8)
         depth = np.repeat(depth[..., np.newaxis], 3, axis=-1)
         cv2.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '.png'), depth)
+        cv2.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '_mask.png'), np.ones_like(depth) * 255)

@@ -45,6 +45,12 @@ def read_depth(depth_path):
     return read_png_depth(depth_path)
 
 
+def read_depth_mask(depth_path):
+    if depth_path.endswith('.tiff'):
+        return read_tiff_depth(depth_path)
+    return read_png_depth(depth_path) / 255.0
+
+
 def strip_lowerdiag(L):
     uncertainty = torch.zeros((L.shape[0], 6), dtype=torch.float, device=L.device)
 

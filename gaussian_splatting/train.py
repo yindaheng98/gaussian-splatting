@@ -110,7 +110,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--iteration", default=30000, type=int)
     parser.add_argument("-l", "--load_ply", default=None, type=str)
     parser.add_argument("--load_camera", default=None, type=str)
-    parser.add_argument("--no_load_depth_data", action="store_true")
+    parser.add_argument("--no_depth_data", action="store_true")
     parser.add_argument("--with_scale_reg", action="store_true")
     parser.add_argument("--mode", choices=sorted(list(set(list(basemodes.keys()) + list(shliftmodes.keys())))), default="base")
     parser.add_argument("--save_iterations", nargs="+", type=int, default=[7000, 30000])
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     configs = {o.split("=", 1)[0]: eval(o.split("=", 1)[1]) for o in args.option}
     dataset, gaussians, trainer = prepare_training(
         sh_degree=args.sh_degree, source=args.source, device=args.device, mode=args.mode,
-        load_ply=args.load_ply, load_camera=args.load_camera, load_depth=not args.no_load_depth_data, with_scale_reg=args.with_scale_reg, configs=configs)
+        load_ply=args.load_ply, load_camera=args.load_camera, load_depth=not args.no_depth_data, with_scale_reg=args.with_scale_reg, configs=configs)
     dataset.save_cameras(os.path.join(args.destination, "cameras.json"))
     torch.cuda.empty_cache()
     training(

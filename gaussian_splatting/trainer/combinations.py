@@ -41,6 +41,8 @@ def DepthOpacityResetDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
         depth_from_iter=7500,
+        depth_rescale_mode: str = 'local',
+        depth_global_rescale_gt_max=10,
         depth_local_relative: bool = True,
         depth_local_relative_kernel_radius=8,
         depth_local_relative_stride=4,
@@ -54,6 +56,8 @@ def DepthOpacityResetDensificationTrainer(
             *args, **kwargs
         ),
         depth_from_iter=depth_from_iter,
+        depth_rescale_mode=depth_rescale_mode,
+        depth_global_rescale_gt_max=depth_global_rescale_gt_max,
         depth_local_relative=depth_local_relative,
         depth_local_relative_kernel_radius=depth_local_relative_kernel_radius,
         depth_local_relative_stride=depth_local_relative_stride,

@@ -64,7 +64,9 @@ class DepthTrainer(TrainerWrapper):
         local_center_inv_depth_gt = local_inv_depth_gt[:, kernel.shape[0] // 2].unsqueeze(-1)
         local_scale_inv_depth = local_inv_depth.std(-1).unsqueeze(-1)
         local_scale_inv_depth_gt = local_inv_depth_gt.std(-1).unsqueeze(-1)
-        local_inv_depth_gt_rescaled = (local_inv_depth_gt - local_center_inv_depth_gt) / local_scale_inv_depth_gt * local_scale_inv_depth + local_center_inv_depth
+        local_scale = local_scale_inv_depth / local_scale_inv_depth_gt
+        local_scale[(local_scale_inv_depth_gt < 1e-6).any(-1)] = 1.0
+        local_inv_depth_gt_rescaled = (local_inv_depth_gt - local_center_inv_depth_gt) * local_scale + local_center_inv_depth
         local_loss = local_inv_depth - local_inv_depth_gt_rescaled
         if mask is not None:
             local_loss *= mask[pix_idx[:, :, 0], pix_idx[:, :, 1]]

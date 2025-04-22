@@ -13,7 +13,6 @@ class DepthTrainer(TrainerWrapper):
             self, base_trainer: AbstractTrainer,
             depth_from_iter=7500,
             depth_rescale_mode: str = 'local',
-            depth_global_rescale_gt_max=10,  # only use the pixels with depth gt < this value for computing rescaling
             depth_local_relative_kernel_radius=8,
             depth_local_relative_stride=4,
             depth_l1_weight_init=1.0,
@@ -23,7 +22,6 @@ class DepthTrainer(TrainerWrapper):
         super().__init__(base_trainer)
         self.depth_from_iter = depth_from_iter
         self.depth_rescale_mode = depth_rescale_mode
-        self.depth_global_rescale_gt_max = depth_global_rescale_gt_max
         self.depth_local_relative_kernel_radius = depth_local_relative_kernel_radius
         self.depth_local_relative_stride = depth_local_relative_stride
         self.depth_l1_weight_func = get_expon_lr_func(
@@ -40,9 +38,8 @@ class DepthTrainer(TrainerWrapper):
         mean_gt, std_gt = inv_depth_gt.mean(), inv_depth_gt.std()
         mean, std = mean_gt, std_gt
         if rescale_gt:
-            mask = inv_depth_gt > (1 / self.depth_global_rescale_gt_max)
-            mean_gt, std_gt = inv_depth_gt[mask].mean(), inv_depth_gt[mask].std()
-            mean, std = inv_depth[mask].mean(), inv_depth[mask].std()
+            mean_gt, std_gt = inv_depth_gt.mean(), inv_depth_gt.std()
+            mean, std = inv_depth.mean(), inv_depth.std()
         norm_depth = (inv_depth - mean) / std
         norm_depth_gt = (inv_depth_gt - mean_gt) / std_gt
         depth_dist = torch.abs(norm_depth - norm_depth_gt)
@@ -83,9 +80,9 @@ class DepthTrainer(TrainerWrapper):
             case 'local':
                 depth_l1 = self.compute_local_relative_depth_loss(inv_depth, inv_depth_gt, camera.ground_truth_depth_mask)
             case 'global':
-                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, camera.ground_truth_depth_mask)
+                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, camera.ground_truth_depth_mask, rescale_gt=True)
             case 'none':
-                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, camera.ground_truth_depth_mask)
+                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, camera.ground_truth_depth_mask, rescale_gt=False)
             case _:
                 raise ValueError(f"Unknown depth rescale mode: {self.depth_rescale_mode}")
         return loss + depth_l1 * self.depth_l1_weight
@@ -101,8 +98,6 @@ def DepthTrainerWrapper(
         *args,
         depth_from_iter=7500,
         depth_rescale_mode: str = 'local',
-        depth_global_rescale_gt_max=10,
-        depth_local_relative: bool = True,
         depth_local_relative_kernel_radius=8,
         depth_local_relative_stride=4,
         depth_l1_weight_init=1.0,
@@ -113,8 +108,6 @@ def DepthTrainerWrapper(
         base_trainer=base_trainer_constructor(model, scene_extent, *args, **kwargs),
         depth_from_iter=depth_from_iter,
         depth_rescale_mode=depth_rescale_mode,
-        depth_global_rescale_gt_max=depth_global_rescale_gt_max,
-        depth_local_relative=depth_local_relative,
         depth_local_relative_kernel_radius=depth_local_relative_kernel_radius,
         depth_local_relative_stride=depth_local_relative_stride,
         depth_l1_weight_init=depth_l1_weight_init,

@@ -43,13 +43,12 @@ def build_pcd_rescale(
         color: torch.Tensor, color_gt: torch.Tensor,
         invdepth: torch.Tensor, invdepth_gt: torch.Tensor, mask: torch.Tensor,
         FoVx, FoVy,
-        rescale_depth_gt=True, depth_rescale_gt_max=1.) -> torch.Tensor:
+        rescale_depth_gt=True) -> torch.Tensor:
     invdepth_gt_rescale = invdepth_gt
     mask = (mask > 1e-6)
     if rescale_depth_gt:
-        mask = mask & (invdepth > 1e-6) & (invdepth_gt > (1 / depth_rescale_gt_max))
-        mean_gt, std_gt = invdepth_gt[mask].mean(), invdepth_gt[mask].std()
-        mean, std = invdepth[mask].mean(), invdepth[mask].std()
+        mean_gt, std_gt = invdepth_gt.mean(), invdepth_gt.std()
+        mean, std = invdepth.mean(), invdepth.std()
         invdepth_gt_rescale = (invdepth_gt - mean_gt) / std_gt * std + mean
     pcd = build_pcd(color, invdepth, mask, FoVx, FoVy)
     pcd_gt = build_pcd(color_gt, invdepth_gt_rescale, mask, FoVx, FoVy)
@@ -58,7 +57,7 @@ def build_pcd_rescale(
 
 def rendering(
         dataset: CameraDataset, gaussians: GaussianModel, save: str, save_pcd: bool = False,
-        rescale_depth_gt: bool = True, depth_rescale_gt_max=1.) -> None:
+        rescale_depth_gt: bool = True) -> None:
     render_path = os.path.join(save, "renders")
     gt_path = os.path.join(save, "gt")
     makedirs(render_path, exist_ok=True)
@@ -77,7 +76,7 @@ def rendering(
             import open3d as o3d
             if camera.ground_truth_depth is not None:
                 mask = camera.ground_truth_depth_mask if camera.ground_truth_depth_mask is not None else torch.ones_like(camera.ground_truth_depth)
-                pcd, pcd_gt, invdepth_gt_rescale = build_pcd_rescale(rendering, gt, depth, camera.ground_truth_depth, mask, camera.FoVx, camera.FoVy, rescale_depth_gt, depth_rescale_gt_max)
+                pcd, pcd_gt, invdepth_gt_rescale = build_pcd_rescale(rendering, gt, depth, camera.ground_truth_depth, mask, camera.FoVx, camera.FoVy, rescale_depth_gt)
                 o3d.io.write_point_cloud(os.path.join(gt_path, '{0:05d}'.format(idx) + ".ply"), pcd_gt)
                 tifffile.imwrite(os.path.join(gt_path, '{0:05d}'.format(idx) + "_depth.tiff"), invdepth_gt_rescale.cpu().numpy())
             else:
@@ -96,7 +95,6 @@ if __name__ == "__main__":
     parser.add_argument("--mode", choices=["base", "densify", "camera", "camera-densify"], default="base")
     parser.add_argument("--device", default="cuda", type=str)
     parser.add_argument("--no_rescale_depth_gt", action="store_true")
-    parser.add_argument("--depth_rescale_gt_max", default=1., type=float)
     parser.add_argument("--save_depth_pcd", action="store_true")
     args = parser.parse_args()
     load_ply = os.path.join(args.destination, "point_cloud", "iteration_" + str(args.iteration), "point_cloud.ply")

@@ -269,6 +269,55 @@ for camera in dataset:
     loss, out = trainer.step(camera)
 ```
 
+## Discussion on Additional Features
+
+### Local Relative Depth Regularization
+
+#### Problem: Global Depth Rescaling Limitation
+
+The default implementation uses DepthAnythingV2 for depth estimation ([`tools/run_depth_anything_v2.py`](./tools/run_depth_anything_v2.py)). These estimated depth maps are then scaled using one global factor per scene ([`trainer/depth.py`](gaussian_splatting/trainer/depth.py) or in the [github.com/graphdeco-inria/gaussian-splatting/utils/make_depth_scale.py](https://github.com/graphdeco-inria/gaussian-splatting/blob/21301643a4354d6e24495c0df5a85354af8bd2be/utils/make_depth_scale.py)).
+However, this approach suffers from local inaccuracies due to limitations inherent in monocular depth predictions.
+
+As demonstrated below, monocular depth estimation frequently introduces local distortions with global rescaling (for instance, correct wall but distorted faces and overly long arms):
+
+![](./assets/depthanything.png)
+
+Using globally scaled depth alone results in artifacts and incorrectly placed surfaces during rendering:
+
+![](./assets/globaldepth.png)
+
+Overlaying rendered depth map with DepthAnythingV2-estimated depth map manifests these shortcomings clearly. While background walls approximately match ground truth, depth estimates for people remain significantly inaccurate:
+
+![](./assets/globaldepthanything.png)
+
+#### Root Cause: Spatial Error Patterns in DepthAnythingV2
+
+Although the output depth estimation from DepthAnythingV2 appears visually plausible when inspected independently (as illustrated in the figure below), local depth scale variations remain substantial.
+
+![](./assets/depth.png)
+
+Therefore, a single global scaling cannot account adequately for these local discrepancies.
+
+#### Solution: Local relative depth regularization
+
+Considering that DepthAnythingV2 produces relatively accurate local depth relationships, this repo introduces local relative depth regularization strategy. Specifically, the strategy involves:
+
+* Divide the depth map into small overlapping windows.
+* Compute scaling and offset corrections individually per window.
+* Apply these local corrections to guide model predictions.
+
+Implementation details are provided in the function `compute_local_relative_depth_loss` in [`trainer/depth.py`](gaussian_splatting/trainer/depth.py).
+
+The resulting improvements are clearly visible, significantly reducing artifacts:
+
+![](./assets/localdepth.png)
+
+Overlaying it with DepthAnythingV2-estimated depth map:
+
+![](./assets/localdepthanything.png)
+
+Local regularization notably improves background alignment (e.g., walls), but some inaccuracies remain for complex foreground shapes such as people. This clearly highlights inherent limitations and persistent spatial error patterns in the monocular DepthAnythingV2 estimations.
+
 # 3D Gaussian Splatting for Real-Time Radiance Field Rendering
 Bernhard Kerbl*, Georgios Kopanas*, Thomas Leimkühler, George Drettakis (* indicates equal contribution)<br>
 | [Webpage](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) | [Full Paper](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/3d_gaussian_splatting_high.pdf) | [Video](https://youtu.be/T_kXY43VZnk) | [Other GRAPHDECO Publications](http://www-sop.inria.fr/reves/publis/gdindex.php) | [FUNGRAPH project page](https://fungraph.inria.fr) |<br>

@@ -14,7 +14,7 @@ class DepthTrainer(TrainerWrapper):
             self, base_trainer: AbstractTrainer,
             depth_from_iter=7500,
             depth_rescale_mode: str = 'local',
-            depth_local_relative_kernel_radius=4,
+            depth_local_relative_kernel_radius=8,
             depth_local_relative_stride=4,
             depth_l1_weight_init=1.0,
             depth_l1_weight_final=0.01,
@@ -51,11 +51,12 @@ class DepthTrainer(TrainerWrapper):
     def compute_local_relative_depth_loss(self, inv_depth: torch.Tensor, inv_depth_gt: torch.Tensor, mask: torch.Tensor = None):
         kernel_size = self.depth_local_relative_kernel_radius*2 + 1
         stride = self.depth_local_relative_stride
+        center_idx = kernel_size**2 // 2
         local_inv_depth = F.unfold(inv_depth.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
         local_inv_depth_gt = F.unfold(inv_depth_gt.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
-        local_center_inv_depth = local_inv_depth[self.depth_local_relative_kernel_radius, :].unsqueeze(0).detach()
-        local_center_inv_depth_gt = local_inv_depth_gt[self.depth_local_relative_kernel_radius, :].unsqueeze(0)
-        local_scale_inv_depth = local_inv_depth.std(0).unsqueeze(0).detach()
+        local_center_inv_depth = local_inv_depth[center_idx, :].unsqueeze(0)
+        local_center_inv_depth_gt = local_inv_depth_gt[center_idx, :].unsqueeze(0)
+        local_scale_inv_depth = local_inv_depth.std(0).unsqueeze(0)
         local_scale_inv_depth_gt = local_inv_depth_gt.std(0).unsqueeze(0)
         local_scale = local_scale_inv_depth / local_scale_inv_depth_gt
         local_scale[(local_scale_inv_depth_gt < 1e-6).any(-1)] = 1.0
@@ -93,7 +94,7 @@ def DepthTrainerWrapper(
         *args,
         depth_from_iter=7500,
         depth_rescale_mode: str = 'local',
-        depth_local_relative_kernel_radius=4,
+        depth_local_relative_kernel_radius=8,
         depth_local_relative_stride=4,
         depth_l1_weight_init=1.0,
         depth_l1_weight_final=0.01,

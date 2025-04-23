@@ -42,7 +42,7 @@ def DepthOpacityResetDensificationTrainer(
         scene_extent: float,
         depth_from_iter=7500,
         depth_rescale_mode: str = 'local',
-        depth_local_relative_kernel_radius=8,
+        depth_local_relative_kernel_radius=4,
         depth_local_relative_stride=4,
         depth_l1_weight_init=1.0,
         depth_l1_weight_final=0.01,

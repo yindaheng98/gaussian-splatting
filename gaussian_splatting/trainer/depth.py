@@ -13,6 +13,7 @@ class DepthTrainer(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
             depth_from_iter=7500,
+            depth_resize: int = None,  # set this value to resize the depth map
             depth_rescale_mode: str = 'local',
             depth_local_relative_kernel_radius=8,
             depth_local_relative_stride=4,
@@ -22,6 +23,7 @@ class DepthTrainer(TrainerWrapper):
     ):
         super().__init__(base_trainer)
         self.depth_from_iter = depth_from_iter
+        self.depth_resize = depth_resize
         self.depth_rescale_mode = depth_rescale_mode
         self.depth_local_relative_kernel_radius = depth_local_relative_kernel_radius
         self.depth_local_relative_stride = depth_local_relative_stride
@@ -72,6 +74,13 @@ class DepthTrainer(TrainerWrapper):
             return loss
         inv_depth = out["depth"].squeeze(0)
         inv_depth_gt = camera.ground_truth_depth
+        assert inv_depth.shape == inv_depth_gt.shape, f"inv_depth shape {inv_depth.shape} does not match gt depth shape {inv_depth_gt.shape}"
+        if self.depth_resize is not None:
+            height, width = inv_depth.shape[-2:]
+            scale = self.depth_resize / max(height, width)
+            height, width = int(height * scale), int(width * scale)
+            inv_depth = F.interpolate(inv_depth.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+            inv_depth_gt = F.interpolate(inv_depth_gt.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
         match(self.depth_rescale_mode):
             case 'local':
                 depth_l1 = self.compute_local_relative_depth_loss(inv_depth, inv_depth_gt, camera.ground_truth_depth_mask)
@@ -93,6 +102,7 @@ def DepthTrainerWrapper(
         scene_extent: float,
         *args,
         depth_from_iter=7500,
+        depth_resize=None,
         depth_rescale_mode: str = 'local',
         depth_local_relative_kernel_radius=8,
         depth_local_relative_stride=4,
@@ -103,6 +113,7 @@ def DepthTrainerWrapper(
     return DepthTrainer(
         base_trainer=base_trainer_constructor(model, scene_extent, *args, **kwargs),
         depth_from_iter=depth_from_iter,
+        depth_resize=depth_resize,
         depth_rescale_mode=depth_rescale_mode,
         depth_local_relative_kernel_radius=depth_local_relative_kernel_radius,
         depth_local_relative_stride=depth_local_relative_stride,

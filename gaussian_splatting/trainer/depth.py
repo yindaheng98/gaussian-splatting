@@ -74,6 +74,7 @@ class DepthTrainer(TrainerWrapper):
             return loss
         inv_depth = out["depth"].squeeze(0)
         inv_depth_gt = camera.ground_truth_depth
+        mask = camera.ground_truth_depth_mask
         assert inv_depth.shape == inv_depth_gt.shape, f"inv_depth shape {inv_depth.shape} does not match gt depth shape {inv_depth_gt.shape}"
         if self.depth_resize is not None:
             height, width = inv_depth.shape[-2:]
@@ -81,13 +82,15 @@ class DepthTrainer(TrainerWrapper):
             height, width = int(height * scale), int(width * scale)
             inv_depth = F.interpolate(inv_depth.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
             inv_depth_gt = F.interpolate(inv_depth_gt.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+            if mask is not None:
+                mask = F.interpolate(mask.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
         match(self.depth_rescale_mode):
             case 'local':
-                depth_l1 = self.compute_local_relative_depth_loss(inv_depth, inv_depth_gt, camera.ground_truth_depth_mask)
+                depth_l1 = self.compute_local_relative_depth_loss(inv_depth, inv_depth_gt, mask)
             case 'global':
-                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, camera.ground_truth_depth_mask, rescale_gt=True)
+                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, mask, rescale_gt=True)
             case 'none':
-                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, camera.ground_truth_depth_mask, rescale_gt=False)
+                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, mask, rescale_gt=False)
             case _:
                 raise ValueError(f"Unknown depth rescale mode: {self.depth_rescale_mode}")
         return loss + depth_l1 * self.depth_l1_weight

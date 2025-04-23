@@ -37,33 +37,33 @@ class DepthTrainer(TrainerWrapper):
         super().update_learning_rate()
         self.depth_l1_weight = self.depth_l1_weight_func(self.curr_step)
 
-    def compute_global_relative_depth_loss(self, inv_depth: torch.Tensor, inv_depth_gt: torch.Tensor, mask: torch.Tensor = None, rescale_gt: bool = True):
-        mean_gt, std_gt = inv_depth_gt.mean(), inv_depth_gt.std()
+    def compute_global_relative_depth_loss(self, invdepth: torch.Tensor, invdepth_gt: torch.Tensor, mask: torch.Tensor = None, rescale_gt: bool = True):
+        mean_gt, std_gt = invdepth_gt.mean(), invdepth_gt.std()
         mean, std = mean_gt, std_gt
         if rescale_gt:
-            mean_gt, std_gt = inv_depth_gt.mean(), inv_depth_gt.std()
-            mean, std = inv_depth.mean(), inv_depth.std()
-        norm_depth = (inv_depth - mean) / std
-        norm_depth_gt = (inv_depth_gt - mean_gt) / std_gt
+            mean_gt, std_gt = invdepth_gt.mean(), invdepth_gt.std()
+            mean, std = invdepth.mean(), invdepth.std()
+        norm_depth = (invdepth - mean) / std
+        norm_depth_gt = (invdepth_gt - mean_gt) / std_gt
         depth_dist = torch.abs(norm_depth - norm_depth_gt)
         if mask is not None:
             depth_dist *= mask
         return depth_dist.mean()
 
-    def compute_local_relative_depth_loss(self, inv_depth: torch.Tensor, inv_depth_gt: torch.Tensor, mask: torch.Tensor = None):
+    def compute_local_relative_depth_loss(self, invdepth: torch.Tensor, invdepth_gt: torch.Tensor, mask: torch.Tensor = None):
         kernel_size = self.depth_local_relative_kernel_radius*2 + 1
         stride = self.depth_local_relative_stride
         center_idx = kernel_size**2 // 2
-        local_inv_depth = F.unfold(inv_depth.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
-        local_inv_depth_gt = F.unfold(inv_depth_gt.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
-        local_center_inv_depth = local_inv_depth[center_idx, :].unsqueeze(0).detach()
-        local_center_inv_depth_gt = local_inv_depth_gt[center_idx, :].unsqueeze(0)
-        local_scale_inv_depth = local_inv_depth.std(0).unsqueeze(0).detach()  # some region std may be 0, which will cause NaN in backward
-        local_scale_inv_depth_gt = local_inv_depth_gt.std(0).unsqueeze(0)
-        local_scale = local_scale_inv_depth / local_scale_inv_depth_gt
-        local_scale[..., local_scale_inv_depth_gt < 1e-6] = 1.0  # some region std may be 0, which will cause NaN in backward
-        local_inv_depth_gt_rescaled = (local_inv_depth_gt - local_center_inv_depth_gt) * local_scale + local_center_inv_depth
-        local_loss = local_inv_depth - local_inv_depth_gt_rescaled
+        local_invdepth = F.unfold(invdepth.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
+        local_invdepth_gt = F.unfold(invdepth_gt.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
+        local_center_invdepth = local_invdepth[center_idx, :].unsqueeze(0).detach()
+        local_center_invdepth_gt = local_invdepth_gt[center_idx, :].unsqueeze(0)
+        local_scale_invdepth = local_invdepth.std(0).unsqueeze(0).detach()  # some region std may be 0, which will cause NaN in backward
+        local_scale_invdepth_gt = local_invdepth_gt.std(0).unsqueeze(0)
+        local_scale = local_scale_invdepth / local_scale_invdepth_gt
+        local_scale[..., local_scale_invdepth_gt < 1e-6] = 1.0  # some region std may be 0, which will cause NaN in backward
+        local_invdepth_gt_rescaled = (local_invdepth_gt - local_center_invdepth_gt) * local_scale + local_center_invdepth
+        local_loss = local_invdepth - local_invdepth_gt_rescaled
         if mask is not None:
             local_loss *= F.unfold(mask.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
         return local_loss.abs().mean()
@@ -72,25 +72,25 @@ class DepthTrainer(TrainerWrapper):
         loss = super().loss(out, camera)
         if self.curr_step < self.depth_from_iter or camera.ground_truth_depth is None:
             return loss
-        inv_depth = out["depth"].squeeze(0)
-        inv_depth_gt = camera.ground_truth_depth
+        invdepth = out["depth"].squeeze(0)
+        invdepth_gt = camera.ground_truth_depth
         mask = camera.ground_truth_depth_mask
-        assert inv_depth.shape == inv_depth_gt.shape, f"inv_depth shape {inv_depth.shape} does not match gt depth shape {inv_depth_gt.shape}"
+        assert invdepth.shape == invdepth_gt.shape, f"invdepth shape {invdepth.shape} does not match gt depth shape {invdepth_gt.shape}"
         if self.depth_resize is not None:
-            height, width = inv_depth.shape[-2:]
+            height, width = invdepth.shape[-2:]
             scale = self.depth_resize / max(height, width)
             height, width = int(height * scale), int(width * scale)
-            inv_depth = F.interpolate(inv_depth.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
-            inv_depth_gt = F.interpolate(inv_depth_gt.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+            invdepth = F.interpolate(invdepth.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+            invdepth_gt = F.interpolate(invdepth_gt.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
             if mask is not None:
                 mask = F.interpolate(mask.unsqueeze(0).unsqueeze(0), size=(height, width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
         match(self.depth_rescale_mode):
             case 'local':
-                depth_l1 = self.compute_local_relative_depth_loss(inv_depth, inv_depth_gt, mask)
+                depth_l1 = self.compute_local_relative_depth_loss(invdepth, invdepth_gt, mask)
             case 'global':
-                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, mask, rescale_gt=True)
+                depth_l1 = self.compute_global_relative_depth_loss(invdepth, invdepth_gt, mask, rescale_gt=True)
             case 'none':
-                depth_l1 = self.compute_global_relative_depth_loss(inv_depth, inv_depth_gt, mask, rescale_gt=False)
+                depth_l1 = self.compute_global_relative_depth_loss(invdepth, invdepth_gt, mask, rescale_gt=False)
             case _:
                 raise ValueError(f"Unknown depth rescale mode: {self.depth_rescale_mode}")
         return loss + depth_l1 * self.depth_l1_weight

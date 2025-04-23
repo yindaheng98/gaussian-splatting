@@ -1,6 +1,7 @@
 
 from typing import Callable
 import torch
+import torch.nn.functional as F
 
 from gaussian_splatting import Camera, GaussianModel
 from gaussian_splatting.utils.schedular import get_expon_lr_func
@@ -48,28 +49,20 @@ class DepthTrainer(TrainerWrapper):
         return depth_dist.mean()
 
     def compute_local_relative_depth_loss(self, inv_depth: torch.Tensor, inv_depth_gt: torch.Tensor, mask: torch.Tensor = None):
-        kernel_size = self.depth_local_relative_kernel_radius
+        kernel_size = self.depth_local_relative_kernel_radius*2 + 1
         stride = self.depth_local_relative_stride
-        height, width = inv_depth.shape
-        kernel = torch.cartesian_prod(
-            torch.arange(-kernel_size, kernel_size+1, dtype=torch.int64, device=inv_depth.device),
-            torch.arange(-kernel_size, kernel_size+1, dtype=torch.int64, device=inv_depth.device))
-        centers = torch.cartesian_prod(
-            torch.arange(kernel_size, height - kernel_size, stride, dtype=torch.int64, device=inv_depth.device),
-            torch.arange(kernel_size, width - kernel_size, stride, dtype=torch.int64, device=inv_depth.device))
-        pix_idx = centers.unsqueeze(1) + kernel.unsqueeze(0)
-        local_inv_depth = inv_depth[pix_idx[:, :, 0], pix_idx[:, :, 1]]
-        local_inv_depth_gt = inv_depth_gt[pix_idx[:, :, 0], pix_idx[:, :, 1]]
-        local_center_inv_depth = local_inv_depth[:, kernel.shape[0] // 2].unsqueeze(-1)
-        local_center_inv_depth_gt = local_inv_depth_gt[:, kernel.shape[0] // 2].unsqueeze(-1)
-        local_scale_inv_depth = local_inv_depth.std(-1).unsqueeze(-1)
-        local_scale_inv_depth_gt = local_inv_depth_gt.std(-1).unsqueeze(-1)
+        local_inv_depth = F.unfold(inv_depth.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
+        local_inv_depth_gt = F.unfold(inv_depth_gt.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
+        local_center_inv_depth = local_inv_depth[self.depth_local_relative_kernel_radius, :].unsqueeze(0).detach()
+        local_center_inv_depth_gt = local_inv_depth_gt[self.depth_local_relative_kernel_radius, :].unsqueeze(0)
+        local_scale_inv_depth = local_inv_depth.std(0).unsqueeze(0).detach()
+        local_scale_inv_depth_gt = local_inv_depth_gt.std(0).unsqueeze(0)
         local_scale = local_scale_inv_depth / local_scale_inv_depth_gt
         local_scale[(local_scale_inv_depth_gt < 1e-6).any(-1)] = 1.0
         local_inv_depth_gt_rescaled = (local_inv_depth_gt - local_center_inv_depth_gt) * local_scale + local_center_inv_depth
         local_loss = local_inv_depth - local_inv_depth_gt_rescaled
         if mask is not None:
-            local_loss *= mask[pix_idx[:, :, 0], pix_idx[:, :, 1]]
+            local_loss *= F.unfold(mask.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
         return local_loss.abs().mean()
 
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:

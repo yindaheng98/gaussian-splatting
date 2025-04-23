@@ -54,12 +54,12 @@ class DepthTrainer(TrainerWrapper):
         center_idx = kernel_size**2 // 2
         local_inv_depth = F.unfold(inv_depth.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
         local_inv_depth_gt = F.unfold(inv_depth_gt.unsqueeze(0).unsqueeze(0), kernel_size=kernel_size, stride=stride, padding=0).squeeze(0)
-        local_center_inv_depth = local_inv_depth[center_idx, :].unsqueeze(0)
+        local_center_inv_depth = local_inv_depth[center_idx, :].unsqueeze(0).detach()
         local_center_inv_depth_gt = local_inv_depth_gt[center_idx, :].unsqueeze(0)
-        local_scale_inv_depth = local_inv_depth.std(0).unsqueeze(0)
+        local_scale_inv_depth = local_inv_depth.std(0).unsqueeze(0).detach()  # some region std may be 0, which will cause NaN in backward
         local_scale_inv_depth_gt = local_inv_depth_gt.std(0).unsqueeze(0)
         local_scale = local_scale_inv_depth / local_scale_inv_depth_gt
-        local_scale[(local_scale_inv_depth_gt < 1e-6).any(-1)] = 1.0
+        local_scale[..., local_scale_inv_depth_gt < 1e-6] = 1.0  # some region std may be 0, which will cause NaN in backward
         local_inv_depth_gt_rescaled = (local_inv_depth_gt - local_center_inv_depth_gt) * local_scale + local_center_inv_depth
         local_loss = local_inv_depth - local_inv_depth_gt_rescaled
         if mask is not None:

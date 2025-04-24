@@ -278,7 +278,7 @@ for camera in dataset:
 The default implementation uses DepthAnythingV2 for depth estimation ([`tools/run_depth_anything_v2.py`](./tools/run_depth_anything_v2.py)). These estimated depth maps are then scaled using one global factor per scene ([`trainer/depth.py`](gaussian_splatting/trainer/depth.py) or in the [github.com/graphdeco-inria/gaussian-splatting/utils/make_depth_scale.py](https://github.com/graphdeco-inria/gaussian-splatting/blob/21301643a4354d6e24495c0df5a85354af8bd2be/utils/make_depth_scale.py)).
 However, this approach suffers from local inaccuracies due to limitations inherent in monocular depth predictions.
 
-As demonstrated below, monocular depth estimation frequently introduces local distortions with global rescaling (for instance, correct wall but distorted faces and overly long arms):
+As demonstrated below, monocular depth estimation frequently introduces local distortions with global rescaling (for instance, people are pouring wine, but the spout is not positioned directly above the wine glass.):
 
 ![](./assets/depthanything.png)
 
@@ -286,7 +286,7 @@ Using globally scaled depth alone results in artifacts and incorrectly placed su
 
 ![](./assets/globaldepth.png)
 
-Overlaying rendered depth map with DepthAnythingV2-estimated depth map manifests these shortcomings clearly. While background walls approximately match ground truth, depth estimates for people remain significantly inaccurate:
+Overlaying rendered depth map with DepthAnythingV2-estimated depth map manifests these shortcomings clearly. While background walls and foreground table approximately match ground truth, depth estimates for people remain significantly inaccurate:
 
 ![](./assets/globaldepthanything.png)
 

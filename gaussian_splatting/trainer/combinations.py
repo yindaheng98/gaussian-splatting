@@ -1,8 +1,6 @@
-from typing import Callable
 from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import TrainableCameraDataset
-from .abc import AbstractTrainer
-from .camera_trainable import CameraOptimizer, BaseCameraTrainer
+from .camera_trainable import CameraTrainerWrapper, BaseCameraTrainer
 from .densifier import BaseDensificationTrainer
 from .opacity_reset import OpacityResetter
 from .sh_lift import SHLifter, BaseSHLiftTrainer
@@ -69,26 +67,10 @@ def BaseOpacityResetDensificationCameraTrainer(
         model: CameraTrainableGaussianModel,
         scene_extent: float,
         dataset: TrainableCameraDataset,
-        camera_position_lr_init=0.00016,
-        camera_position_lr_final=0.0000016,
-        camera_position_lr_delay_mult=0.01,
-        camera_position_lr_max_steps=30_000,
-        camera_rotation_lr_init=0.0001,
-        camera_rotation_lr_final=0.000001,
-        camera_rotation_lr_delay_mult=0.01,
-        camera_rotation_lr_max_steps=30_000,
         *args, **kwargs):
-    return CameraOptimizer(
-        BaseOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
-        dataset, scene_extent,
-        camera_position_lr_init=camera_position_lr_init,
-        camera_position_lr_final=camera_position_lr_final,
-        camera_position_lr_delay_mult=camera_position_lr_delay_mult,
-        camera_position_lr_max_steps=camera_position_lr_max_steps,
-        camera_rotation_lr_init=camera_rotation_lr_init,
-        camera_rotation_lr_final=camera_rotation_lr_final,
-        camera_rotation_lr_delay_mult=camera_rotation_lr_delay_mult,
-        camera_rotation_lr_max_steps=camera_rotation_lr_max_steps
+    return CameraTrainerWrapper(
+        lambda model, scene_extent, dataset, *args, **kwargs: BaseOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
+        model, dataset, scene_extent, *args, **kwargs
     )
 
 
@@ -96,26 +78,10 @@ def DepthOpacityResetDensificationCameraTrainer(
         model: CameraTrainableGaussianModel,
         scene_extent: float,
         dataset: TrainableCameraDataset,
-        camera_position_lr_init=0.00016,
-        camera_position_lr_final=0.0000016,
-        camera_position_lr_delay_mult=0.01,
-        camera_position_lr_max_steps=30_000,
-        camera_rotation_lr_init=0.0001,
-        camera_rotation_lr_final=0.000001,
-        camera_rotation_lr_delay_mult=0.01,
-        camera_rotation_lr_max_steps=30_000,
         *args, **kwargs):
-    return CameraOptimizer(
-        DepthOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
-        dataset, scene_extent,
-        camera_position_lr_init=camera_position_lr_init,
-        camera_position_lr_final=camera_position_lr_final,
-        camera_position_lr_delay_mult=camera_position_lr_delay_mult,
-        camera_position_lr_max_steps=camera_position_lr_max_steps,
-        camera_rotation_lr_init=camera_rotation_lr_init,
-        camera_rotation_lr_final=camera_rotation_lr_final,
-        camera_rotation_lr_delay_mult=camera_rotation_lr_delay_mult,
-        camera_rotation_lr_max_steps=camera_rotation_lr_max_steps
+    return CameraTrainerWrapper(
+        lambda model, scene_extent, dataset, *args, **kwargs: DepthOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
+        model, dataset, scene_extent, *args, **kwargs
     )
 
 

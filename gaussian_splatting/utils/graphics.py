@@ -29,7 +29,7 @@ def getWorld2View2(R, t, translate=torch.zeros(3), scale=1.0):
 
     C2W = torch.linalg.inv(Rt)
     cam_center = C2W[:3, 3]
-    cam_center = (cam_center + translate) * scale
+    cam_center = (cam_center + translate.to(R.device)) * scale
     C2W[:3, 3] = cam_center
     Rt = torch.linalg.inv(C2W)
     return Rt

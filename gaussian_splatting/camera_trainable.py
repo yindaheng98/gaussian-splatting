@@ -11,7 +11,7 @@ class CameraTrainableGaussianModel(GaussianModel):
 
     def forward(self, viewpoint_camera: Camera):
         # Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
-        screenspace_points = torch.zeros_like(self.get_xyz, dtype=self.get_xyz.dtype, requires_grad=True, device=self._xyz.device) + 0
+        screenspace_points = torch.zeros_like(self.get_xyz, requires_grad=True)
         try:
             screenspace_points.retain_grad()
         except:
@@ -49,7 +49,7 @@ class CameraTrainableGaussianModel(GaussianModel):
         gaussians_xyz = self.get_xyz.clone()
         gaussians_rot = self.get_rotation.clone()
 
-        xyz_ones = torch.ones(gaussians_xyz.shape[0], 1).cuda().float()
+        xyz_ones = torch.ones(gaussians_xyz.shape[0], 1, dtype=gaussians_xyz.dtype, device=gaussians_xyz.device)
         xyz_homo = torch.cat((gaussians_xyz, xyz_ones), dim=1)
         gaussians_xyz_trans = (rel_w2c.detach().inverse() @ rel_w2c @ xyz_homo.T).T[:, :3]
         gaussians_rot_trans = quaternion_raw_multiply(quaternion.detach() * torch.tensor([1, -1, -1, -1], device=quaternion.device), quaternion_raw_multiply(quaternion, gaussians_rot))

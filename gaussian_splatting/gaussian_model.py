@@ -155,19 +155,19 @@ class GaussianModel(nn.Module):
         assert points.shape[0] == colors.shape[0]
         assert points.shape[1] == colors.shape[1] == 3
         device = self._xyz.device
-        points, colors = points.type(torch.float32).to(device), colors.type(torch.float32).to(device)
+        points, colors = points.to(dtype=torch.float, device=device), colors.to(dtype=torch.float, device=device)
         fused_point_cloud = points
         fused_color = RGB2SH(colors)
-        features = torch.zeros((points.shape[0], 3, (self.max_sh_degree + 1) ** 2), dtype=torch.float32, device=device)
+        features = torch.zeros((points.shape[0], 3, (self.max_sh_degree + 1) ** 2), dtype=torch.float, device=device)
         features[:, :3, 0] = fused_color
         features[:, 3:, 1:] = 0.0
 
         dist2 = torch.clamp_min(distCUDA2(points), 0.0000001)
         scales = torch.log(torch.sqrt(dist2))[..., None].repeat(1, 3)
-        rots = torch.zeros((fused_point_cloud.shape[0], 4), dtype=torch.float32, device=device)
+        rots = torch.zeros((fused_point_cloud.shape[0], 4), dtype=torch.float, device=device)
         rots[:, 0] = 1
 
-        opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float32, device=device))
+        opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device=device))
 
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._features_dc = nn.Parameter(features[:, :, 0:1].transpose(1, 2).contiguous().requires_grad_(True))

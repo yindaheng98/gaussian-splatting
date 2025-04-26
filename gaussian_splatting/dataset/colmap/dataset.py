@@ -59,7 +59,7 @@ def parse_colmap_camera(cameras, images, image_dir, depth_dir=None):
                 depth_mask_path = os.path.splitext(depth_mask_path)[0] + '.png'
         parsed_cameras.append(ColmapCamera(
             image_height=height, image_width=width,
-            R=torch.from_numpy(R), T=torch.from_numpy(T),
+            R=torch.from_numpy(R).type(torch.float), T=torch.from_numpy(T).type(torch.float),
             FoVy=FovY, FoVx=FovX,
             image_path=image_path,
             depth_path=depth_path,

@@ -39,4 +39,4 @@ def read_colmap_points3D(colmap_folder: str):
 def colmap_init(model: GaussianModel, colmap_folder: str):
     with torch.no_grad():
         xyz, rgb, _ = read_colmap_points3D(colmap_folder)
-        return model.create_from_pcd(torch.from_numpy(xyz), torch.from_numpy(rgb) / 255.0)
+        return model.create_from_pcd(torch.from_numpy(xyz).type(torch.float), torch.from_numpy(rgb).type(torch.float) / 255.0)

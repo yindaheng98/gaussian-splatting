@@ -10,7 +10,7 @@ def inverse_sigmoid(x):
 
 
 def PILtoTorch(pil_image):
-    resized_image = torch.from_numpy(np.array(pil_image)) / 255.0
+    resized_image = torch.from_numpy(np.array(pil_image)).type(torch.float) / 255.0
     if len(resized_image.shape) == 3:
         return resized_image.permute(2, 0, 1)
     else:
@@ -27,7 +27,7 @@ def read_png_depth(depth_path):
     cv2_depth = cv2.imread(depth_path, cv2.IMREAD_UNCHANGED)
     if cv2_depth.ndim != 2:
         cv2_depth = cv2_depth[..., 0]
-    torch_image = torch.from_numpy(cv2_depth.astype(np.float32))
+    torch_image = torch.from_numpy(cv2_depth).type(torch.float)
     return torch_image
 
 
@@ -35,7 +35,7 @@ def read_tiff_depth(depth_path):
     tiff_depth = tifffile.imread(depth_path)
     if tiff_depth.ndim != 2:
         tiff_depth = tiff_depth[..., 0]
-    torch_image = torch.from_numpy(tiff_depth)
+    torch_image = torch.from_numpy(tiff_depth).type(torch.float)
     return torch_image
 
 

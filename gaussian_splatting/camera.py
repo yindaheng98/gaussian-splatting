@@ -29,9 +29,9 @@ class Camera(NamedTuple):
 
 
 def camera2dict(camera: Camera, id):
-    Rt = torch.zeros((4, 4))
+    Rt = torch.zeros((4, 4), device=camera.R.device)
     Rt[:3, :3] = camera.R
-    Rt[:3, 3] = camera.T
+    Rt[:3, 3] = camera.T.to(camera.R.device)
     Rt[3, 3] = 1.0
 
     C2W = torch.linalg.inv(Rt)
@@ -61,11 +61,12 @@ def build_camera(
         image_path: str = None, depth_path: str = None, depth_mask_path: str = None,
         device="cuda"
 ):
+    R, T = R.to(device=device, dtype=torch.float), T.to(device=device, dtype=torch.float)
     zfar = 100.0
     znear = 0.01
-    trans = torch.zeros(3)
+    trans = torch.zeros(3, device=R.device)
     scale = 1.0
-    world_view_transform = getWorld2View2(R, T, trans, scale).to(device).transpose(0, 1)
+    world_view_transform = getWorld2View2(R, T, trans, scale).transpose(0, 1)
     projection_matrix = getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy).to(device).transpose(0, 1)
     full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
     camera_center = world_view_transform.inverse()[3, :3]
@@ -94,12 +95,12 @@ def build_camera(
         # image_width=colmap_camera.image_width, # colmap_camera.image_width is read from cameras.bin, maybe dfferent from the actual image size
         image_height=image_height, image_width=image_width,
         FoVx=FoVx, FoVy=FoVy,
-        R=R.to(device), T=T.to(device),
+        R=R, T=T,
         world_view_transform=world_view_transform,
         projection_matrix=projection_matrix,
         full_proj_transform=full_proj_transform,
         camera_center=camera_center,
-        quaternion=quaternion.to(device),
+        quaternion=quaternion,
         ground_truth_image_path=image_path,
         ground_truth_image=gt_image,
         ground_truth_depth_path=depth_path,
@@ -110,9 +111,9 @@ def build_camera(
 
 
 def dict2camera(camera_dict, load_depth=False, device="cuda"):
-    C2W = torch.zeros((4, 4))
-    C2W[:3, 3] = torch.tensor(camera_dict['position'])
-    C2W[:3, :3] = torch.tensor(camera_dict['rotation'])
+    C2W = torch.zeros((4, 4), device=device)
+    C2W[:3, 3] = torch.tensor(camera_dict['position'], dtype=torch.float, device=device)
+    C2W[:3, :3] = torch.tensor(camera_dict['rotation'], dtype=torch.float, device=device)
     C2W[3, 3] = 1.0
     Rt = torch.linalg.inv(C2W)
     T = Rt[:3, 3]

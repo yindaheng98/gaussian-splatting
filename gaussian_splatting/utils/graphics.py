@@ -10,22 +10,21 @@
 #
 
 import math
-import numpy as np
 import torch
 
 
 def getWorld2View(R, t):
-    Rt = torch.zeros((4, 4))
+    Rt = torch.zeros((4, 4), device=R.device)
     Rt[:3, :3] = R
-    Rt[:3, 3] = t
+    Rt[:3, 3] = t.to(R.device)
     Rt[3, 3] = 1.0
-    return Rt.float()
+    return Rt
 
 
 def getWorld2View2(R, t, translate=torch.zeros(3), scale=1.0):
-    Rt = torch.zeros((4, 4))
+    Rt = torch.zeros((4, 4), device=R.device)
     Rt[:3, :3] = R
-    Rt[:3, 3] = t
+    Rt[:3, 3] = t.to(R.device)
     Rt[3, 3] = 1.0
 
     C2W = torch.linalg.inv(Rt)
@@ -33,7 +32,7 @@ def getWorld2View2(R, t, translate=torch.zeros(3), scale=1.0):
     cam_center = (cam_center + translate) * scale
     C2W[:3, 3] = cam_center
     Rt = torch.linalg.inv(C2W)
-    return Rt.float()
+    return Rt
 
 
 def getProjectionMatrix(znear, zfar, fovX, fovY):
@@ -56,7 +55,7 @@ def getProjectionMatrix(znear, zfar, fovX, fovY):
     P[3, 2] = z_sign
     P[2, 2] = z_sign * zfar / (zfar - znear)
     P[2, 3] = -(zfar * znear) / (zfar - znear)
-    return P.float()
+    return P
 
 
 def fov2focal(fov, pixels):

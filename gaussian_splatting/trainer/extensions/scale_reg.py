@@ -27,7 +27,7 @@ class ScaleRegularizer(TrainerWrapper):
         scaling_for_reg = scaling[scaling > scale_reg_thr]
         scale_reg = 0
         if scaling_for_reg.shape[0] > 0:
-            scale_reg = (scaling[scaling > scale_reg_thr] / self.scale_reg_scale - 1).mean()
+            scale_reg = (scaling[scaling > scale_reg_thr] / scale_reg_thr - 1).mean()
         return super().loss(out, camera) + scale_reg * self.scale_reg_weight
 
 

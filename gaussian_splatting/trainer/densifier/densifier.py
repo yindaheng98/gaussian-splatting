@@ -141,7 +141,7 @@ class Densifier(AbstractDensifier):
 
     def densify_and_prune(self, loss, out, camera, step: int):
         ret = DensificationInstruct()
-        if step < self.densify_until_iter:
+        if step < self.densify_until_iter or step < self.prune_until_iter:
             self.update_densification_stats(out)
         reset = False
         if self.densify_from_iter <= step < self.densify_until_iter and step % self.densify_interval == 0:

@@ -141,13 +141,13 @@ class Densifier(AbstractDensifier):
 
     def densify_and_prune(self, loss, out, camera, step: int):
         ret = DensificationInstruct()
-        if step < self.densify_until_iter or step < self.prune_until_iter:
+        if step <= self.densify_until_iter or step <= self.prune_until_iter:
             self.update_densification_stats(out)
         reset = False
-        if self.densify_from_iter <= step < self.densify_until_iter and step % self.densify_interval == 0:
+        if self.densify_from_iter <= step <= self.densify_until_iter and step % self.densify_interval == 0:
             ret = self.densify()
             reset = True
-        if self.prune_from_iter <= step < self.prune_until_iter and step % self.prune_interval == 0:
+        if self.prune_from_iter <= step <= self.prune_until_iter and step % self.prune_interval == 0:
             ret = ret._replace(remove_mask=self.prune() if ret.remove_mask is None else torch.logical_or(ret.remove_mask, self.prune()))
             reset = True
         if reset:

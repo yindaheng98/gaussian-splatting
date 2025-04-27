@@ -37,7 +37,7 @@ class OpacityResetter(TrainerWrapper):
 
     def optim_step(self):
         with torch.no_grad():
-            if self.opacity_reset_from_iter <= self.curr_step < self.opacity_reset_until_iter and self.curr_step % self.opacity_reset_interval == 0:
+            if self.opacity_reset_from_iter <= self.curr_step <= self.opacity_reset_until_iter and self.curr_step % self.opacity_reset_interval == 0:
                 opacities_new = self.model.inverse_opacity_activation(torch.min(self.model.get_opacity, torch.ones_like(self.model.get_opacity)*0.01))
                 optimizable_tensors = replace_tensor_to_optimizer(self.optimizer, opacities_new, "opacity")
                 self.model._opacity = optimizable_tensors["opacity"]

@@ -1,5 +1,8 @@
+from typing import Callable
 import torch
 import torch.nn as nn
+
+from gaussian_splatting.gaussian_model import GaussianModel
 
 from .abc import AbstractTrainer, TrainerWrapper
 
@@ -40,3 +43,20 @@ class OpacityResetter(TrainerWrapper):
                 self.model._opacity = optimizable_tensors["opacity"]
                 torch.cuda.empty_cache()
         return super().optim_step()
+
+
+def OpacityResetTrainerWrapper(
+        base_trainer_constructor: Callable[..., AbstractTrainer],
+        model: GaussianModel,
+        scene_extent: float,
+        *args,
+        opacity_reset_from_iter=3000,
+        opacity_reset_until_iter=15000,
+        opacity_reset_interval=3000,
+        **kwargs) -> OpacityResetter:
+    return OpacityResetter(
+        base_trainer=base_trainer_constructor(model, scene_extent, *args, **kwargs),
+        opacity_reset_from_iter=opacity_reset_from_iter,
+        opacity_reset_until_iter=opacity_reset_until_iter,
+        opacity_reset_interval=opacity_reset_interval,
+    )

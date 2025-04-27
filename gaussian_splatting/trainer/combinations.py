@@ -2,7 +2,7 @@ from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import TrainableCameraDataset
 from .camera_trainable import CameraTrainerWrapper, BaseCameraTrainer
 from .densifier import BaseDensificationTrainer
-from .opacity_reset import OpacityResetter
+from .opacity_reset import OpacityResetTrainerWrapper
 from .sh_lift import SHLifter, BaseSHLiftTrainer
 from .depth import DepthTrainer, DepthTrainerWrapper, BaseDepthTrainer
 
@@ -20,18 +20,11 @@ def DepthCameraTrainer(model: GaussianModel, scene_extent: float, dataset: Train
 def BaseOpacityResetDensificationTrainer(
         model: GaussianModel,
         scene_extent: float,
-        opacity_reset_from_iter=3000,
-        opacity_reset_until_iter=15000,
-        opacity_reset_interval=3000,
         *args, **kwargs):
-    return OpacityResetter(
-        BaseDensificationTrainer(
-            model, scene_extent,
-            *args, **kwargs
-        ),
-        opacity_reset_from_iter=opacity_reset_from_iter,
-        opacity_reset_until_iter=opacity_reset_until_iter,
-        opacity_reset_interval=opacity_reset_interval
+    return OpacityResetTrainerWrapper(
+        BaseDensificationTrainer,
+        model, scene_extent,
+        *args, **kwargs
     )
 
 

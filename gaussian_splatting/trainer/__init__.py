@@ -2,7 +2,7 @@ from .abc import AbstractTrainer, TrainerWrapper
 from .base import BaseTrainer
 from .densifier import AbstractDensifier, Densifier, DensificationTrainer, BaseDensificationTrainer, DensificationInstruct
 from .camera_trainable import CameraOptimizer, CameraTrainerWrapper, BaseCameraTrainer
-from .opacity_reset import OpacityResetter
+from .opacity_reset import OpacityResetter, OpacityResetTrainerWrapper
 from .sh_lift import SHLifter, BaseSHLiftTrainer
 from .depth import DepthTrainer, DepthTrainerWrapper, BaseDepthTrainer
 from .combinations import Trainer, CameraTrainer

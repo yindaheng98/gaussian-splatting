@@ -1,61 +1,46 @@
+from typing import Callable
 import torch
 from gaussian_splatting.utils import build_rotation
 from gaussian_splatting import GaussianModel
 
-from .abc import AbstractDensifier, DensificationInstruct
-from .trainer import DensificationTrainer
+from .abc import AbstractDensifier, DensifierWrapper, DensificationInstruct
 
 
-class Densifier(AbstractDensifier):
+class Densifier(DensifierWrapper):
 
     def __init__(
-        self, model: GaussianModel, scene_extent,
-
+        self, base_densifier: AbstractDensifier,
+        model: GaussianModel, scene_extent,
         densify_from_iter=500,
         densify_until_iter=15000,
         densify_interval=100,
         densify_grad_threshold=0.0002,
-        densify_opacity_threshold=0.005,
         densify_percent_dense=0.01,
         densify_percent_too_big=0.8,
-
-        prune_from_iter=1000,
-        prune_until_iter=15000,
-        prune_interval=100,
-        prune_screensize_threshold=20,
-        prune_percent_too_big=1,
     ):
+        super().__init__(base_densifier)
         self._model = model
         self.scene_extent = scene_extent
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
         self.densify_interval = densify_interval
         self.densify_grad_threshold = densify_grad_threshold
-        self.densify_opacity_threshold = densify_opacity_threshold
         self.densify_percent_dense = densify_percent_dense
         self.densify_percent_too_big = densify_percent_too_big
-        self.prune_from_iter = prune_from_iter
-        self.prune_until_iter = prune_until_iter
-        self.prune_interval = prune_interval
-        self.prune_screensize_threshold = prune_screensize_threshold
-        self.prune_percent_too_big = prune_percent_too_big
 
         self.xyz_gradient_accum = None
         self.denom = None
-        self.max_radii2D = None
 
     @property
     def model(self) -> GaussianModel:
         return self._model
 
     def update_densification_stats(self, out):
-        viewspace_points, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
-        if self.xyz_gradient_accum is None or self.denom is None or self.max_radii2D is None:
+        viewspace_points, visibility_filter = out["viewspace_points"], out["visibility_filter"]
+        if self.xyz_gradient_accum is None or self.denom is None:
             new_size = self.model.get_xyz.shape[0]
             self.xyz_gradient_accum = torch.zeros((new_size, 1), device=self.model._xyz.device)
             self.denom = torch.zeros((new_size, 1), device=self.model._xyz.device)
-            self.max_radii2D = torch.zeros((new_size), device=self.model._xyz.device)
-        self.max_radii2D[visibility_filter] = torch.max(self.max_radii2D[visibility_filter], radii[visibility_filter])
         self.xyz_gradient_accum[visibility_filter] += torch.norm(viewspace_points.grad[visibility_filter, :2], dim=-1, keepdim=True)
         self.denom[visibility_filter] += 1
 
@@ -115,13 +100,6 @@ class Densifier(AbstractDensifier):
             new_rotation=new_rotation,
         )
 
-    def prune(self) -> torch.Tensor:
-        prune_mask = (self.model.get_opacity < self.densify_opacity_threshold).squeeze()
-        big_points_vs = self.max_radii2D > self.prune_screensize_threshold
-        big_points_ws = self.model.get_scaling.max(dim=1).values > self.prune_percent_too_big * self.scene_extent
-        prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
-        return prune_mask
-
     def densify(self) -> DensificationInstruct:
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
@@ -140,48 +118,56 @@ class Densifier(AbstractDensifier):
         )
 
     def densify_and_prune(self, loss, out, camera, step: int):
-        ret = DensificationInstruct()
-        if step <= self.densify_until_iter or step <= self.prune_until_iter:
+        ret = super().densify_and_prune(loss, out, camera, step)
+        if step <= self.densify_until_iter:
             self.update_densification_stats(out)
-        reset = False
         if self.densify_from_iter <= step <= self.densify_until_iter and step % self.densify_interval == 0:
-            ret = self.densify()
-            reset = True
-        if self.prune_from_iter <= step <= self.prune_until_iter and step % self.prune_interval == 0:
-            ret = ret._replace(remove_mask=self.prune() if ret.remove_mask is None else torch.logical_or(ret.remove_mask, self.prune()))
-            reset = True
-        if reset:
-            self.xyz_gradient_accum = None
-            self.denom = None
-            self.max_radii2D = None
-            torch.cuda.empty_cache()
+            dense = self.densify()
+            if ret.new_xyz is not None:
+                ret = ret._replace(
+                    new_xyz=torch.cat((ret.new_xyz, dense.new_xyz), dim=0),
+                    new_features_dc=torch.cat((ret.new_features_dc, dense.new_features_dc), dim=0),
+                    new_features_rest=torch.cat((ret.new_features_rest, dense.new_features_rest), dim=0),
+                    new_opacities=torch.cat((ret.new_opacities, dense.new_opacities), dim=0),
+                    new_scaling=torch.cat((ret.new_scaling, dense.new_scaling), dim=0),
+                    new_rotation=torch.cat((ret.new_rotation, dense.new_rotation), dim=0),
+                )
+            else:
+                ret = ret._replace(
+                    new_xyz=dense.new_xyz,
+                    new_features_dc=dense.new_features_dc,
+                    new_features_rest=dense.new_features_rest,
+                    new_opacities=dense.new_opacities,
+                    new_scaling=dense.new_scaling,
+                    new_rotation=dense.new_rotation,
+                )
         return ret
 
+    def after_densify_and_prune_hook(self, loss, out, camera):
+        self.xyz_gradient_accum = None
+        self.denom = None
+        return super().after_densify_and_prune_hook(loss, out, camera)
 
-def BaseDensificationTrainer(
+
+def DensificationWrapper(
+        base_densifier_constructor: Callable[..., AbstractDensifier],
         model: GaussianModel,
         scene_extent: float,
-
         densify_from_iter=500,
         densify_until_iter=15000,
         densify_interval=100,
         densify_grad_threshold=0.0002,
-        densify_opacity_threshold=0.005,
         densify_percent_dense=0.01,
         densify_percent_too_big=0.8,
-
-        prune_from_iter=1000,
-        prune_until_iter=15000,
-        prune_interval=100,
-        prune_screensize_threshold=20,
-        prune_percent_too_big=1,
-
-        *args, **kwargs):
-    return DensificationTrainer(
-        model, scene_extent,
-        Densifier(
-            model, scene_extent,
-            densify_from_iter, densify_until_iter, densify_interval, densify_grad_threshold, densify_opacity_threshold, densify_percent_dense, densify_percent_too_big,
-            prune_from_iter, prune_until_iter, prune_interval, prune_screensize_threshold, prune_percent_too_big),
         *args, **kwargs
+):
+    return Densifier(
+        base_densifier_constructor(model, scene_extent, *args, **kwargs),
+        model, scene_extent,
+        densify_from_iter=densify_from_iter,
+        densify_until_iter=densify_until_iter,
+        densify_interval=densify_interval,
+        densify_grad_threshold=densify_grad_threshold,
+        densify_percent_dense=densify_percent_dense,
+        densify_percent_too_big=densify_percent_too_big
     )

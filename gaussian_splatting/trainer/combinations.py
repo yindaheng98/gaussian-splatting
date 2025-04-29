@@ -63,7 +63,7 @@ def BaseOpacityResetDensificationCameraTrainer(
         *args, **kwargs):
     return CameraTrainerWrapper(
         lambda model, scene_extent, dataset, *args, **kwargs: BaseOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
-        model, dataset, scene_extent, *args, **kwargs
+        model, scene_extent, dataset, *args, **kwargs
     )
 
 
@@ -74,7 +74,7 @@ def DepthOpacityResetDensificationCameraTrainer(
         *args, **kwargs):
     return CameraTrainerWrapper(
         lambda model, scene_extent, dataset, *args, **kwargs: DepthOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
-        model, dataset, scene_extent, *args, **kwargs
+        model, scene_extent, dataset, *args, **kwargs
     )
 
 

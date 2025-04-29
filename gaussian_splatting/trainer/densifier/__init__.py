@@ -2,4 +2,4 @@ from .abc import AbstractDensifier, DensificationInstruct, DensifierWrapper, Noo
 from .trainer import DensificationTrainer
 from .densifier import Densifier, DensificationWrapper
 from .pruner import OpacityPruner, PruningWrapper
-from .combinations import BaseDensificationTrainer
+from .combinations import DensificationTrainerWrapper, BaseDensificationTrainer

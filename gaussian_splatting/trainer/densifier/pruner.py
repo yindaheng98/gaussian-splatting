@@ -45,6 +45,8 @@ class OpacityPruner(DensifierWrapper):
 
     def densify_and_prune(self, loss, out, camera, step: int):
         ret = super().densify_and_prune(loss, out, camera, step)
+        if step <= self.prune_until_iter:
+            self.update_densification_stats(out)
         if self.prune_from_iter <= step <= self.prune_until_iter and step % self.prune_interval == 0:
             ret = ret._replace(remove_mask=self.prune() if ret.remove_mask is None else torch.logical_or(ret.remove_mask, self.prune()))
         return ret

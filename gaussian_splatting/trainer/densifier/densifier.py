@@ -141,6 +141,7 @@ class Densifier(DensifierWrapper):
                     new_scaling=dense.new_scaling,
                     new_rotation=dense.new_rotation,
                 )
+            ret = ret._replace(remove_mask=dense.remove_mask if ret.remove_mask is None else torch.logical_or(ret.remove_mask, dense.remove_mask))
         return ret
 
     def after_densify_and_prune_hook(self, loss, out, camera):

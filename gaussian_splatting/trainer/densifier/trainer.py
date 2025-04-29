@@ -105,9 +105,10 @@ class DensificationTrainer(BaseTrainer):
 
     def densify_and_prune(self, loss, out, camera):
         instruct = self.densifier.densify_and_prune(loss, out, camera, self.curr_step)
+        hook = False
         if instruct.remove_mask is not None:
             self.remove_points(instruct.remove_mask)
-            torch.cuda.empty_cache()
+            hook = True
         if instruct.new_xyz is not None:
             assert instruct.new_features_dc is not None
             assert instruct.new_features_rest is not None
@@ -121,6 +122,9 @@ class DensificationTrainer(BaseTrainer):
                 instruct.new_opacities,
                 instruct.new_scaling,
                 instruct.new_rotation)
+            hook = True
+        if hook:
+            self.densifier.after_densify_and_prune_hook(loss, out, camera)
             torch.cuda.empty_cache()
 
     def before_optim_hook(self, loss, out, camera):

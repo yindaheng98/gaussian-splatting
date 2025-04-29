@@ -4,9 +4,10 @@ from gaussian_splatting.utils import build_rotation
 from gaussian_splatting import GaussianModel
 
 from .abc import AbstractDensifier, DensifierWrapper, DensificationInstruct
+from .trainer import DensificationTrainer
 
 
-class Densifier(DensifierWrapper):
+class SplitCloneDensifier(DensifierWrapper):
 
     def __init__(
         self, base_densifier: AbstractDensifier,
@@ -145,20 +146,21 @@ class Densifier(DensifierWrapper):
         return super().after_densify_and_prune_hook(loss, out, camera)
 
 
-def DensificationWrapper(
-        base_densifier_constructor: Callable[..., AbstractDensifier],
+def SplitCloneDensifierTrainerWrapper(
+        noargs_base_densifier_constructor: Callable[[GaussianModel, float], AbstractDensifier],
         model: GaussianModel,
         scene_extent: float,
+        *args,
         densify_from_iter=500,
         densify_until_iter=15000,
         densify_interval=100,
         densify_grad_threshold=0.0002,
         densify_percent_dense=0.01,
         densify_percent_too_big=0.8,
-        *args, **kwargs
-):
-    return Densifier(
-        base_densifier_constructor(model, scene_extent, *args, **kwargs),
+        **kwargs):
+    densifier = noargs_base_densifier_constructor(model, scene_extent)
+    densifier = SplitCloneDensifier(
+        densifier,
         scene_extent,
         densify_from_iter=densify_from_iter,
         densify_until_iter=densify_until_iter,
@@ -166,4 +168,9 @@ def DensificationWrapper(
         densify_grad_threshold=densify_grad_threshold,
         densify_percent_dense=densify_percent_dense,
         densify_percent_too_big=densify_percent_too_big
+    )
+    return DensificationTrainer(
+        model, scene_extent,
+        densifier,
+        *args, **kwargs
     )

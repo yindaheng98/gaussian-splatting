@@ -3,6 +3,7 @@ import torch
 from gaussian_splatting import GaussianModel
 
 from .abc import AbstractDensifier, DensifierWrapper
+from .trainer import DensificationTrainer
 
 
 class OpacityPruner(DensifierWrapper):
@@ -55,19 +56,21 @@ class OpacityPruner(DensifierWrapper):
         return super().after_densify_and_prune_hook(loss, out, camera)
 
 
-def PruningWrapper(
-        base_densifier_constructor: Callable[..., AbstractDensifier],
+def OpacityPrunerTrainerWrapper(
+        noargs_base_densifier_constructor: Callable[[GaussianModel, float], AbstractDensifier],
         model: GaussianModel,
         scene_extent: float,
+        *args,
         prune_from_iter=1000,
         prune_until_iter=15000,
         prune_interval=100,
         prune_screensize_threshold=20,
         prune_percent_too_big=1,
         prune_opacity_threshold=0.005,
-        *args, **kwargs):
-    return OpacityPruner(
-        base_densifier_constructor(model, scene_extent, *args, **kwargs),
+        **kwargs):
+    densifier = noargs_base_densifier_constructor(model, scene_extent)
+    densifier = OpacityPruner(
+        densifier,
         scene_extent,
         prune_from_iter=prune_from_iter,
         prune_until_iter=prune_until_iter,
@@ -75,4 +78,9 @@ def PruningWrapper(
         prune_screensize_threshold=prune_screensize_threshold,
         prune_percent_too_big=prune_percent_too_big,
         prune_opacity_threshold=prune_opacity_threshold,
+    )
+    return DensificationTrainer(
+        model, scene_extent,
+        densifier,
+        *args, **kwargs
     )

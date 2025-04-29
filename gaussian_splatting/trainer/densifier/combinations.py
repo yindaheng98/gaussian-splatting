@@ -21,7 +21,7 @@ def DensificationTrainerWrapper(
     densifier = noargs_base_densifier_constructor(model, scene_extent)
     densifier = Densifier(
         densifier,
-        model, scene_extent,
+        scene_extent,
         densify_from_iter=densify_from_iter,
         densify_until_iter=densify_until_iter,
         densify_interval=densify_interval,
@@ -49,7 +49,7 @@ def BaseDensificationTrainer(
     return DensificationTrainerWrapper(
         lambda model, scene_extent: OpacityPruner(
             NoopDensifier(model),
-            model, scene_extent,
+            scene_extent,
             prune_from_iter=prune_from_iter,
             prune_until_iter=prune_until_iter,
             prune_interval=prune_interval,

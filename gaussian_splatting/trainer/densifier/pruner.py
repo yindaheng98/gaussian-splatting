@@ -9,7 +9,7 @@ class OpacityPruner(DensifierWrapper):
 
     def __init__(
         self, base_densifier: AbstractDensifier,
-        model: GaussianModel, scene_extent,
+        scene_extent,
         prune_from_iter=1000,
         prune_until_iter=15000,
         prune_interval=100,
@@ -18,7 +18,6 @@ class OpacityPruner(DensifierWrapper):
         prune_opacity_threshold=0.005,
     ):
         super().__init__(base_densifier)
-        self._model = model
         self.scene_extent = scene_extent
         self.prune_from_iter = prune_from_iter
         self.prune_until_iter = prune_until_iter
@@ -68,9 +67,8 @@ def PruningWrapper(
         prune_opacity_threshold=0.005,
         *args, **kwargs):
     return OpacityPruner(
-        base_densifier=base_densifier_constructor(model, scene_extent, *args, **kwargs),
-        model=model,
-        scene_extent=scene_extent,
+        base_densifier_constructor(model, scene_extent, *args, **kwargs),
+        scene_extent,
         prune_from_iter=prune_from_iter,
         prune_until_iter=prune_until_iter,
         prune_interval=prune_interval,

@@ -10,7 +10,7 @@ class Densifier(DensifierWrapper):
 
     def __init__(
         self, base_densifier: AbstractDensifier,
-        model: GaussianModel, scene_extent,
+        scene_extent,
         densify_from_iter=500,
         densify_until_iter=15000,
         densify_interval=100,
@@ -19,7 +19,6 @@ class Densifier(DensifierWrapper):
         densify_percent_too_big=0.8,
     ):
         super().__init__(base_densifier)
-        self._model = model
         self.scene_extent = scene_extent
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
@@ -30,10 +29,6 @@ class Densifier(DensifierWrapper):
 
         self.xyz_gradient_accum = None
         self.denom = None
-
-    @property
-    def model(self) -> GaussianModel:
-        return self._model
 
     def update_densification_stats(self, out):
         viewspace_points, visibility_filter = out["viewspace_points"], out["visibility_filter"]
@@ -164,7 +159,7 @@ def DensificationWrapper(
 ):
     return Densifier(
         base_densifier_constructor(model, scene_extent, *args, **kwargs),
-        model, scene_extent,
+        scene_extent,
         densify_from_iter=densify_from_iter,
         densify_until_iter=densify_until_iter,
         densify_interval=densify_interval,

@@ -12,8 +12,7 @@ from gaussian_splatting.trainer import AbstractTrainer
 from gaussian_splatting.prepare import basemodes, shliftmodes, prepare_dataset, prepare_gaussians, prepare_trainer
 
 
-def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, load_depth=False, with_scale_reg=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
-    trainable_camera = "camera" in mode
+def prepare_training(sh_degree: int, source: str, device: str, mode: str, trainable_camera: bool = False, load_ply: str = None, load_camera: str = None, load_depth=False, with_scale_reg=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
     dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_depth=load_depth)
     gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply)
     trainer = prepare_trainer(gaussians=gaussians, dataset=dataset, mode=mode, trainable_camera=trainable_camera, load_ply=load_ply, with_scale_reg=with_scale_reg, configs=configs)
@@ -78,7 +77,7 @@ if __name__ == "__main__":
 
     configs = {o.split("=", 1)[0]: eval(o.split("=", 1)[1]) for o in args.option}
     dataset, gaussians, trainer = prepare_training(
-        sh_degree=args.sh_degree, source=args.source, device=args.device, mode=args.mode,
+        sh_degree=args.sh_degree, source=args.source, device=args.device, mode=args.mode, trainable_camera="camera" in args.mode,
         load_ply=args.load_ply, load_camera=args.load_camera, load_depth=not args.no_depth_data, with_scale_reg=args.with_scale_reg, configs=configs)
     dataset.save_cameras(os.path.join(args.destination, "cameras.json"))
     torch.cuda.empty_cache()

@@ -5,72 +5,11 @@ from typing import List, Tuple
 import torch
 from tqdm import tqdm
 from argparse import Namespace
-from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
-from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, TrainableCameraDataset
+from gaussian_splatting import GaussianModel
+from gaussian_splatting.dataset import CameraDataset
 from gaussian_splatting.utils import psnr
-from gaussian_splatting.dataset.colmap import ColmapCameraDataset, colmap_init, ColmapTrainableCameraDataset
-from gaussian_splatting.trainer import *
-from gaussian_splatting.trainer.extensions import ScaleRegularizeTrainerWrapper
-
-basemodes = {
-    "base": Trainer,
-    "densify": OpacityResetDensificationTrainer,
-    "camera": CameraTrainer,
-    "camera-densify": OpacityResetDensificationCameraTrainer,
-    "nodepth-base": BaseTrainer,
-    "nodepth-densify": BaseOpacityResetDensificationTrainer,
-    "nodepth-camera": BaseCameraTrainer,
-    "nodepth-camera-densify": BaseOpacityResetDensificationCameraTrainer,
-}
-shliftmodes = {
-    "base": SHLiftTrainer,
-    "densify": SHLiftOpacityResetDensificationTrainer,
-    "camera": SHLiftCameraTrainer,
-    "camera-densify": SHLiftOpacityResetDensificationCameraTrainer,
-    "nodepth-base": BaseSHLiftTrainer,
-    "nodepth-densify": BaseSHLiftOpacityResetDensificationTrainer,
-    "nodepth-camera": BaseSHLiftCameraTrainer,
-    "nodepth-camera-densify": BaseSHLiftOpacityResetDensificationCameraTrainer,
-}
-
-
-def prepare_dataset(source: str, device: str, trainable_camera: bool = False, load_camera: str = None, load_depth=False) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
-    if trainable_camera:
-        dataset = (TrainableCameraDataset.from_json(load_camera, load_depth=load_depth) if load_camera else ColmapTrainableCameraDataset(source, load_depth=load_depth)).to(device)
-    else:
-        dataset = (JSONCameraDataset(load_camera, load_depth=load_depth) if load_camera else ColmapCameraDataset(source, load_depth=load_depth)).to(device)
-    return dataset
-
-
-def prepare_gaussians(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
-    if trainable_camera:
-        gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
-        gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-    else:
-        gaussians = GaussianModel(sh_degree).to(device)
-        gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-    return gaussians
-
-
-def prepare_trainer(gaussians: GaussianModel, dataset: CameraDataset, mode: str, trainable_camera: bool = False, load_ply: str = None, with_scale_reg=False, configs={}) -> AbstractTrainer:
-    modes = shliftmodes if load_ply else basemodes
-    constructor = modes[mode]
-    if with_scale_reg:
-        constructor = lambda *args, **kwargs: ScaleRegularizeTrainerWrapper(modes[mode], *args, **kwargs)
-    if trainable_camera:
-        trainer = constructor(
-            gaussians,
-            scene_extent=dataset.scene_extent(),
-            dataset=dataset,
-            **configs
-        )
-    else:
-        trainer = constructor(
-            gaussians,
-            scene_extent=dataset.scene_extent(),
-            **configs
-        )
-    return trainer
+from gaussian_splatting.trainer import AbstractTrainer
+from gaussian_splatting.prepare import basemodes, shliftmodes, prepare_dataset, prepare_gaussians, prepare_trainer
 
 
 def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, load_depth=False, with_scale_reg=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:

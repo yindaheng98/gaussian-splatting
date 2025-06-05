@@ -5,26 +5,16 @@ from tqdm import tqdm
 from os import makedirs
 import torchvision
 import tifffile
-from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
-from gaussian_splatting.dataset import CameraDataset, JSONCameraDataset, TrainableCameraDataset
-from gaussian_splatting.dataset.colmap import ColmapCameraDataset, ColmapTrainableCameraDataset
-from gaussian_splatting.utils import psnr
+from gaussian_splatting import GaussianModel
+from gaussian_splatting.dataset import CameraDataset
+from gaussian_splatting.utils import psnr, unproject
 from gaussian_splatting.utils.lpipsPyTorch import lpips
-from gaussian_splatting.utils import unproject
+from gaussian_splatting.prepare import prepare_dataset, prepare_gaussians
 
 
-def prepare_rendering(sh_degree: int, source: str, device: str, mode: str, load_ply: str, load_camera: str = None, with_depth=False) -> Tuple[CameraDataset, GaussianModel]:
-    match mode:
-        case "base" | "densify":
-            gaussians = GaussianModel(sh_degree).to(device)
-            gaussians.load_ply(load_ply)
-            dataset = (JSONCameraDataset(load_camera, load_depth=with_depth) if load_camera else ColmapCameraDataset(source, load_depth=with_depth)).to(device)
-        case "camera" | "camera-densify":
-            gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
-            gaussians.load_ply(load_ply)
-            dataset = (TrainableCameraDataset.from_json(load_camera, load_depth=with_depth) if load_camera else ColmapTrainableCameraDataset(source, load_depth=with_depth)).to(device)
-        case _:
-            raise ValueError(f"Unknown mode: {mode}")
+def prepare_rendering(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None, load_camera: str = None, load_depth=False) -> Tuple[CameraDataset, GaussianModel]:
+    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_depth=load_depth)
+    gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply)
     return dataset, gaussians
 
 
@@ -92,7 +82,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--destination", required=True, type=str)
     parser.add_argument("-i", "--iteration", required=True, type=int)
     parser.add_argument("--load_camera", default=None, type=str)
-    parser.add_argument("--mode", choices=["base", "densify", "camera", "camera-densify"], default="base")
+    parser.add_argument("--mode", choices=["base", "camera"], default="base")
     parser.add_argument("--device", default="cuda", type=str)
     parser.add_argument("--no_rescale_depth_gt", action="store_true")
     parser.add_argument("--save_depth_pcd", action="store_true")
@@ -101,6 +91,6 @@ if __name__ == "__main__":
     save = os.path.join(args.destination, "ours_{}".format(args.iteration))
     with torch.no_grad():
         dataset, gaussians = prepare_rendering(
-            sh_degree=args.sh_degree, source=args.source, device=args.device, mode=args.mode,
-            load_ply=load_ply, load_camera=args.load_camera, with_depth=True)
+            sh_degree=args.sh_degree, source=args.source, device=args.device, trainable_camera=args.mode == "camera",
+            load_ply=load_ply, load_camera=args.load_camera, load_depth=True)
         rendering(dataset, gaussians, save, save_pcd=args.save_depth_pcd, rescale_depth_gt=not args.no_rescale_depth_gt)

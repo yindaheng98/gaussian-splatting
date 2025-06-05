@@ -75,8 +75,6 @@
                 "output/truck",
                 "-i",
                 "30000",
-                "--mode",
-                "densify",
             ]
         },
         {
@@ -115,7 +113,7 @@
                 "-i",
                 "30000",
                 "--mode",
-                "camera-densify",
+                "camera",
                 "--load_camera",
                 "output/truck-camera-densify/cameras.json",
             ]

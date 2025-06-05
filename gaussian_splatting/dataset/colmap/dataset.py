@@ -1,10 +1,9 @@
 import os
-from typing import NamedTuple
+from typing import List, NamedTuple
 import numpy as np
 
 import torch
 
-from gaussian_splatting import CameraTrainableGaussianModel
 from gaussian_splatting.camera import build_camera
 from gaussian_splatting.dataset import CameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import focal2fov
@@ -27,7 +26,7 @@ class ColmapCamera(NamedTuple):
     depth_mask_path: str
 
 
-def parse_colmap_camera(cameras, images, image_dir, depth_dir=None):
+def parse_colmap_camera(cameras, images, image_dir, depth_dir=None) -> List[ColmapCamera]:
     parsed_cameras = []
     for _, key in enumerate(cameras):
         extr = cameras[key]
@@ -68,7 +67,7 @@ def parse_colmap_camera(cameras, images, image_dir, depth_dir=None):
     return parsed_cameras
 
 
-def read_colmap_cameras(colmap_folder, load_depth=False):
+def read_colmap_cameras(colmap_folder, load_depth=False) -> List[ColmapCamera]:
     path = colmap_folder
     image_dir = os.path.join(path, "images")
     try:
@@ -104,7 +103,3 @@ class ColmapCameraDataset(CameraDataset):
 
 def ColmapTrainableCameraDataset(colmap_folder, load_depth=False):
     return TrainableCameraDataset(ColmapCameraDataset(colmap_folder, load_depth=load_depth))
-
-
-def ColmapCameraTrainableGaussianModel(colmap_folder, load_depth=False, *args, **kwargs):
-    return CameraTrainableGaussianModel(dataset=ColmapTrainableCameraDataset(colmap_folder, load_depth=load_depth), *args, **kwargs)

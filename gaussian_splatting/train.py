@@ -34,25 +34,39 @@ shliftmodes = {
 }
 
 
-def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, load_depth=False, with_scale_reg=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
+def prepare_dataset(source: str, device: str, mode: str, load_camera: str = None, load_depth=False) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
+    assert mode in basemodes or mode in shliftmodes, f"Unknown mode: {mode}. Available modes: {sorted(list(set(list(basemodes.keys()) + list(shliftmodes.keys()))))}"
+    if "camera" in mode:
+        dataset = (TrainableCameraDataset.from_json(load_camera, load_depth=load_depth) if load_camera else ColmapTrainableCameraDataset(source, load_depth=load_depth)).to(device)
+    else:
+        dataset = (JSONCameraDataset(load_camera, load_depth=load_depth) if load_camera else ColmapCameraDataset(source, load_depth=load_depth)).to(device)
+    return dataset
+
+
+def prepare_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
+    assert mode in basemodes or mode in shliftmodes, f"Unknown mode: {mode}. Available modes: {sorted(list(set(list(basemodes.keys()) + list(shliftmodes.keys()))))}"
+    if "camera" in mode:
+        gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
+        gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
+    else:
+        gaussians = GaussianModel(sh_degree).to(device)
+        gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
+    return gaussians
+
+
+def prepare_trainer(gaussians: GaussianModel, dataset: CameraDataset, mode: str, load_ply: str = None, with_scale_reg=False, configs={}) -> AbstractTrainer:
     modes = shliftmodes if load_ply else basemodes
     constructor = modes[mode]
     if with_scale_reg:
         constructor = lambda *args, **kwargs: ScaleRegularizeTrainerWrapper(modes[mode], *args, **kwargs)
     match mode:
         case "base" | "densify" | "nodepth-base" | "nodepth-densify":
-            gaussians = GaussianModel(sh_degree).to(device)
-            gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-            dataset = (JSONCameraDataset(load_camera, load_depth=load_depth) if load_camera else ColmapCameraDataset(source, load_depth=load_depth)).to(device)
             trainer = constructor(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
                 **configs
             )
         case "camera" | "camera-densify" | "nodepth-camera" | "nodepth-camera-densify":
-            gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
-            gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-            dataset = (TrainableCameraDataset.from_json(load_camera, load_depth=load_depth) if load_camera else ColmapTrainableCameraDataset(source, load_depth=load_depth)).to(device)
             trainer = constructor(
                 gaussians,
                 scene_extent=dataset.scene_extent(),
@@ -61,6 +75,13 @@ def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_p
             )
         case _:
             raise ValueError(f"Unknown mode: {mode}")
+    return trainer
+
+
+def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, load_depth=False, with_scale_reg=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
+    dataset = prepare_dataset(source=source, device=device, mode=mode, load_camera=load_camera, load_depth=load_depth)
+    gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, mode=mode, load_ply=load_ply)
+    trainer = prepare_trainer(gaussians=gaussians, dataset=dataset, mode=mode, load_ply=load_ply, with_scale_reg=with_scale_reg, configs=configs)
     return dataset, gaussians, trainer
 
 

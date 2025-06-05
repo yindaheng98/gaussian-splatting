@@ -2,9 +2,8 @@ from typing import Callable
 from gaussian_splatting import GaussianModel
 
 from .abc import AbstractDensifier, NoopDensifier
-from .densifier import SplitCloneDensifier, SplitCloneDensifierTrainerWrapper
-from .pruner import OpacityPruner, OpacityPrunerTrainerWrapper
-from .trainer import DensificationTrainer
+from .densifier import SplitCloneDensifierTrainerWrapper
+from .pruner import OpacityPruner
 
 
 def DensificationTrainerWrapper(

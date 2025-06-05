@@ -34,18 +34,16 @@ shliftmodes = {
 }
 
 
-def prepare_dataset(source: str, device: str, mode: str, load_camera: str = None, load_depth=False) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
-    assert mode in basemodes or mode in shliftmodes, f"Unknown mode: {mode}. Available modes: {sorted(list(set(list(basemodes.keys()) + list(shliftmodes.keys()))))}"
-    if "camera" in mode:
+def prepare_dataset(source: str, device: str, trainable_camera: bool = False, load_camera: str = None, load_depth=False) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
+    if trainable_camera:
         dataset = (TrainableCameraDataset.from_json(load_camera, load_depth=load_depth) if load_camera else ColmapTrainableCameraDataset(source, load_depth=load_depth)).to(device)
     else:
         dataset = (JSONCameraDataset(load_camera, load_depth=load_depth) if load_camera else ColmapCameraDataset(source, load_depth=load_depth)).to(device)
     return dataset
 
 
-def prepare_gaussians(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
-    assert mode in basemodes or mode in shliftmodes, f"Unknown mode: {mode}. Available modes: {sorted(list(set(list(basemodes.keys()) + list(shliftmodes.keys()))))}"
-    if "camera" in mode:
+def prepare_gaussians(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
+    if trainable_camera:
         gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
         gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
     else:
@@ -79,8 +77,8 @@ def prepare_trainer(gaussians: GaussianModel, dataset: CameraDataset, mode: str,
 
 
 def prepare_training(sh_degree: int, source: str, device: str, mode: str, load_ply: str = None, load_camera: str = None, load_depth=False, with_scale_reg=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
-    dataset = prepare_dataset(source=source, device=device, mode=mode, load_camera=load_camera, load_depth=load_depth)
-    gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, mode=mode, load_ply=load_ply)
+    dataset = prepare_dataset(source=source, device=device, trainable_camera="camera" in mode, load_camera=load_camera, load_depth=load_depth)
+    gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera="camera" in mode, load_ply=load_ply)
     trainer = prepare_trainer(gaussians=gaussians, dataset=dataset, mode=mode, load_ply=load_ply, with_scale_reg=with_scale_reg, configs=configs)
     return dataset, gaussians, trainer
 

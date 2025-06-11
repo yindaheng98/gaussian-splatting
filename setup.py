@@ -44,7 +44,7 @@ if os.name == 'nt':
 
 setup(
     name="gaussian_splatting",
-    version='1.16.5',
+    version='1.16.6',
     author='yindaheng98',
     author_email='yindaheng98@gmail.com',
     url='https://github.com/yindaheng98/gaussian-splatting',
@@ -78,5 +78,7 @@ setup(
         'tqdm',
         'plyfile',
         'tifffile',
+        'numpy',
+        'opencv-python',
     ]
 )

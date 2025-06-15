@@ -7,7 +7,7 @@ import torchvision
 import tifffile
 from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
-from gaussian_splatting.utils import psnr, unproject
+from gaussian_splatting.utils import psnr, ssim, unproject
 from gaussian_splatting.utils.lpipsPyTorch import lpips
 from gaussian_splatting.prepare import prepare_dataset, prepare_gaussians
 
@@ -53,11 +53,18 @@ def rendering(
     makedirs(render_path, exist_ok=True)
     makedirs(gt_path, exist_ok=True)
     pbar = tqdm(dataset, desc="Rendering progress")
+    with open(os.path.join(save, "quality.csv"), "w") as f:
+        f.write("name,psnr,ssim,lpips\n")
     for idx, camera in enumerate(pbar):
         out = gaussians(camera)
         rendering = out["render"]
         gt = camera.ground_truth_image
-        pbar.set_postfix({"PSNR": psnr(rendering, gt).mean().item(), "LPIPS": lpips(rendering, gt).mean().item()})
+        psnr_value = psnr(rendering, gt).mean().item()
+        ssim_value = ssim(rendering, gt).mean().item()
+        lpips_value = lpips(rendering, gt).mean().item()
+        pbar.set_postfix({"PSNR": psnr_value, "SSIM": ssim_value, "LPIPS": lpips_value})
+        with open(os.path.join(save, "quality.csv"), "a") as f:
+            f.write('{0:05d}'.format(idx) + f",{psnr_value},{ssim_value},{lpips_value}\n")
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
         depth = out["depth"].squeeze(0)

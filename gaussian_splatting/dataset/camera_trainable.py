@@ -60,10 +60,10 @@ class TrainableCameraDataset(CameraDataset):
         })
 
     def to(self, device):
-        self.cameras.to(device)
-        self.quaternions.to(device)
-        self.Ts.to(device)
-        self.exposures.to(device)
+        self.cameras = self.cameras.to(device)
+        self.quaternions = nn.Parameter(self.quaternions.to(device))
+        self.Ts = nn.Parameter(self.Ts.to(device))
+        self.exposures = nn.Parameter(self.exposures.to(device))
         return self
 
     def save_cameras(self, path):

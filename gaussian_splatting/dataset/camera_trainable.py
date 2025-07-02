@@ -16,7 +16,7 @@ def exposure_postprocess(camera: Camera, x: torch.Tensor):
 
 class TrainableCameraDataset(CameraDataset):
 
-    def __init__(self, cameras: List[Camera], exposures: List[torch.Tensor] = []):
+    def __init__(self, cameras: CameraDataset, exposures: List[torch.Tensor] = []):
         super().__init__()
         self.cameras = cameras
         self.quaternions = nn.Parameter(torch.stack([camera.quaternion for camera in cameras]))
@@ -60,6 +60,7 @@ class TrainableCameraDataset(CameraDataset):
         })
 
     def to(self, device):
+        self.cameras.to(device)
         self.quaternions.to(device)
         self.Ts.to(device)
         self.exposures.to(device)

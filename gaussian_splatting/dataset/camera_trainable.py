@@ -109,3 +109,13 @@ class FixedTrainableCameraDataset(JSONCameraDataset):
             }
         ) for camera, json_camera in zip(self.cameras, self.json_cameras)]
         return self
+
+    def save_cameras(self, path):
+        cameras = []
+        for idx, camera in enumerate(self):
+            cameras.append({
+                **camera2dict(camera, idx),
+                "exposure": camera.custom_data['exposures'].detach().tolist(),
+            })
+        with open(path, 'w') as f:
+            json.dump(cameras, f, indent=2)

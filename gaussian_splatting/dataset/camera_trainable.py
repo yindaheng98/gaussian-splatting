@@ -84,3 +84,28 @@ class TrainableCameraDataset(CameraDataset):
         cameras = JSONCameraDataset(path, load_depth=load_depth)
         exposures = [(torch.tensor(camera['exposure'], dtype=torch.float) if 'exposure' in camera else torch.eye(3, 4)) for camera in cameras.json_cameras]
         return cls(cameras, exposures)
+
+
+class FixedTrainableCameraDataset(JSONCameraDataset):
+    # Same as TrainableCameraDataset, but is fixed
+    # Used for loading cameras saved by TrainableCameraDataset
+    def __init__(self, path, load_depth=False):
+        super().__init__(path, load_depth=load_depth)
+        self.cameras = [camera._replace(
+            postprocess=exposure_postprocess,
+            custom_data={
+                **camera.custom_data,
+                'exposures': (torch.tensor(json_camera['exposure'], dtype=torch.float) if 'exposure' in json_camera else torch.eye(3, 4))
+            }
+        ) for camera, json_camera in zip(self.cameras, self.json_cameras)]
+
+    def to(self, device):
+        self = super().to(device)
+        self.cameras = [camera._replace(
+            postprocess=exposure_postprocess,
+            custom_data={
+                **camera.custom_data,
+                'exposures': (torch.tensor(json_camera['exposure'], dtype=torch.float, device=device) if 'exposure' in json_camera else torch.eye(3, 4))
+            }
+        ) for camera, json_camera in zip(self.cameras, self.json_cameras)]
+        return self

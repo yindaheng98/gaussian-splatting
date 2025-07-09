@@ -49,7 +49,6 @@ def camera2dict(camera: Camera, id):
         'ground_truth_image_path': camera.ground_truth_image_path.replace("\\", "/") if camera.ground_truth_image_path else None,
         'ground_truth_depth_path': camera.ground_truth_depth_path.replace("\\", "/") if camera.ground_truth_depth_path else None,
         'ground_truth_depth_mask_path': camera.ground_truth_depth_mask_path.replace("\\", "/") if camera.ground_truth_depth_mask_path else None,
-        "img_name": os.path.basename(camera.ground_truth_image_path) if camera.ground_truth_image_path else None,
     }
     return camera_entry
 

@@ -48,6 +48,7 @@ def build_pcd_rescale(
 def rendering(
         dataset: CameraDataset, gaussians: GaussianModel, save: str, save_pcd: bool = False,
         rescale_depth_gt: bool = True) -> None:
+    os.makedirs(save, exist_ok=True)
     dataset.save_cameras(os.path.join(save, "cameras.json"))
     render_path = os.path.join(save, "renders")
     gt_path = os.path.join(save, "gt")

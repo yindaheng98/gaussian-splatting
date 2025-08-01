@@ -104,7 +104,7 @@ class FixedTrainableCameraDataset(JSONCameraDataset):
             postprocess=exposure_postprocess,
             custom_data={
                 **camera.custom_data,
-                'exposures': (torch.tensor(json_camera['exposure'], dtype=torch.float, device=device) if 'exposure' in json_camera else torch.eye(3, 4))
+                'exposures': (torch.tensor(json_camera['exposure'], dtype=torch.float, device=device) if 'exposure' in json_camera else torch.eye(3, 4, dtype=torch.float, device=device))
             }
         ) for camera, json_camera in zip(self.cameras, self.json_cameras)]
         return self

@@ -11,6 +11,7 @@ We **refactored the original code following the standard Python package structur
 * [x] camera and 3DGS parameters joint training
 * [x] depth regularization
 * [x] local relative depth regularization
+* [x] image mask
 * [ ] integrated 2DGS (integrated [gsplat](https://github.com/nerfstudio-project/gsplat) backend)
 
 ## Install

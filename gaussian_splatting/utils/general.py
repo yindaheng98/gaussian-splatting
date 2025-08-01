@@ -23,6 +23,10 @@ def read_image(image_path):
     return torch_image[:3, ...].clamp(0.0, 1.0)
 
 
+def read_image_mask(image_path):
+    return read_depth_mask(image_path)
+
+
 def read_png_depth(depth_path):
     cv2_depth = cv2.imread(depth_path, cv2.IMREAD_UNCHANGED)
     if cv2_depth.ndim != 2:

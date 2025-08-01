@@ -70,6 +70,10 @@ class BaseTrainer(AbstractTrainer):
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         render = out["render"]
         gt = camera.ground_truth_image
+        mask = camera.ground_truth_image_mask
+        if mask is not None:
+            render = render * mask.unsqueeze(0)
+            gt = gt * mask.unsqueeze(0)
         Ll1 = l1_loss(render, gt)
         ssim_value = ssim(render, gt)
         loss = (1.0 - self.lambda_dssim) * Ll1 + self.lambda_dssim * (1.0 - ssim_value)

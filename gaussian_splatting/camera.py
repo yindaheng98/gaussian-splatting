@@ -2,7 +2,7 @@ import os
 from typing import NamedTuple, Callable
 import torch
 import logging
-from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, read_image, read_depth, read_depth_mask, matrix_to_quaternion
+from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, read_image, read_image_mask, read_depth, read_depth_mask, matrix_to_quaternion
 
 
 class Camera(NamedTuple):
@@ -18,9 +18,11 @@ class Camera(NamedTuple):
     camera_center: torch.Tensor
     quaternion: torch.Tensor
     ground_truth_image_path: str
+    ground_truth_image_mask_path: str
     ground_truth_depth_path: str
     ground_truth_depth_mask_path: str
     ground_truth_image: torch.Tensor = None
+    ground_truth_image_mask: torch.Tensor = None
     ground_truth_depth: torch.Tensor = None
     ground_truth_depth_mask: torch.Tensor = None
     postprocess: Callable[['Camera', torch.Tensor], torch.Tensor] = lambda camera, x: x
@@ -47,6 +49,7 @@ def camera2dict(camera: Camera, id):
         'fx': fov2focal(camera.FoVx, camera.image_width),
         'fy': fov2focal(camera.FoVy, camera.image_height),
         'ground_truth_image_path': camera.ground_truth_image_path.replace("\\", "/") if camera.ground_truth_image_path else None,
+        'ground_truth_image_mask_path': camera.ground_truth_image_mask_path.replace("\\", "/") if camera.ground_truth_image_mask_path else None,
         'ground_truth_depth_path': camera.ground_truth_depth_path.replace("\\", "/") if camera.ground_truth_depth_path else None,
         'ground_truth_depth_mask_path': camera.ground_truth_depth_mask_path.replace("\\", "/") if camera.ground_truth_depth_mask_path else None,
     }
@@ -57,7 +60,8 @@ def build_camera(
         image_height: int, image_width: int,
         FoVx: float, FoVy: float,
         R: torch.Tensor, T: torch.Tensor,
-        image_path: str = None, depth_path: str = None, depth_mask_path: str = None,
+        image_path: str = None, image_mask_path: str = None,
+        depth_path: str = None, depth_mask_path: str = None,
         device="cuda", custom_data: dict = {}
 ):
     R, T = R.to(device=device, dtype=torch.float), T.to(device=device, dtype=torch.float)
@@ -76,6 +80,15 @@ def build_camera(
         if gt_image.shape[1:] != (image_height, image_width):
             logging.warning(f"gt_image shape {gt_image.shape} does not match expected shape {image_height}x{image_width}, resizing.")
             gt_image = torch.nn.functional.interpolate(gt_image.unsqueeze(0), size=(image_height, image_width), mode='bilinear', align_corners=False).squeeze(0)
+    gt_image_mask = None
+    if image_mask_path is not None:
+        if os.path.exists(image_mask_path):
+            gt_image_mask = read_image_mask(image_mask_path).to(device)
+            if gt_image_mask.shape != (image_height, image_width):
+                logging.warning(f"gt_image_mask shape {gt_image_mask.shape} does not match expected shape {image_height}x{image_width}, resizing.")
+                gt_image_mask = torch.nn.functional.interpolate(gt_image_mask.unsqueeze(0).unsqueeze(0), size=(image_height, image_width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+        elif not os.path.exists(image_mask_path):
+            logging.warning(f"Image mask path {image_mask_path} does not exist, skipping mask loading.")
     gt_depth = None
     if depth_path is not None:
         if os.path.exists(depth_path):
@@ -107,6 +120,8 @@ def build_camera(
         quaternion=quaternion,
         ground_truth_image_path=image_path,
         ground_truth_image=gt_image,
+        ground_truth_image_mask_path=image_mask_path,
+        ground_truth_image_mask=gt_image_mask,
         ground_truth_depth_path=depth_path,
         ground_truth_depth=gt_depth,
         ground_truth_depth_mask_path=depth_mask_path,
@@ -131,6 +146,7 @@ def dict2camera(camera_dict, load_depth=False, device="cuda", custom_data: dict 
         R=R,
         T=T,
         image_path=camera_dict['ground_truth_image_path'] if 'ground_truth_image_path' in camera_dict else None,
+        image_mask_path=camera_dict['ground_truth_image_mask_path'] if 'ground_truth_image_mask_path' in camera_dict else None,
         depth_path=camera_dict['ground_truth_depth_path'] if (load_depth and 'ground_truth_depth_path' in camera_dict) else None,
         depth_mask_path=camera_dict['ground_truth_depth_mask_path'] if (load_depth and 'ground_truth_depth_mask_path' in camera_dict) else None,
         device=device,

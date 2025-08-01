@@ -22,6 +22,7 @@ class ColmapCamera(NamedTuple):
     R: torch.Tensor
     T: torch.Tensor
     image_path: str
+    image_mask_path: str
     depth_path: str
     depth_mask_path: str
 
@@ -48,6 +49,9 @@ def parse_colmap_camera(cameras, images, image_dir, depth_dir=None) -> List[Colm
             raise ValueError("Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!")
 
         image_path = os.path.join(image_dir, extr.name)
+        image_mask_path = os.path.join(image_dir, os.path.splitext(extr.name)[0] + '_mask.tiff')
+        if not os.path.exists(image_mask_path):
+            image_mask_path = os.path.splitext(image_mask_path)[0] + '.png'
         depth_path, depth_mask_path = None, None
         if depth_dir is not None:
             depth_path = os.path.join(depth_dir, os.path.splitext(extr.name)[0] + '.tiff')
@@ -61,6 +65,7 @@ def parse_colmap_camera(cameras, images, image_dir, depth_dir=None) -> List[Colm
             R=torch.from_numpy(R).type(torch.float), T=torch.from_numpy(T).type(torch.float),
             FoVy=FovY, FoVx=FovX,
             image_path=image_path,
+            image_mask_path=image_mask_path,
             depth_path=depth_path,
             depth_mask_path=depth_mask_path,
         ))

@@ -22,9 +22,13 @@ class BaseTrainer(AbstractTrainer):
             opacity_lr=0.025,
             scaling_lr=0.005,
             rotation_lr=0.001,
+            ignore_out_of_mask_loss=False,  # whether to ignore loss for out-of-mask pixels, if True, these pixels will be ignored in loss computation
+            random_out_of_mask_color=True,  # if ignore_out_of_mask_loss is False, whether use random color or use camera.bg_color for out-of-mask pixels
     ):
         super().__init__()
         self.lambda_dssim = lambda_dssim
+        self.ignore_out_of_mask_loss = ignore_out_of_mask_loss
+        self.random_out_of_mask_color = random_out_of_mask_color
         params = [
             {'params': [model._xyz], 'lr': position_lr_init * scene_extent, "name": "xyz"},
             {'params': [model._features_dc], 'lr': feature_lr, "name": "f_dc"},
@@ -72,8 +76,13 @@ class BaseTrainer(AbstractTrainer):
         gt = camera.ground_truth_image
         mask = camera.ground_truth_image_mask
         if mask is not None:
-            render = render * mask.unsqueeze(0)
-            gt = gt * mask.unsqueeze(0)
+            if self.ignore_out_of_mask_loss:
+                render = render * mask.unsqueeze(0)
+                gt = gt * mask.unsqueeze(0)
+            elif self.random_out_of_mask_color:
+                gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * torch.rand_like(gt)
+            else:
+                gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * camera.bg_color.unsqueeze(-1).unsqueeze(-1)
         Ll1 = l1_loss(render, gt)
         ssim_value = ssim(render, gt)
         loss = (1.0 - self.lambda_dssim) * Ll1 + self.lambda_dssim * (1.0 - ssim_value)

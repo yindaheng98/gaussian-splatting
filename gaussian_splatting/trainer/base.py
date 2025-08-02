@@ -22,13 +22,15 @@ class BaseTrainer(AbstractTrainer):
             opacity_lr=0.025,
             scaling_lr=0.005,
             rotation_lr=0.001,
-            ignore_out_of_mask_loss=False,  # whether to ignore loss for out-of-mask pixels, if True, these pixels will be ignored in loss computation
-            random_out_of_mask_color=False,  # if ignore_out_of_mask_loss is False, whether use random color or use camera.bg_color for out-of-mask pixels
+            inverse_image_mask=False,  # whether to use inverse image mask for loss computation
+            ignore_out_of_image_mask_loss=False,  # whether to ignore loss for out-of-mask pixels, if True, these pixels will be ignored in loss computation
+            random_out_of_image_mask_color=False,  # if ignore_out_of_mask_loss is False, whether use random color or use camera.bg_color for out-of-mask pixels
     ):
         super().__init__()
         self.lambda_dssim = lambda_dssim
-        self.ignore_out_of_mask_loss = ignore_out_of_mask_loss
-        self.random_out_of_mask_color = random_out_of_mask_color
+        self.inverse_image_mask = inverse_image_mask
+        self.ignore_out_of_image_mask_loss = ignore_out_of_image_mask_loss
+        self.random_out_of_image_mask_color = random_out_of_image_mask_color
         params = [
             {'params': [model._xyz], 'lr': position_lr_init * scene_extent, "name": "xyz"},
             {'params': [model._features_dc], 'lr': feature_lr, "name": "f_dc"},
@@ -76,10 +78,12 @@ class BaseTrainer(AbstractTrainer):
         gt = camera.ground_truth_image
         mask = camera.ground_truth_image_mask
         if mask is not None:
-            if self.ignore_out_of_mask_loss:
+            if self.inverse_image_mask:
+                mask = 1 - mask
+            if self.ignore_out_of_image_mask_loss:
                 render = render * mask.unsqueeze(0)
                 gt = gt * mask.unsqueeze(0)
-            elif self.random_out_of_mask_color:
+            elif self.random_out_of_image_mask_color:
                 gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * torch.rand_like(gt)
             else:
                 gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * camera.bg_color.unsqueeze(-1).unsqueeze(-1)

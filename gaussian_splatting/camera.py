@@ -1,5 +1,5 @@
 import os
-from typing import NamedTuple, Callable
+from typing import NamedTuple, Callable, Tuple
 import torch
 import logging
 from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, read_image, read_image_mask, read_depth, read_depth_mask, matrix_to_quaternion
@@ -62,6 +62,7 @@ def build_camera(
         R: torch.Tensor, T: torch.Tensor,
         image_path: str = None, image_mask_path: str = None,
         depth_path: str = None, depth_mask_path: str = None,
+        bg_color: Tuple[float, float, float] = (0., 0., 0.),
         device="cuda", custom_data: dict = {}
 ):
     R, T = R.to(device=device, dtype=torch.float), T.to(device=device, dtype=torch.float)
@@ -126,6 +127,7 @@ def build_camera(
         ground_truth_depth=gt_depth,
         ground_truth_depth_mask_path=depth_mask_path,
         ground_truth_depth_mask=gt_depth_mask,
+        bg_color=torch.tensor(bg_color, dtype=torch.float32, device=device),
         custom_data=custom_data,
     )
 

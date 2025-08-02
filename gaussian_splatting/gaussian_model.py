@@ -106,7 +106,7 @@ class GaussianModel(nn.Module):
             image_width=int(viewpoint_camera.image_width),
             tanfovx=tanfovx,
             tanfovy=tanfovy,
-            bg=viewpoint_camera.bg_color.to(self._xyz.device),
+            bg=viewpoint_camera.bg_color,
             scale_modifier=self.scale_modifier,
             viewmatrix=viewpoint_camera.world_view_transform,
             projmatrix=viewpoint_camera.full_proj_transform,

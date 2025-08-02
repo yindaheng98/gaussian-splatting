@@ -23,7 +23,7 @@ class BaseTrainer(AbstractTrainer):
             scaling_lr=0.005,
             rotation_lr=0.001,
             ignore_out_of_mask_loss=False,  # whether to ignore loss for out-of-mask pixels, if True, these pixels will be ignored in loss computation
-            random_out_of_mask_color=True,  # if ignore_out_of_mask_loss is False, whether use random color or use camera.bg_color for out-of-mask pixels
+            random_out_of_mask_color=False,  # if ignore_out_of_mask_loss is False, whether use random color or use camera.bg_color for out-of-mask pixels
     ):
         super().__init__()
         self.lambda_dssim = lambda_dssim

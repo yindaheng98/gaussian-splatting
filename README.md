@@ -21,15 +21,6 @@ We **refactored the original code following the standard Python package structur
 * [Pytorch](https://pytorch.org/) (>= v2.4 recommended)
 * [CUDA Toolkit](https://developer.nvidia.com/cuda-12-4-0-download-archive) (12.4 recommended, match with PyTorch version)
 
-### Local Install
-
-```shell
-git clone --recursive https://github.com/yindaheng98/gaussian-splatting
-cd gaussian-splatting
-pip install tqdm plyfile tifffile numpy opencv-python pillow open3d
-pip install --target . --upgrade . --no-deps
-```
-
 ### PyPI Install
 
 ```shell
@@ -40,6 +31,15 @@ build latest from source:
 ```shell
 pip install wheel setuptools
 pip install --upgrade git+https://github.com/yindaheng98/gaussian-splatting.git@master --no-build-isolation
+```
+
+### Development Install
+
+```shell
+git clone --recursive https://github.com/yindaheng98/gaussian-splatting
+cd gaussian-splatting
+pip install tqdm plyfile tifffile numpy opencv-python pillow open3d
+pip install --target . --upgrade . --no-deps
 ```
 
 ## Quick Start

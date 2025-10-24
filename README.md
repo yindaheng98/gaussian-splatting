@@ -26,7 +26,7 @@ We **refactored the original code following the standard Python package structur
 ```shell
 git clone --recursive https://github.com/yindaheng98/gaussian-splatting
 cd gaussian-splatting
-pip install tqdm plyfile tifffile
+pip install tqdm plyfile tifffile numpy opencv-python pillow open3d
 pip install --target . --upgrade . --no-deps
 ```
 

@@ -38,7 +38,8 @@ pip install --upgrade gaussian-splatting
 or
 build latest from source:
 ```shell
-pip install --upgrade git+https://github.com/yindaheng98/gaussian-splatting.git@master
+pip install wheel setuptools
+pip install --upgrade git+https://github.com/yindaheng98/gaussian-splatting.git@master --no-build-isolation
 ```
 
 ## Quick Start

@@ -22,10 +22,11 @@ class BaseTrainer(AbstractTrainer):
             opacity_lr=0.025,
             scaling_lr=0.005,
             rotation_lr=0.001,
-            mask_mode="ignore",  # "ignore", "random", "bg_color"
+            mask_mode="none",  # "ignore", "random", "bg_color"
     ):
         super().__init__()
         self.lambda_dssim = lambda_dssim
+        assert mask_mode in ["none", "ignore", "random", "bg_color"], f"Unknown mask policy: {mask_mode}"
         self.mask_mode = mask_mode
         params = [
             {'params': [model._xyz], 'lr': position_lr_init * scene_extent, "name": "xyz"},
@@ -73,17 +74,21 @@ class BaseTrainer(AbstractTrainer):
         render = out["render"]
         gt = camera.ground_truth_image
         mask = camera.ground_truth_image_mask
-        if mask is not None:
-            match self.mask_mode:
-                case "ignore":
-                    render = render * mask.unsqueeze(0)
-                    gt = gt * mask.unsqueeze(0)
-                case "random":
-                    gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * torch.rand_like(gt)
-                case "bg_color":
-                    gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * camera.bg_color.unsqueeze(-1).unsqueeze(-1)
-                case _:
-                    raise ValueError(f"Unknown mask policy: {self.mask_mode}")
+        match self.mask_mode:
+            case "none":
+                pass
+            case "ignore":
+                assert mask is not None, "Mask is required for 'ignore' mask policy"
+                render = render * mask.unsqueeze(0)
+                gt = gt * mask.unsqueeze(0)
+            case "random":
+                assert mask is not None, "Mask is required for 'random' mask policy"
+                gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * torch.rand_like(gt)
+            case "bg_color":
+                assert mask is not None, "Mask is required for 'bg_color' mask policy"
+                gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * camera.bg_color.unsqueeze(-1).unsqueeze(-1)
+            case _:
+                raise ValueError(f"Unknown mask policy: {self.mask_mode}")
         Ll1 = l1_loss(render, gt)
         ssim_value = ssim(render, gt)
         loss = (1.0 - self.lambda_dssim) * Ll1 + self.lambda_dssim * (1.0 - ssim_value)

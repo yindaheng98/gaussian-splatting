@@ -12,8 +12,11 @@ from gaussian_splatting.utils.lpipsPyTorch import lpips
 from gaussian_splatting.prepare import prepare_dataset, prepare_gaussians
 
 
-def prepare_rendering(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None, load_camera: str = None, load_depth=False) -> Tuple[CameraDataset, GaussianModel]:
-    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_depth=load_depth)
+def prepare_rendering(
+        sh_degree: int, source: str, device: str,
+        trainable_camera: bool = False, load_ply: str = None, load_camera: str = None,
+        load_depth=False) -> Tuple[CameraDataset, GaussianModel]:
+    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=False, load_depth=load_depth)
     gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply)
     return dataset, gaussians
 
@@ -101,5 +104,5 @@ if __name__ == "__main__":
     with torch.no_grad():
         dataset, gaussians = prepare_rendering(
             sh_degree=args.sh_degree, source=args.source, device=args.device, trainable_camera=args.mode == "camera",
-            load_ply=load_ply, load_camera=args.load_camera, load_depth=True)
+            load_ply=load_ply, load_camera=args.load_camera, load_depth=args.save_depth_pcd)
         rendering(dataset, gaussians, save, save_pcd=args.save_depth_pcd, rescale_depth_gt=not args.no_rescale_depth_gt)

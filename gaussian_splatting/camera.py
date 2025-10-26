@@ -133,7 +133,7 @@ def build_camera(
     )
 
 
-def dict2camera(camera_dict, load_depth=False, device="cuda", custom_data: dict = {}):
+def dict2camera(camera_dict, load_mask=True, load_depth=True, device="cuda", custom_data: dict = {}):
     C2W = torch.zeros((4, 4), device=device)
     C2W[:3, 3] = torch.tensor(camera_dict['position'], dtype=torch.float, device=device)
     C2W[:3, :3] = torch.tensor(camera_dict['rotation'], dtype=torch.float, device=device)
@@ -141,6 +141,12 @@ def dict2camera(camera_dict, load_depth=False, device="cuda", custom_data: dict 
     Rt = torch.linalg.inv(C2W)
     T = Rt[:3, 3]
     R = Rt[:3, :3]
+    if load_mask and ('ground_truth_image_mask_path' not in camera_dict or camera_dict['ground_truth_image_mask_path'] is None):
+        logging.warning(f"Value of key 'ground_truth_image_mask_path' is not a valid path, skipping mask loading.")
+    if load_depth and ('ground_truth_depth_path' not in camera_dict or camera_dict['ground_truth_depth_path'] is None):
+        logging.warning(f"Value of key 'ground_truth_depth_path' is not a valid path, skipping depth loading.")
+    if load_depth and ('ground_truth_depth_mask_path' not in camera_dict or camera_dict['ground_truth_depth_mask_path'] is None):
+        logging.warning(f"Value of key 'ground_truth_depth_mask_path' is not a valid path, skipping depth mask loading.")
     return build_camera(
         image_width=camera_dict['width'],
         image_height=camera_dict['height'],
@@ -149,7 +155,7 @@ def dict2camera(camera_dict, load_depth=False, device="cuda", custom_data: dict 
         R=R,
         T=T,
         image_path=camera_dict['ground_truth_image_path'] if 'ground_truth_image_path' in camera_dict else None,
-        image_mask_path=camera_dict['ground_truth_image_mask_path'] if 'ground_truth_image_mask_path' in camera_dict else None,
+        image_mask_path=camera_dict['ground_truth_image_mask_path'] if (load_mask and 'ground_truth_image_mask_path' in camera_dict) else None,
         depth_path=camera_dict['ground_truth_depth_path'] if (load_depth and 'ground_truth_depth_path' in camera_dict) else None,
         depth_mask_path=camera_dict['ground_truth_depth_mask_path'] if (load_depth and 'ground_truth_depth_mask_path' in camera_dict) else None,
         device=device,

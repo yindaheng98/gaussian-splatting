@@ -27,7 +27,7 @@ class ColmapCamera(NamedTuple):
     depth_mask_path: str
 
 
-def parse_colmap_camera(cameras, images, image_dir, depth_dir=None) -> List[ColmapCamera]:
+def parse_colmap_camera(cameras, images, image_dir, load_mask=True, depth_dir=None) -> List[ColmapCamera]:
     parsed_cameras = []
     for _, key in enumerate(cameras):
         extr = cameras[key]
@@ -49,9 +49,11 @@ def parse_colmap_camera(cameras, images, image_dir, depth_dir=None) -> List[Colm
             raise ValueError("Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!")
 
         image_path = os.path.join(image_dir, extr.name)
-        image_mask_path = os.path.join(image_dir, os.path.splitext(extr.name)[0] + '_mask.tiff')
-        if not os.path.exists(image_mask_path):
-            image_mask_path = os.path.splitext(image_mask_path)[0] + '.png'
+        image_mask_path = None
+        if load_mask:
+            image_mask_path = os.path.join(image_dir, os.path.splitext(extr.name)[0] + '_mask.tiff')
+            if not os.path.exists(image_mask_path):
+                image_mask_path = os.path.splitext(image_mask_path)[0] + '.png'
         depth_path, depth_mask_path = None, None
         if depth_dir is not None:
             depth_path = os.path.join(depth_dir, os.path.splitext(extr.name)[0] + '.tiff')
@@ -72,7 +74,7 @@ def parse_colmap_camera(cameras, images, image_dir, depth_dir=None) -> List[Colm
     return parsed_cameras
 
 
-def read_colmap_cameras(colmap_folder, load_depth=False) -> List[ColmapCamera]:
+def read_colmap_cameras(colmap_folder, load_mask=True, load_depth=True) -> List[ColmapCamera]:
     path = colmap_folder
     image_dir = os.path.join(path, "images")
     try:
@@ -86,13 +88,13 @@ def read_colmap_cameras(colmap_folder, load_depth=False) -> List[ColmapCamera]:
         cam_extrinsics = read_images_text(cameras_extrinsic_file)
         cam_intrinsics = read_cameras_text(cameras_intrinsic_file)
     depth_dir = os.path.join(path, "depths") if load_depth else None
-    return parse_colmap_camera(cam_extrinsics, cam_intrinsics, image_dir, depth_dir)
+    return parse_colmap_camera(cam_extrinsics, cam_intrinsics, image_dir, load_mask=load_mask, depth_dir=depth_dir)
 
 
 class ColmapCameraDataset(CameraDataset):
-    def __init__(self, colmap_folder, load_depth=False):
+    def __init__(self, colmap_folder, load_mask=True, load_depth=True):
         super().__init__()
-        self.raw_cameras = read_colmap_cameras(colmap_folder, load_depth=load_depth)
+        self.raw_cameras = read_colmap_cameras(colmap_folder, load_mask=load_mask, load_depth=load_depth)
         self.cameras = [build_camera(**cam._asdict()) for cam in self.raw_cameras]
 
     def to(self, device):
@@ -106,5 +108,5 @@ class ColmapCameraDataset(CameraDataset):
         return self.cameras[idx]
 
 
-def ColmapTrainableCameraDataset(colmap_folder, load_depth=False):
-    return TrainableCameraDataset(ColmapCameraDataset(colmap_folder, load_depth=load_depth))
+def ColmapTrainableCameraDataset(colmap_folder, load_mask=True, load_depth=True):
+    return TrainableCameraDataset(ColmapCameraDataset(colmap_folder, load_mask=load_mask, load_depth=load_depth))

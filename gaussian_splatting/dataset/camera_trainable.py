@@ -81,8 +81,8 @@ class TrainableCameraDataset(CameraDataset):
             json.dump(cameras, f, indent=2)
 
     @classmethod
-    def from_json(cls, path, load_depth=False):
-        cameras = JSONCameraDataset(path, load_depth=load_depth)
+    def from_json(cls, path, load_mask=True, load_depth=True):
+        cameras = JSONCameraDataset(path, load_mask=load_mask, load_depth=load_depth)
         exposures = [(torch.tensor(camera['exposure'], dtype=torch.float) if 'exposure' in camera else torch.eye(3, 4)) for camera in cameras.json_cameras]
         return cls(cameras, exposures)
 
@@ -91,8 +91,8 @@ class FixedTrainableCameraDataset(JSONCameraDataset):
     # Same as TrainableCameraDataset, but is fixed
     # Used for loading cameras saved by TrainableCameraDataset
 
-    def __init__(self, path, load_depth=False):
-        super().__init__(path, load_depth=load_depth)
+    def __init__(self, path, load_mask=True, load_depth=True):
+        super().__init__(path, load_mask=load_mask, load_depth=load_depth)
         self.load_exposures()
 
     def to(self, device):

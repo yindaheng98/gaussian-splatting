@@ -8,9 +8,17 @@ from .trainer.extensions import ScaleRegularizeTrainerWrapper
 
 def prepare_dataset(source: str, device: str, trainable_camera: bool = False, load_camera: str = None, load_mask=True, load_depth=True) -> CameraDataset:
     if trainable_camera:
-        dataset = (TrainableCameraDataset.from_json(load_camera, load_mask=load_mask, load_depth=load_depth) if load_camera else ColmapTrainableCameraDataset(source, load_mask=load_mask, load_depth=load_depth)).to(device)
+        dataset = (
+            TrainableCameraDataset.from_json(load_camera, load_mask=load_mask, load_depth=load_depth)
+            if load_camera else
+            ColmapTrainableCameraDataset(source, load_mask=load_mask, load_depth=load_depth)
+        ).to(device)
     else:
-        dataset = (FixedTrainableCameraDataset(load_camera, load_mask=load_mask, load_depth=load_depth) if load_camera else ColmapCameraDataset(source, load_mask=load_mask, load_depth=load_depth)).to(device)
+        dataset = (
+            FixedTrainableCameraDataset(load_camera, load_mask=load_mask, load_depth=load_depth)
+            if load_camera else
+            ColmapCameraDataset(source, load_mask=load_mask, load_depth=load_depth)
+        ).to(device)
     return dataset
 
 

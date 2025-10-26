@@ -15,8 +15,8 @@ from gaussian_splatting.prepare import prepare_dataset, prepare_gaussians
 def prepare_rendering(
         sh_degree: int, source: str, device: str,
         trainable_camera: bool = False, load_ply: str = None, load_camera: str = None,
-        load_depth=False) -> Tuple[CameraDataset, GaussianModel]:
-    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=False, load_depth=load_depth)
+        load_depth=True) -> Tuple[CameraDataset, GaussianModel]:
+    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=True, load_depth=load_depth)
     gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply)
     return dataset, gaussians
 

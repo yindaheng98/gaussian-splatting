@@ -15,7 +15,7 @@ from gaussian_splatting.prepare import basemodes, shliftmodes, prepare_dataset, 
 def prepare_training(
         sh_degree: int, source: str, device: str, mode: str,
         trainable_camera: bool = False, load_ply: str = None, load_camera: str = None,
-        load_mask=False, load_depth=False,
+        load_mask=True, load_depth=True,
         with_scale_reg=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
     dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=load_mask, load_depth=load_depth)
     gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply)

@@ -105,7 +105,9 @@ class BaseTrainer(AbstractTrainer):
                 gt = gt * mask.unsqueeze(0)
             case "bg_color":
                 assert mask is not None, "Mask is required for 'bg_color' mask policy"
-                gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * camera.bg_color.unsqueeze(-1).unsqueeze(-1)
+                # bg_color after postprocess
+                bg_color = camera.postprocess(camera, camera.bg_color.unsqueeze(-1).unsqueeze(-1)).clamp(0.0, 1.0)
+                gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * bg_color
             case _:
                 raise ValueError(f"Unknown mask policy: {self.mask_mode}")
         Ll1 = l1_loss(render, gt)

@@ -22,12 +22,23 @@ class BaseTrainer(AbstractTrainer):
             opacity_lr=0.025,
             scaling_lr=0.005,
             rotation_lr=0.001,
-            mask_mode="none",  # "ignore", "random", "bg_color"
+            mask_mode="none",
+            # "none"=do not use mask
+            # "ignore"=loss of the masked area will be set to 0
+            # "bg_color"=fill the masked area of ground truth with the bg_color for rendering
+            bg_color=None,
+            # None=do not change bg_color
+            # "random"=set bg_color to random color
+            # tuple(float, float, float)=set bg_color to the given color
     ):
         super().__init__()
         self.lambda_dssim = lambda_dssim
-        assert mask_mode in ["none", "ignore", "random", "bg_color"], f"Unknown mask policy: {mask_mode}"
+        assert mask_mode in ["none", "ignore", "bg_color"], f"Unknown mask policy: {mask_mode}"
+        assert bg_color is None or bg_color == "random" or (
+            isinstance(bg_color, tuple) and len(bg_color) == 3 and all(isinstance(c, float) for c in bg_color)
+        ), f"bg_color must be 'random' or a RGB value tuple(float, float, float), got {bg_color}"
         self.mask_mode = mask_mode
+        self.bg_color = bg_color
         params = [
             {'params': [model._xyz], 'lr': position_lr_init * scene_extent, "name": "xyz"},
             {'params': [model._features_dc], 'lr': feature_lr, "name": "f_dc"},
@@ -70,6 +81,17 @@ class BaseTrainer(AbstractTrainer):
     def schedulers(self) -> Dict[str, Callable[[int], float]]:
         return self._schedulers
 
+    def preprocess(self, camera: Camera) -> Camera:
+        if self.bg_color == "random":
+            camera = camera._replace(bg_color=torch.rand_like(camera.bg_color))
+        elif isinstance(self.bg_color, tuple):
+            camera = camera._replace(bg_color=torch.tensor(self.bg_color, device=camera.bg_color.device, dtype=camera.bg_color.dtype))
+        elif self.bg_color is None:
+            pass
+        else:
+            raise ValueError(f"bg_color must be 'random' or a tuple(int, int, int), got {self.bg_color}")
+        return camera
+
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         render = out["render"]
         gt = camera.ground_truth_image
@@ -81,9 +103,6 @@ class BaseTrainer(AbstractTrainer):
                 assert mask is not None, "Mask is required for 'ignore' mask policy"
                 render = render * mask.unsqueeze(0)
                 gt = gt * mask.unsqueeze(0)
-            case "random":
-                assert mask is not None, "Mask is required for 'random' mask policy"
-                gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * torch.rand_like(gt)
             case "bg_color":
                 assert mask is not None, "Mask is required for 'bg_color' mask policy"
                 gt = gt * mask.unsqueeze(0) + (1 - mask.unsqueeze(0)) * camera.bg_color.unsqueeze(-1).unsqueeze(-1)

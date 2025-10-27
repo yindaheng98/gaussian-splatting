@@ -34,6 +34,10 @@ class AbstractTrainer(ABC):
         raise ValueError("Schedulers is not set")
 
     @abstractmethod
+    def preprocess(self, camera: Camera) -> Camera:
+        pass
+
+    @abstractmethod
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         pass
 
@@ -49,6 +53,7 @@ class AbstractTrainer(ABC):
 
     def step(self, camera: Camera):
         self.update_learning_rate()
+        camera = self.preprocess(camera)
         out = self.model(camera)
         loss = self.loss(out, camera)
         loss.backward()
@@ -99,6 +104,9 @@ class TrainerWrapper(AbstractTrainer):
     @property
     def schedulers(self) -> Dict[str, Callable[[int], float]]:
         return self.base_trainer.schedulers
+
+    def preprocess(self, camera: Camera) -> Camera:
+        return self.base_trainer.preprocess(camera)
 
     def loss(self, out: dict, camera: Camera) -> torch.Tensor:
         return self.base_trainer.loss(out, camera)

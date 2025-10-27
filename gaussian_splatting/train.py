@@ -31,7 +31,7 @@ def save_cfg_args(destination: str, sh_degree: int, source: str):
 
 def training(dataset: CameraDataset, gaussians: GaussianModel, trainer: AbstractTrainer, destination: str, iteration: int, save_iterations: List[int], device: str):
     shutil.rmtree(os.path.join(destination, "point_cloud"), ignore_errors=True)  # remove the previous point cloud
-    pbar = tqdm(range(1, iteration+1))
+    pbar = tqdm(range(1, iteration+1), dynamic_ncols=True, desc="Training")
     epoch = list(range(len(dataset)))
     epoch_psnr = torch.empty(3, 0, device=device)
     ema_loss_for_log = 0.0
@@ -45,8 +45,13 @@ def training(dataset: CameraDataset, gaussians: GaussianModel, trainer: Abstract
         idx = epoch[epoch_idx]
         loss, out = trainer.step(dataset[idx])
         with torch.no_grad():
+            ground_truth_image = dataset[idx].ground_truth_image
+            rendered_image = out["render"]
+            if dataset[idx].ground_truth_image_mask is not None:
+                ground_truth_image *= dataset[idx].ground_truth_image_mask
+                rendered_image *= dataset[idx].ground_truth_image_mask
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
-            epoch_psnr = torch.concat([epoch_psnr, psnr(out["render"], dataset[idx].ground_truth_image)], dim=1)
+            epoch_psnr = torch.concat([epoch_psnr, psnr(rendered_image, ground_truth_image)], dim=1)
             if step % 10 == 0:
                 pbar.set_postfix({'epoch': step // len(dataset), 'loss': ema_loss_for_log, 'psnr': avg_psnr_for_log, 'n': gaussians._xyz.shape[0]})
         if step in save_iterations:

@@ -15,8 +15,8 @@ from gaussian_splatting.prepare import prepare_dataset, prepare_gaussians
 def prepare_rendering(
         sh_degree: int, source: str, device: str,
         trainable_camera: bool = False, load_ply: str = None, load_camera: str = None,
-        load_depth=True) -> Tuple[CameraDataset, GaussianModel]:
-    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=True, load_depth=load_depth)
+        load_mask=True, load_depth=True) -> Tuple[CameraDataset, GaussianModel]:
+    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=load_mask, load_depth=load_depth)
     gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply)
     return dataset, gaussians
 
@@ -57,13 +57,16 @@ def rendering(
     gt_path = os.path.join(save, "gt")
     makedirs(render_path, exist_ok=True)
     makedirs(gt_path, exist_ok=True)
-    pbar = tqdm(dataset, desc="Rendering progress")
+    pbar = tqdm(dataset, dynamic_ncols=True, desc="Rendering")
     with open(os.path.join(save, "quality.csv"), "w") as f:
         f.write("name,psnr,ssim,lpips\n")
     for idx, camera in enumerate(pbar):
         out = gaussians(camera)
         rendering = out["render"]
         gt = camera.ground_truth_image
+        if camera.ground_truth_image_mask is not None:
+            gt *= camera.ground_truth_image_mask
+            rendering *= camera.ground_truth_image_mask
         psnr_value = psnr(rendering, gt).mean().item()
         ssim_value = ssim(rendering, gt).mean().item()
         lpips_value = lpips(rendering, gt).mean().item()
@@ -96,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument("--load_camera", default=None, type=str)
     parser.add_argument("--mode", choices=["base", "camera"], default="base")
     parser.add_argument("--device", default="cuda", type=str)
+    parser.add_argument("--no_image_mask", action="store_true")
     parser.add_argument("--no_rescale_depth_gt", action="store_true")
     parser.add_argument("--save_depth_pcd", action="store_true")
     args = parser.parse_args()
@@ -104,5 +108,6 @@ if __name__ == "__main__":
     with torch.no_grad():
         dataset, gaussians = prepare_rendering(
             sh_degree=args.sh_degree, source=args.source, device=args.device, trainable_camera=args.mode == "camera",
-            load_ply=load_ply, load_camera=args.load_camera, load_depth=args.save_depth_pcd)
+            load_ply=load_ply, load_camera=args.load_camera,
+            load_mask=not args.no_image_mask, load_depth=args.save_depth_pcd)
         rendering(dataset, gaussians, save, save_pcd=args.save_depth_pcd, rescale_depth_gt=not args.no_rescale_depth_gt)

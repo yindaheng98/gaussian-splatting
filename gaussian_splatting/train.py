@@ -58,9 +58,9 @@ def training(dataset: CameraDataset, gaussians: GaussianModel, trainer: Abstract
                 epoch_maskpsnr = torch.concat([epoch_maskpsnr, psnr(rendered_maskimage, ground_truth_maskimage)], dim=1)
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             if step % 10 == 0:
-                postfix = {'epoch': step // len(dataset), 'loss': ema_loss_for_log, 'psnr': avg_psnr_for_log, 'n': gaussians._xyz.shape[0]}
-                if avg_maskpsnr_for_log > 0:
-                    postfix['mask_psnr'] = avg_maskpsnr_for_log
+                postfix = {'epoch': step // len(dataset), 'loss': ema_loss_for_log, 'psnr': avg_psnr_for_log, 'masked psnr': avg_maskpsnr_for_log, 'n': gaussians._xyz.shape[0]}
+                if avg_maskpsnr_for_log <= 0:
+                    del postfix['masked psnr']
                 pbar.set_postfix(postfix)
         if step in save_iterations:
             save_path = os.path.join(destination, "point_cloud", "iteration_" + str(step))

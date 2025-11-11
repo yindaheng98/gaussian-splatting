@@ -48,8 +48,8 @@ def training(dataset: CameraDataset, gaussians: GaussianModel, trainer: Abstract
             ground_truth_image = dataset[idx].ground_truth_image
             rendered_image = out["render"]
             if dataset[idx].ground_truth_image_mask is not None:
-                ground_truth_image *= dataset[idx].ground_truth_image_mask
-                rendered_image *= dataset[idx].ground_truth_image_mask
+                ground_truth_image = ground_truth_image * dataset[idx].ground_truth_image_mask
+                rendered_image = rendered_image * dataset[idx].ground_truth_image_mask
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             epoch_psnr = torch.concat([epoch_psnr, psnr(rendered_image, ground_truth_image)], dim=1)
             if step % 10 == 0:

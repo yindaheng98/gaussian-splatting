@@ -34,26 +34,34 @@ def training(dataset: CameraDataset, gaussians: GaussianModel, trainer: Abstract
     pbar = tqdm(range(1, iteration+1), dynamic_ncols=True, desc="Training")
     epoch = list(range(len(dataset)))
     epoch_psnr = torch.empty(3, 0, device=device)
+    epoch_maskpsnr = torch.empty(3, 0, device=device)
     ema_loss_for_log = 0.0
     avg_psnr_for_log = 0.0
+    avg_maskpsnr_for_log = 0.0
     for step in pbar:
         epoch_idx = step % len(dataset)
         if epoch_idx == 0:
             avg_psnr_for_log = epoch_psnr.mean().item()
+            avg_maskpsnr_for_log = epoch_maskpsnr.mean().item()
             epoch_psnr = torch.empty(3, 0, device=device)
+            epoch_maskpsnr = torch.empty(3, 0, device=device)
             random.shuffle(epoch)
         idx = epoch[epoch_idx]
         loss, out = trainer.step(dataset[idx])
         with torch.no_grad():
             ground_truth_image = dataset[idx].ground_truth_image
             rendered_image = out["render"]
-            if dataset[idx].ground_truth_image_mask is not None:
-                ground_truth_image = ground_truth_image * dataset[idx].ground_truth_image_mask
-                rendered_image = rendered_image * dataset[idx].ground_truth_image_mask
-            ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             epoch_psnr = torch.concat([epoch_psnr, psnr(rendered_image, ground_truth_image)], dim=1)
+            if dataset[idx].ground_truth_image_mask is not None:
+                ground_truth_maskimage = ground_truth_image * dataset[idx].ground_truth_image_mask
+                rendered_maskimage = rendered_image * dataset[idx].ground_truth_image_mask
+                epoch_maskpsnr = torch.concat([epoch_maskpsnr, psnr(rendered_maskimage, ground_truth_maskimage)], dim=1)
+            ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             if step % 10 == 0:
-                pbar.set_postfix({'epoch': step // len(dataset), 'loss': ema_loss_for_log, 'psnr': avg_psnr_for_log, 'n': gaussians._xyz.shape[0]})
+                postfix = {'epoch': step // len(dataset), 'loss': ema_loss_for_log, 'psnr': avg_psnr_for_log, 'n': gaussians._xyz.shape[0]}
+                if avg_maskpsnr_for_log > 0:
+                    postfix['mask_psnr'] = avg_maskpsnr_for_log
+                pbar.set_postfix(postfix)
         if step in save_iterations:
             save_path = os.path.join(destination, "point_cloud", "iteration_" + str(step))
             os.makedirs(save_path, exist_ok=True)

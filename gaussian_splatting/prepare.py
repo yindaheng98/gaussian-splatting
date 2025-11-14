@@ -35,22 +35,30 @@ def prepare_gaussians(sh_degree: int, source: str, device: str, trainable_camera
 basemodes = {
     "base": Trainer,
     "densify": OpacityResetDensificationTrainer,
+    "adaptivedensify": OpacityResetAdaptiveDensificationTrainer,
     "camera": CameraTrainer,
     "camera-densify": OpacityResetDensificationCameraTrainer,
+    "camera-adaptivedensify": OpacityResetAdaptiveDensificationCameraTrainer,
     "nodepth-base": BaseTrainer,
     "nodepth-densify": BaseOpacityResetDensificationTrainer,
+    "nodepth-adaptivedensify": BaseOpacityResetAdaptiveDensificationTrainer,
     "nodepth-camera": BaseCameraTrainer,
     "nodepth-camera-densify": BaseOpacityResetDensificationCameraTrainer,
+    "nodepth-camera-adaptivedensify": BaseOpacityResetAdaptiveDensificationCameraTrainer,
 }
 shliftmodes = {
     "base": SHLiftTrainer,
     "densify": SHLiftOpacityResetDensificationTrainer,
+    "adaptivedensify": SHLiftOpacityResetAdaptiveDensificationTrainer,
     "camera": SHLiftCameraTrainer,
     "camera-densify": SHLiftOpacityResetDensificationCameraTrainer,
+    "camera-adaptivedensify": SHLiftOpacityResetAdaptiveDensificationCameraTrainer,
     "nodepth-base": BaseSHLiftTrainer,
     "nodepth-densify": BaseSHLiftOpacityResetDensificationTrainer,
+    "nodepth-adaptivedensify": BaseSHLiftOpacityResetAdaptiveDensificationTrainer,
     "nodepth-camera": BaseSHLiftCameraTrainer,
     "nodepth-camera-densify": BaseSHLiftOpacityResetDensificationCameraTrainer,
+    "nodepth-camera-adaptivedensify": BaseSHLiftOpacityResetAdaptiveDensificationCameraTrainer,
 }
 
 

@@ -52,6 +52,7 @@ class SplitCloneDensifier(DensifierWrapper):
         selected_pts_mask = torch.logical_or(
             selected_pts_mask,
             torch.max(self.model.get_scaling, dim=1).values > self.densify_percent_too_big*scene_extent)
+        # N=selected_pts_mask.sum(), add 2N new points and remove N old points
 
         stds = self.model.get_scaling[selected_pts_mask].repeat(N, 1)
         means = torch.zeros((stds.size(0), 3), device=self.model._xyz.device)
@@ -79,6 +80,7 @@ class SplitCloneDensifier(DensifierWrapper):
         selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.model.get_scaling, dim=1).values <= self.densify_percent_dense*scene_extent)
+        # N=selected_pts_mask.sum(), add N new points
 
         new_xyz = self.model._xyz[selected_pts_mask]
         new_features_dc = self.model._features_dc[selected_pts_mask]

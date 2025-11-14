@@ -32,6 +32,10 @@ class AdaptiveSplitCloneDensifier(SplitCloneDensifier):
             selected_pts_mask,
             torch.max(self.model.get_scaling, dim=1).values > self.densify_percent_too_big*scene_extent)
         # N=selected_pts_mask.sum(), add 2N new points and remove N old points
+        grad_score = padded_grad / grad_threshold
+        scaling_score = torch.max(self.model.get_scaling, dim=1).values / (self.densify_percent_dense*scene_extent)
+        score = grad_score * scaling_score
+        too_big_score = torch.max(self.model.get_scaling, dim=1).values / (self.densify_percent_too_big*scene_extent)
 
         stds = self.model.get_scaling[selected_pts_mask].repeat(N, 1)
         means = torch.zeros((stds.size(0), 3), device=self.model._xyz.device)
@@ -60,6 +64,9 @@ class AdaptiveSplitCloneDensifier(SplitCloneDensifier):
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.model.get_scaling, dim=1).values <= self.densify_percent_dense*scene_extent)
         # N=selected_pts_mask.sum(), add N new points
+        grad_score = torch.norm(grads, dim=-1) / grad_threshold
+        scaling_score = self.densify_percent_dense*scene_extent / torch.max(self.model.get_scaling, dim=1).values
+        score = grad_score * scaling_score
 
         new_xyz = self.model._xyz[selected_pts_mask]
         new_features_dc = self.model._features_dc[selected_pts_mask]
@@ -75,6 +82,23 @@ class AdaptiveSplitCloneDensifier(SplitCloneDensifier):
             new_opacities=new_opacities,
             new_scaling=new_scaling,
             new_rotation=new_rotation,
+        )
+
+    def densify(self) -> DensificationInstruct:
+        grads = self.xyz_gradient_accum / self.denom
+        grads[grads.isnan()] = 0.0
+
+        clone = self.densify_and_clone(grads, self.densify_grad_threshold, self.scene_extent)
+        split = self.densify_and_split(grads, self.densify_grad_threshold, self.scene_extent)
+
+        return DensificationInstruct(
+            new_xyz=torch.cat((clone.new_xyz, split.new_xyz), dim=0),
+            new_features_dc=torch.cat((clone.new_features_dc, split.new_features_dc), dim=0),
+            new_features_rest=torch.cat((clone.new_features_rest, split.new_features_rest), dim=0),
+            new_opacities=torch.cat((clone.new_opacities, split.new_opacities), dim=0),
+            new_scaling=torch.cat((clone.new_scaling, split.new_scaling), dim=0),
+            new_rotation=torch.cat((clone.new_rotation, split.new_rotation), dim=0),
+            remove_mask=split.remove_mask
         )
 
 

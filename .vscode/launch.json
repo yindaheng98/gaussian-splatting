@@ -17,6 +17,7 @@
                 "30000",
                 "--mode",
                 "densify",
+                "-odensify_grad_threshold=0.0001",
             ]
         },
         {
@@ -59,6 +60,7 @@
                 "--mode",
                 "camera-densify",
                 "--with_scale_reg",
+                "-odensify_grad_threshold=0.0001",
             ]
         },
         {

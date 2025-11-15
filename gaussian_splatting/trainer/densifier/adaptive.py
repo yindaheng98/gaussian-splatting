@@ -71,13 +71,14 @@ class AdaptiveSplitCloneDensifier(SplitCloneDensifier):
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
 
-        n_should_select = self.densify_target_n - grads.shape[0]
         too_big_pts_mask = torch.max(self.model.get_scaling, dim=1).values > self.densify_percent_too_big*self.scene_extent
-        n_should_select -= too_big_pts_mask.sum().item()
+        n_should_select = max(0, self.densify_target_n - grads.shape[0] - too_big_pts_mask.sum().item())
         gradscore = torch.norm(grads, dim=-1)
         gradscore_rest = gradscore[~too_big_pts_mask]
         _, indices = torch.sort(gradscore_rest, descending=True)
         grad_threshold = gradscore_rest[indices[min(n_should_select, gradscore_rest.shape[0]) - 1]].item()
+        if n_should_select <= 0:
+            grad_threshold = self.densify_grad_threshold
         big_grad_pts_mask = gradscore >= min(grad_threshold, self.densify_grad_threshold)
         pts_mask = torch.logical_or(too_big_pts_mask, big_grad_pts_mask)
 

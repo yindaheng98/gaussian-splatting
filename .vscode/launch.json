@@ -120,26 +120,5 @@
                 "output/truck-camera-densify/cameras.json",
             ]
         },
-        {
-            "name": "render3D",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "tools/render3d.py",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "args": [
-                "-s",
-                "data/truck",
-                "-d",
-                "output/truck",
-                "-i",
-                "30000",
-                "--mode",
-                "densify",
-            ],
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}",
-            }
-        },
     ]
 }

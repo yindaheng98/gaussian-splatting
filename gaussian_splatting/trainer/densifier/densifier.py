@@ -18,6 +18,7 @@ class SplitCloneDensifier(DensifierWrapper):
         densify_grad_threshold=0.0002,
         densify_percent_dense=0.01,
         densify_percent_too_big=0.8,
+        densify_limit_n=None
     ):
         super().__init__(base_densifier)
         self.scene_extent = scene_extent
@@ -27,6 +28,7 @@ class SplitCloneDensifier(DensifierWrapper):
         self.densify_grad_threshold = densify_grad_threshold
         self.densify_percent_dense = densify_percent_dense
         self.densify_percent_too_big = densify_percent_too_big
+        self.densify_limit_n = densify_limit_n
 
         self.xyz_gradient_accum = None
         self.denom = None
@@ -119,7 +121,8 @@ class SplitCloneDensifier(DensifierWrapper):
         ret = super().densify_and_prune(loss, out, camera, step)
         if step <= self.densify_until_iter:
             self.update_densification_stats(out)
-        if self.densify_from_iter <= step <= self.densify_until_iter and step % self.densify_interval == 0:
+        if self.densify_from_iter <= step <= self.densify_until_iter and step % self.densify_interval == 0 \
+                and self.densify_limit_n is not None and self.model.get_xyz.shape[0] < self.densify_limit_n:
             dense = self.densify()
             if ret.new_xyz is not None:
                 ret = ret._replace(

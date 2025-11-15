@@ -17,6 +17,7 @@
                 "30000",
                 "--mode",
                 "densify",
+                "--empty_cache_every_step",
                 "-odensify_grad_threshold=0.0001",
             ]
         },
@@ -41,6 +42,7 @@
                 "--load_camera",
                 "output/truck/cameras.json",
                 "--with_scale_reg",
+                "--empty_cache_every_step",
             ]
         },
         {
@@ -61,6 +63,7 @@
                 "camera-densify",
                 "--with_scale_reg",
                 "-odensify_grad_threshold=0.0001",
+                "--empty_cache_every_step",
             ]
         },
         {

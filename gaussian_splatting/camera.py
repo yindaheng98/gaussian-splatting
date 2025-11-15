@@ -82,6 +82,9 @@ def build_camera(
         if gt_image.shape[1:] != (image_height, image_width):
             logging.warning(f"gt_image shape {gt_image.shape} does not match expected shape {image_height}x{image_width}, resizing.")
             gt_image = torch.nn.functional.interpolate(gt_image.unsqueeze(0), size=(image_height, image_width), mode='bilinear', align_corners=False).squeeze(0)
+            # logging.warning(f"gt_image shape {gt_image.shape} does not match expected shape {image_height}x{image_width}, update the shape.")
+            # assert abs((gt_image.shape[1] / image_height) / (gt_image.shape[2] / image_width) - 1) < 1e-3, "Aspect ratio mismatch."
+            # image_height, image_width = gt_image.shape[1:]
     gt_image_mask = None
     if image_mask_path is not None:
         if os.path.exists(image_mask_path):

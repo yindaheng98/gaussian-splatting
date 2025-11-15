@@ -122,7 +122,7 @@ class SplitCloneDensifier(DensifierWrapper):
         if step <= self.densify_until_iter:
             self.update_densification_stats(out)
         if self.densify_from_iter <= step <= self.densify_until_iter and step % self.densify_interval == 0 \
-                and self.densify_limit_n is not None and self.model.get_xyz.shape[0] < self.densify_limit_n:
+                and (self.densify_limit_n is None or self.model.get_xyz.shape[0] < self.densify_limit_n):
             dense = self.densify()
             if ret.new_xyz is not None:
                 ret = ret._replace(

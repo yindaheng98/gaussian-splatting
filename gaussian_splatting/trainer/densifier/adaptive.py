@@ -19,23 +19,11 @@ class AdaptiveSplitCloneDensifier(SplitCloneDensifier):
         super().__init__(*args, **kwargs)
         self.densify_target_n = densify_target_n
 
-    def densify_and_split(self, grads, grad_threshold, scene_extent, N=2):
-        n_init_points = self.model.get_xyz.shape[0]
-        # Extract points that satisfy the gradient condition
-        padded_grad = torch.zeros((n_init_points), device=self.model._xyz.device)
-        padded_grad[:grads.shape[0]] = grads.squeeze()
-        selected_pts_mask = torch.where(padded_grad >= grad_threshold, True, False)
+    def densify_and_split(self, selected_pts_mask, scene_extent, N=2):
         selected_pts_mask = torch.logical_and(
             selected_pts_mask,
             torch.max(self.model.get_scaling, dim=1).values > self.densify_percent_dense*scene_extent)
-        selected_pts_mask = torch.logical_or(
-            selected_pts_mask,
-            torch.max(self.model.get_scaling, dim=1).values > self.densify_percent_too_big*scene_extent)
         # N=selected_pts_mask.sum(), add 2N new points and remove N old points
-        grad_score = padded_grad / grad_threshold
-        scaling_score = torch.max(self.model.get_scaling, dim=1).values / (self.densify_percent_dense*scene_extent)
-        score = grad_score * scaling_score
-        too_big_score = torch.max(self.model.get_scaling, dim=1).values / (self.densify_percent_too_big*scene_extent)
 
         stds = self.model.get_scaling[selected_pts_mask].repeat(N, 1)
         means = torch.zeros((stds.size(0), 3), device=self.model._xyz.device)
@@ -58,15 +46,10 @@ class AdaptiveSplitCloneDensifier(SplitCloneDensifier):
             remove_mask=selected_pts_mask
         )
 
-    def densify_and_clone(self, grads, grad_threshold, scene_extent):
-        # Extract points that satisfy the gradient condition
-        selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
+    def densify_and_clone(self, selected_pts_mask, scene_extent):
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.model.get_scaling, dim=1).values <= self.densify_percent_dense*scene_extent)
         # N=selected_pts_mask.sum(), add N new points
-        grad_score = torch.norm(grads, dim=-1) / grad_threshold
-        scaling_score = self.densify_percent_dense*scene_extent / torch.max(self.model.get_scaling, dim=1).values
-        score = grad_score * scaling_score
 
         new_xyz = self.model._xyz[selected_pts_mask]
         new_features_dc = self.model._features_dc[selected_pts_mask]
@@ -88,8 +71,18 @@ class AdaptiveSplitCloneDensifier(SplitCloneDensifier):
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
 
-        clone = self.densify_and_clone(grads, self.densify_grad_threshold, self.scene_extent)
-        split = self.densify_and_split(grads, self.densify_grad_threshold, self.scene_extent)
+        n_should_select = self.densify_target_n - grads.shape[0]
+        too_big_pts_mask = torch.max(self.model.get_scaling, dim=1).values > self.densify_percent_too_big*self.scene_extent
+        n_should_select -= too_big_pts_mask.sum().item()
+        gradscore = torch.norm(grads, dim=-1)
+        gradscore_rest = gradscore[~too_big_pts_mask]
+        _, indices = torch.sort(gradscore_rest, descending=True)
+        grad_threshold = gradscore_rest[indices[min(n_should_select, gradscore_rest.shape[0]) - 1]].item()
+        big_grad_pts_mask = gradscore >= min(grad_threshold, self.densify_grad_threshold)
+        pts_mask = torch.logical_or(too_big_pts_mask, big_grad_pts_mask)
+
+        clone = self.densify_and_clone(pts_mask, self.scene_extent)
+        split = self.densify_and_split(pts_mask, self.scene_extent)
 
         return DensificationInstruct(
             new_xyz=torch.cat((clone.new_xyz, split.new_xyz), dim=0),

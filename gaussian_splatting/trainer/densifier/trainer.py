@@ -32,6 +32,37 @@ def cat_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dic
     return optimizable_tensors
 
 
+def _replace(tensor: torch.Tensor, replace_mask: torch.Tensor, replace_tensor: torch.Tensor):
+    tensor_clone = tensor.clone()
+    tensor_clone[replace_mask] = replace_tensor
+    return tensor_clone
+
+
+def replace_tensors_to_optimizer(optimizer: torch.optim.Optimizer, replace_mask: torch.Tensor, tensors_dict: Dict[str, torch.Tensor]):
+    optimizable_tensors = {}
+    for group in optimizer.param_groups:
+        assert len(group["params"]) == 1
+        if group["name"] not in tensors_dict:
+            continue
+        replace_tensor = tensors_dict[group["name"]]
+        stored_state = optimizer.state.get(group['params'][0], None)
+        if stored_state is not None:
+
+            stored_state["exp_avg"][replace_mask] = 0
+            stored_state["exp_avg_sq"][replace_mask] = 0
+
+            del optimizer.state[group['params'][0]]
+            group["params"][0] = nn.Parameter(_replace(group["params"][0], replace_mask, replace_tensor).requires_grad_(True))
+            optimizer.state[group['params'][0]] = stored_state
+
+            optimizable_tensors[group["name"]] = group["params"][0]
+        else:
+            group["params"][0] = nn.Parameter(_replace(group["params"][0], replace_mask, replace_tensor).requires_grad_(True))
+            optimizable_tensors[group["name"]] = group["params"][0]
+
+    return optimizable_tensors
+
+
 def mask_tensors_in_optimizer(optimizer: torch.optim.Optimizer, prune_mask: torch.Tensor, tensors_names: List[str]):
     optimizable_tensors = {}
     for group in optimizer.param_groups:
@@ -46,7 +77,7 @@ def mask_tensors_in_optimizer(optimizer: torch.optim.Optimizer, prune_mask: torc
             stored_state["exp_avg_sq"] = stored_state["exp_avg_sq"][mask]
 
             del optimizer.state[group['params'][0]]
-            group["params"][0] = nn.Parameter((group["params"][0][mask].requires_grad_(True)))
+            group["params"][0] = nn.Parameter(group["params"][0][mask].requires_grad_(True))
             optimizer.state[group['params'][0]] = stored_state
 
             optimizable_tensors[group["name"]] = group["params"][0]
@@ -103,9 +134,43 @@ class DensificationTrainer(BaseTrainer):
             rotation=optimizable_tensors["rotation"],
         )
 
+    def replace_points(self, replace_mask, replace_xyz, replace_features_dc, replace_features_rest, replace_opacities, replace_scaling, replace_rotation):
+        optimizable_tensors = replace_tensors_to_optimizer(self.optimizer, replace_mask, {
+            "xyz": replace_xyz,
+            "f_dc": replace_features_dc,
+            "f_rest": replace_features_rest,
+            "opacity": replace_opacities,
+            "scaling": replace_scaling,
+            "rotation": replace_rotation})
+
+        self.model.update_points_replace(
+            xyz=optimizable_tensors["xyz"],
+            features_dc=optimizable_tensors["f_dc"],
+            features_rest=optimizable_tensors["f_rest"],
+            opacity=optimizable_tensors["opacity"],
+            scaling=optimizable_tensors["scaling"],
+            rotation=optimizable_tensors["rotation"],
+        )
+
     def densify_and_prune(self, loss, out, camera):
         instruct = self.densifier.densify_and_prune(loss, out, camera, self.curr_step)
         hook = False
+        if instruct.replace_mask is not None:
+            assert instruct.replace_xyz is not None
+            assert instruct.replace_features_dc is not None
+            assert instruct.replace_features_rest is not None
+            assert instruct.replace_opacities is not None
+            assert instruct.replace_scaling is not None
+            assert instruct.replace_rotation is not None
+            self.replace_points(
+                instruct.replace_mask,
+                instruct.replace_xyz,
+                instruct.replace_features_dc,
+                instruct.replace_features_rest,
+                instruct.replace_opacities,
+                instruct.replace_scaling,
+                instruct.replace_rotation)
+            hook = True
         if instruct.remove_mask is not None:
             self.remove_points(instruct.remove_mask)
             hook = True

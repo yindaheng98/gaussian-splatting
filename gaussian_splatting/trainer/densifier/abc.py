@@ -13,6 +13,13 @@ class DensificationInstruct(NamedTuple):
     new_scaling: torch.Tensor = None
     new_rotation: torch.Tensor = None
     remove_mask: torch.Tensor = None
+    replace_xyz: torch.Tensor = None
+    replace_features_dc: torch.Tensor = None
+    replace_features_rest: torch.Tensor = None
+    replace_opacities: torch.Tensor = None
+    replace_scaling: torch.Tensor = None
+    replace_rotation: torch.Tensor = None
+    replace_mask: torch.Tensor = None
 
 
 class AbstractDensifier(ABC):

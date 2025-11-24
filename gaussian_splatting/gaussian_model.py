@@ -273,6 +273,30 @@ class GaussianModel(nn.Module):
         self._rotation = rotation
         self._opacity = opacity
 
+    def update_points_replace(
+            self, replace_mask: torch.Tensor,
+            xyz: nn.Parameter,
+            features_dc: nn.Parameter,
+            features_rest: nn.Parameter,
+            scaling: nn.Parameter,
+            rotation: nn.Parameter,
+            opacity: nn.Parameter,
+    ):
+        def is_same_rest(attr: nn.Parameter, ref: nn.Parameter):
+            return (attr[~replace_mask, ...] == ref[~replace_mask, ...]).all()
+        assert is_same_rest(xyz, self._xyz)
+        assert is_same_rest(features_dc, self._features_dc)
+        assert is_same_rest(features_rest, self._features_rest)
+        assert is_same_rest(scaling, self._scaling)
+        assert is_same_rest(rotation, self._rotation)
+        assert is_same_rest(opacity, self._opacity)
+        self._xyz = xyz
+        self._features_dc = features_dc
+        self._features_rest = features_rest
+        self._scaling = scaling
+        self._rotation = rotation
+        self._opacity = opacity
+
     def update_points_remove(
             self, removed_mask: torch.Tensor,
             xyz: nn.Parameter,

@@ -151,6 +151,30 @@ class SplitCloneDensifier(DensifierWrapper):
         return super().after_densify_and_prune_hook(loss, out, camera)
 
 
+def SplitCloneDensifierWrapper(
+        base_densifier_constructor: Callable[..., AbstractDensifier],
+        model: GaussianModel,
+        scene_extent: float,
+        *args,
+        densify_from_iter=500,
+        densify_until_iter=15000,
+        densify_interval=100,
+        densify_grad_threshold=0.0002,
+        densify_percent_dense=0.01,
+        densify_percent_too_big=0.8,
+        **kwargs):
+    return SplitCloneDensifier(
+        base_densifier_constructor(model, scene_extent, *args, **kwargs),
+        scene_extent,
+        densify_from_iter=densify_from_iter,
+        densify_until_iter=densify_until_iter,
+        densify_interval=densify_interval,
+        densify_grad_threshold=densify_grad_threshold,
+        densify_percent_dense=densify_percent_dense,
+        densify_percent_too_big=densify_percent_too_big
+    )
+
+
 def SplitCloneDensifierTrainerWrapper(
         noargs_base_densifier_constructor: Callable[[GaussianModel, float], AbstractDensifier],
         model: GaussianModel,

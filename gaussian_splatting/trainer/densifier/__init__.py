@@ -1,8 +1,8 @@
 from .abc import AbstractDensifier, DensificationInstruct, DensifierWrapper, NoopDensifier
 from .trainer import DensificationTrainer
-from .densifier import SplitCloneDensifier, SplitCloneDensifierTrainerWrapper
-from .adaptive import AdaptiveSplitCloneDensifier, AdaptiveSplitCloneDensifierTrainerWrapper
-from .pruner import OpacityPruner, OpacityPrunerTrainerWrapper
+from .densifier import SplitCloneDensifier, SplitCloneDensifierWrapper, SplitCloneDensifierTrainerWrapper
+from .adaptive import AdaptiveSplitCloneDensifier, AdaptiveSplitCloneDensifierWrapper, AdaptiveSplitCloneDensifierTrainerWrapper
+from .pruner import OpacityPruner, OpacityPrunerDensifierWrapper, OpacityPrunerTrainerWrapper
 from .combinations import DensificationTrainerWrapper, BaseDensificationTrainer
 from .combinations import AdaptiveDensificationTrainerWrapper, AdaptiveDensificationTrainer
-from .combinations import build_full_densifier, build_full_adaptive_densifier
+from .combinations import FullDensifierWrapper, FullAdaptiveDensifierWrapper

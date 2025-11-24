@@ -56,6 +56,30 @@ class OpacityPruner(DensifierWrapper):
         return super().after_densify_and_prune_hook(loss, out, camera)
 
 
+def OpacityPrunerDensifierWrapper(
+        base_densifier_constructor: Callable[..., AbstractDensifier],
+        model: GaussianModel,
+        scene_extent: float,
+        *args,
+        prune_from_iter=1000,
+        prune_until_iter=15000,
+        prune_interval=100,
+        prune_screensize_threshold=20,
+        prune_percent_too_big=1,
+        prune_opacity_threshold=0.005,
+        **kwargs):
+    return OpacityPruner(
+        base_densifier_constructor(model, scene_extent, *args, **kwargs),
+        scene_extent,
+        prune_from_iter=prune_from_iter,
+        prune_until_iter=prune_until_iter,
+        prune_interval=prune_interval,
+        prune_screensize_threshold=prune_screensize_threshold,
+        prune_percent_too_big=prune_percent_too_big,
+        prune_opacity_threshold=prune_opacity_threshold,
+    )
+
+
 def OpacityPrunerTrainerWrapper(
         noargs_base_densifier_constructor: Callable[[GaussianModel, float], AbstractDensifier],
         model: GaussianModel,

@@ -5,3 +5,4 @@ from .adaptive import AdaptiveSplitCloneDensifier, AdaptiveSplitCloneDensifierTr
 from .pruner import OpacityPruner, OpacityPrunerTrainerWrapper
 from .combinations import DensificationTrainerWrapper, BaseDensificationTrainer
 from .combinations import AdaptiveDensificationTrainerWrapper, AdaptiveDensificationTrainer
+from .combinations import build_full_densifier, build_full_adaptive_densifier

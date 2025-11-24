@@ -162,6 +162,7 @@ def SplitCloneDensifierWrapper(
         densify_grad_threshold=0.0002,
         densify_percent_dense=0.01,
         densify_percent_too_big=0.8,
+        densify_limit_n=None,
         **kwargs):
     return SplitCloneDensifier(
         base_densifier_constructor(model, scene_extent, *args, **kwargs),
@@ -171,7 +172,8 @@ def SplitCloneDensifierWrapper(
         densify_interval=densify_interval,
         densify_grad_threshold=densify_grad_threshold,
         densify_percent_dense=densify_percent_dense,
-        densify_percent_too_big=densify_percent_too_big
+        densify_percent_too_big=densify_percent_too_big,
+        densify_limit_n=densify_limit_n
     )
 
 
@@ -186,6 +188,7 @@ def SplitCloneDensifierTrainerWrapper(
         densify_grad_threshold=0.0002,
         densify_percent_dense=0.01,
         densify_percent_too_big=0.8,
+        densify_limit_n=None,
         **kwargs):
     densifier = noargs_base_densifier_constructor(model, scene_extent)
     densifier = SplitCloneDensifier(
@@ -196,7 +199,8 @@ def SplitCloneDensifierTrainerWrapper(
         densify_interval=densify_interval,
         densify_grad_threshold=densify_grad_threshold,
         densify_percent_dense=densify_percent_dense,
-        densify_percent_too_big=densify_percent_too_big
+        densify_percent_too_big=densify_percent_too_big,
+        densify_limit_n=densify_limit_n
     )
     return DensificationTrainer(
         model, scene_extent,

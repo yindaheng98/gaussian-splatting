@@ -9,7 +9,7 @@ class DensificationInstruct(NamedTuple):
     new_xyz: torch.Tensor = None
     new_features_dc: torch.Tensor = None
     new_features_rest: torch.Tensor = None
-    new_opacities: torch.Tensor = None
+    new_opacity: torch.Tensor = None
     new_scaling: torch.Tensor = None
     new_rotation: torch.Tensor = None
     remove_mask: torch.Tensor = None
@@ -19,8 +19,8 @@ class DensificationInstruct(NamedTuple):
     replace_features_dc: torch.Tensor = None
     replace_features_rest_mask: torch.Tensor = None
     replace_features_rest: torch.Tensor = None
-    replace_opacities_mask: torch.Tensor = None
-    replace_opacities: torch.Tensor = None
+    replace_opacity_mask: torch.Tensor = None
+    replace_opacity: torch.Tensor = None
     replace_scaling_mask: torch.Tensor = None
     replace_scaling: torch.Tensor = None
     replace_rotation_mask: torch.Tensor = None
@@ -57,7 +57,7 @@ class DensificationInstruct(NamedTuple):
             new_xyz=cat_new(a.new_xyz, b.new_xyz),
             new_features_dc=cat_new(a.new_features_dc, b.new_features_dc),
             new_features_rest=cat_new(a.new_features_rest, b.new_features_rest),
-            new_opacities=cat_new(a.new_opacities, b.new_opacities),
+            new_opacity=cat_new(a.new_opacity, b.new_opacity),
             new_scaling=cat_new(a.new_scaling, b.new_scaling),
             new_rotation=cat_new(a.new_rotation, b.new_rotation),
             remove_mask=or_mask(a.remove_mask, b.remove_mask),
@@ -67,8 +67,8 @@ class DensificationInstruct(NamedTuple):
             replace_features_dc=cover_replace(a.replace_features_dc_mask, a.replace_features_dc, b.replace_features_dc_mask, b.replace_features_dc),
             replace_features_rest_mask=or_mask(a.replace_features_rest_mask, b.replace_features_rest_mask),
             replace_features_rest=cover_replace(a.replace_features_rest_mask, a.replace_features_rest, b.replace_features_rest_mask, b.replace_features_rest),
-            replace_opacities_mask=or_mask(a.replace_opacities_mask, b.replace_opacities_mask),
-            replace_opacities=cover_replace(a.replace_opacities_mask, a.replace_opacities, b.replace_opacities_mask, b.replace_opacities),
+            replace_opacity_mask=or_mask(a.replace_opacity_mask, b.replace_opacity_mask),
+            replace_opacity=cover_replace(a.replace_opacity_mask, a.replace_opacity, b.replace_opacity_mask, b.replace_opacity),
             replace_scaling_mask=or_mask(a.replace_scaling_mask, b.replace_scaling_mask),
             replace_scaling=cover_replace(a.replace_scaling_mask, a.replace_scaling, b.replace_scaling_mask, b.replace_scaling),
             replace_rotation_mask=or_mask(a.replace_rotation_mask, b.replace_rotation_mask),
@@ -131,7 +131,7 @@ class NoopDensifier(AbstractDensifier):
             new_xyz=None,
             new_features_dc=None,
             new_features_rest=None,
-            new_opacities=None,
+            new_opacity=None,
             new_scaling=None,
             new_rotation=None,
             remove_mask=None

@@ -73,7 +73,7 @@ class SplitCloneDensifier(DensifierWrapper):
             new_xyz=new_xyz,
             new_features_dc=new_features_dc,
             new_features_rest=new_features_rest,
-            new_opacities=new_opacity,
+            new_opacity=new_opacity,
             new_scaling=new_scaling,
             new_rotation=new_rotation,
             replace_xyz_mask=selected_pts_mask,
@@ -92,7 +92,7 @@ class SplitCloneDensifier(DensifierWrapper):
         new_xyz = self.model._xyz[selected_pts_mask]
         new_features_dc = self.model._features_dc[selected_pts_mask]
         new_features_rest = self.model._features_rest[selected_pts_mask]
-        new_opacities = self.model._opacity[selected_pts_mask]
+        new_opacity = self.model._opacity[selected_pts_mask]
         new_scaling = self.model._scaling[selected_pts_mask]
         new_rotation = self.model._rotation[selected_pts_mask]
 
@@ -100,7 +100,7 @@ class SplitCloneDensifier(DensifierWrapper):
             new_xyz=new_xyz,
             new_features_dc=new_features_dc,
             new_features_rest=new_features_rest,
-            new_opacities=new_opacities,
+            new_opacity=new_opacity,
             new_scaling=new_scaling,
             new_rotation=new_rotation,
         )

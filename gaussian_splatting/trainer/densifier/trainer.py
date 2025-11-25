@@ -108,12 +108,12 @@ class DensificationTrainer(BaseTrainer):
         super().__init__(model, scene_extent, *args, **kwargs)
         self.densifier = densifier
 
-    def add_points(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):
+    def add_points(self, new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation):
         optimizable_tensors = cat_tensors_to_optimizer(self.optimizer, {
             "xyz": new_xyz,
             "f_dc": new_features_dc,
             "f_rest": new_features_rest,
-            "opacity": new_opacities,
+            "opacity": new_opacity,
             "scaling": new_scaling,
             "rotation": new_rotation})
 
@@ -144,7 +144,7 @@ class DensificationTrainer(BaseTrainer):
         replace_xyz_mask, replace_xyz,
         replace_features_dc_mask, replace_features_dc,
         replace_features_rest_mask, replace_features_rest,
-        replace_opacities_mask, replace_opacities,
+        replace_opacity_mask, replace_opacity,
         replace_scaling_mask, replace_scaling,
         replace_rotation_mask, replace_rotation,
     ):
@@ -153,7 +153,7 @@ class DensificationTrainer(BaseTrainer):
             "xyz": (replace_xyz_mask, replace_xyz),
             "f_dc": (replace_features_dc_mask, replace_features_dc),
             "f_rest": (replace_features_rest_mask, replace_features_rest),
-            "opacity": (replace_opacities_mask, replace_opacities),
+            "opacity": (replace_opacity_mask, replace_opacity),
             "scaling": (replace_scaling_mask, replace_scaling),
             "rotation": (replace_rotation_mask, replace_rotation)})
 
@@ -161,7 +161,7 @@ class DensificationTrainer(BaseTrainer):
             xyz_mask=replace_xyz_mask, xyz=optimizable_tensors["xyz"],
             features_dc_mask=replace_features_dc_mask, features_dc=optimizable_tensors["f_dc"],
             features_rest_mask=replace_features_rest_mask, features_rest=optimizable_tensors["f_rest"],
-            opacity_mask=replace_opacities_mask, opacity=optimizable_tensors["opacity"],
+            opacity_mask=replace_opacity_mask, opacity=optimizable_tensors["opacity"],
             scaling_mask=replace_scaling_mask, scaling=optimizable_tensors["scaling"],
             rotation_mask=replace_rotation_mask, rotation=optimizable_tensors["rotation"],
         )
@@ -172,7 +172,7 @@ class DensificationTrainer(BaseTrainer):
         if instruct.replace_xyz_mask is not None  \
                 or instruct.replace_features_dc_mask is not None \
                 or instruct.replace_features_rest_mask is not None  \
-                or instruct.replace_opacities_mask is not None \
+                or instruct.replace_opacity_mask is not None \
                 or instruct.replace_scaling_mask is not None  \
                 or instruct.replace_rotation_mask is not None:
             if instruct.replace_xyz_mask is not None:
@@ -181,8 +181,8 @@ class DensificationTrainer(BaseTrainer):
                 assert instruct.replace_features_dc is not None
             if instruct.replace_features_rest_mask is not None:
                 assert instruct.replace_features_rest is not None
-            if instruct.replace_opacities_mask is not None:
-                assert instruct.replace_opacities is not None
+            if instruct.replace_opacity_mask is not None:
+                assert instruct.replace_opacity is not None
             if instruct.replace_scaling_mask is not None:
                 assert instruct.replace_scaling is not None
             if instruct.replace_rotation_mask is not None:
@@ -191,7 +191,7 @@ class DensificationTrainer(BaseTrainer):
                 instruct.replace_xyz_mask, instruct.replace_xyz,
                 instruct.replace_features_dc_mask, instruct.replace_features_dc,
                 instruct.replace_features_rest_mask, instruct.replace_features_rest,
-                instruct.replace_opacities_mask, instruct.replace_opacities,
+                instruct.replace_opacity_mask, instruct.replace_opacity,
                 instruct.replace_scaling_mask, instruct.replace_scaling,
                 instruct.replace_rotation_mask, instruct.replace_rotation,
             )
@@ -202,14 +202,14 @@ class DensificationTrainer(BaseTrainer):
         if instruct.new_xyz is not None:
             assert instruct.new_features_dc is not None
             assert instruct.new_features_rest is not None
-            assert instruct.new_opacities is not None
+            assert instruct.new_opacity is not None
             assert instruct.new_scaling is not None
             assert instruct.new_rotation is not None
             self.add_points(
                 instruct.new_xyz,
                 instruct.new_features_dc,
                 instruct.new_features_rest,
-                instruct.new_opacities,
+                instruct.new_opacity,
                 instruct.new_scaling,
                 instruct.new_rotation)
             hook = True

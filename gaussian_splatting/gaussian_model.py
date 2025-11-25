@@ -274,22 +274,22 @@ class GaussianModel(nn.Module):
         self._opacity = opacity
 
     def update_points_replace(
-            self, replace_mask: torch.Tensor,
-            xyz: nn.Parameter,
-            features_dc: nn.Parameter,
-            features_rest: nn.Parameter,
-            scaling: nn.Parameter,
-            rotation: nn.Parameter,
-            opacity: nn.Parameter,
+            self,
+            xyz_mask: torch.Tensor, xyz: nn.Parameter,
+            features_dc_mask: torch.Tensor, features_dc: nn.Parameter,
+            features_rest_mask: torch.Tensor, features_rest: nn.Parameter,
+            scaling_mask: torch.Tensor, scaling: nn.Parameter,
+            rotation_mask: torch.Tensor, rotation: nn.Parameter,
+            opacity_mask: torch.Tensor, opacity: nn.Parameter,
     ):
-        def is_same_rest(attr: nn.Parameter, ref: nn.Parameter):
-            return (attr[~replace_mask, ...] == ref[~replace_mask, ...]).all()
-        assert is_same_rest(xyz, self._xyz)
-        assert is_same_rest(features_dc, self._features_dc)
-        assert is_same_rest(features_rest, self._features_rest)
-        assert is_same_rest(scaling, self._scaling)
-        assert is_same_rest(rotation, self._rotation)
-        assert is_same_rest(opacity, self._opacity)
+        def is_same_rest(attr: nn.Parameter, ref: nn.Parameter, mask: torch.Tensor):
+            return (attr[~mask, ...] == ref[~mask, ...]).all()
+        assert is_same_rest(xyz, self._xyz, xyz_mask)
+        assert is_same_rest(features_dc, self._features_dc, features_dc_mask)
+        assert is_same_rest(features_rest, self._features_rest, features_rest_mask)
+        assert is_same_rest(scaling, self._scaling, scaling_mask)
+        assert is_same_rest(rotation, self._rotation, rotation_mask)
+        assert is_same_rest(opacity, self._opacity, opacity_mask)
         self._xyz = xyz
         self._features_dc = features_dc
         self._features_rest = features_rest

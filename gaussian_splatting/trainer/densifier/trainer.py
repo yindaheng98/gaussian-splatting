@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import torch
 import torch.nn as nn
 from gaussian_splatting import GaussianModel
@@ -38,13 +38,18 @@ def _replace(tensor: torch.Tensor, replace_mask: torch.Tensor, replace_tensor: t
     return tensor_clone
 
 
-def replace_tensors_to_optimizer(optimizer: torch.optim.Optimizer, replace_mask: torch.Tensor, tensors_dict: Dict[str, torch.Tensor]):
+def replace_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dict[str, Tuple[torch.Tensor, torch.Tensor]]):
     optimizable_tensors = {}
     for group in optimizer.param_groups:
         assert len(group["params"]) == 1
         if group["name"] not in tensors_dict:
             continue
-        replace_tensor = tensors_dict[group["name"]]
+
+        replace_mask, replace_tensor = tensors_dict[group["name"]]
+        if replace_mask is None or replace_tensor is None:
+            optimizable_tensors[group["name"]] = group["params"][0]
+            continue
+
         stored_state = optimizer.state.get(group['params'][0], None)
         if stored_state is not None:
 
@@ -134,42 +139,62 @@ class DensificationTrainer(BaseTrainer):
             rotation=optimizable_tensors["rotation"],
         )
 
-    def replace_points(self, replace_mask, replace_xyz, replace_features_dc, replace_features_rest, replace_opacities, replace_scaling, replace_rotation):
-        optimizable_tensors = replace_tensors_to_optimizer(self.optimizer, replace_mask, {
-            "xyz": replace_xyz,
-            "f_dc": replace_features_dc,
-            "f_rest": replace_features_rest,
-            "opacity": replace_opacities,
-            "scaling": replace_scaling,
-            "rotation": replace_rotation})
+    def replace_points(
+        self,
+        replace_xyz_mask, replace_xyz,
+        replace_features_dc_mask, replace_features_dc,
+        replace_features_rest_mask, replace_features_rest,
+        replace_opacities_mask, replace_opacities,
+        replace_scaling_mask, replace_scaling,
+        replace_rotation_mask, replace_rotation,
+    ):
+
+        optimizable_tensors = replace_tensors_to_optimizer(self.optimizer, {
+            "xyz": (replace_xyz_mask, replace_xyz),
+            "f_dc": (replace_features_dc_mask, replace_features_dc),
+            "f_rest": (replace_features_rest_mask, replace_features_rest),
+            "opacity": (replace_opacities_mask, replace_opacities),
+            "scaling": (replace_scaling_mask, replace_scaling),
+            "rotation": (replace_rotation_mask, replace_rotation)})
 
         self.model.update_points_replace(
-            xyz=optimizable_tensors["xyz"],
-            features_dc=optimizable_tensors["f_dc"],
-            features_rest=optimizable_tensors["f_rest"],
-            opacity=optimizable_tensors["opacity"],
-            scaling=optimizable_tensors["scaling"],
-            rotation=optimizable_tensors["rotation"],
+            xyz_mask=replace_xyz_mask, xyz=optimizable_tensors["xyz"],
+            features_dc_mask=replace_features_dc_mask, features_dc=optimizable_tensors["f_dc"],
+            features_rest_mask=replace_features_rest_mask, features_rest=optimizable_tensors["f_rest"],
+            opacity_mask=replace_opacities_mask, opacity=optimizable_tensors["opacity"],
+            scaling_mask=replace_scaling_mask, scaling=optimizable_tensors["scaling"],
+            rotation_mask=replace_rotation_mask, rotation=optimizable_tensors["rotation"],
         )
 
     def densify_and_prune(self, loss, out, camera):
         instruct = self.densifier.densify_and_prune(loss, out, camera, self.curr_step)
         hook = False
-        if instruct.replace_mask is not None:
-            assert instruct.replace_xyz is not None
-            assert instruct.replace_features_dc is not None
-            assert instruct.replace_features_rest is not None
-            assert instruct.replace_opacities is not None
-            assert instruct.replace_scaling is not None
-            assert instruct.replace_rotation is not None
+        if instruct.replace_xyz_mask is not None  \
+                or instruct.replace_features_dc_mask is not None \
+                or instruct.replace_features_rest_mask is not None  \
+                or instruct.replace_opacities_mask is not None \
+                or instruct.replace_scaling_mask is not None  \
+                or instruct.replace_rotation_mask is not None:
+            if instruct.replace_xyz_mask is not None:
+                assert instruct.replace_xyz is not None
+            if instruct.replace_features_dc_mask is not None:
+                assert instruct.replace_features_dc is not None
+            if instruct.replace_features_rest_mask is not None:
+                assert instruct.replace_features_rest is not None
+            if instruct.replace_opacities_mask is not None:
+                assert instruct.replace_opacities is not None
+            if instruct.replace_scaling_mask is not None:
+                assert instruct.replace_scaling is not None
+            if instruct.replace_rotation_mask is not None:
+                assert instruct.replace_rotation is not None
             self.replace_points(
-                instruct.replace_mask,
-                instruct.replace_xyz,
-                instruct.replace_features_dc,
-                instruct.replace_features_rest,
-                instruct.replace_opacities,
-                instruct.replace_scaling,
-                instruct.replace_rotation)
+                instruct.replace_xyz_mask, instruct.replace_xyz,
+                instruct.replace_features_dc_mask, instruct.replace_features_dc,
+                instruct.replace_features_rest_mask, instruct.replace_features_rest,
+                instruct.replace_opacities_mask, instruct.replace_opacities,
+                instruct.replace_scaling_mask, instruct.replace_scaling,
+                instruct.replace_rotation_mask, instruct.replace_rotation,
+            )
             hook = True
         if instruct.remove_mask is not None:
             self.remove_points(instruct.remove_mask)

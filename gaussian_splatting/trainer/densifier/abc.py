@@ -44,9 +44,9 @@ class DensificationInstruct(NamedTuple):
 
         def cover_replace(a_mask: torch.Tensor, a: torch.Tensor, b_mask: torch.Tensor, b: torch.Tensor):
             if a_mask is None:
-                return b_mask, b
+                return b
             if b_mask is None:
-                return a_mask, a
+                return a
             tmp = torch.zeros((a_mask.shape[0], *a.shape[1:]), device=a.device, dtype=a.dtype)
             tmp[a_mask] = a
             tmp[b_mask] = b

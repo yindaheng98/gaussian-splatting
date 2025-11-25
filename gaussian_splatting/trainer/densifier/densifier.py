@@ -112,15 +112,7 @@ class SplitCloneDensifier(DensifierWrapper):
         clone = self.densify_and_clone(grads, self.densify_grad_threshold, self.scene_extent)
         split = self.densify_and_split(grads, self.densify_grad_threshold, self.scene_extent)
 
-        return DensificationInstruct(
-            new_xyz=torch.cat((clone.new_xyz, split.new_xyz), dim=0),
-            new_features_dc=torch.cat((clone.new_features_dc, split.new_features_dc), dim=0),
-            new_features_rest=torch.cat((clone.new_features_rest, split.new_features_rest), dim=0),
-            new_opacities=torch.cat((clone.new_opacities, split.new_opacities), dim=0),
-            new_scaling=torch.cat((clone.new_scaling, split.new_scaling), dim=0),
-            new_rotation=torch.cat((clone.new_rotation, split.new_rotation), dim=0),
-            remove_mask=split.remove_mask
-        )
+        return DensificationInstruct.merge(clone, split)
 
     def densify_and_prune(self, loss, out, camera, step: int):
         ret = super().densify_and_prune(loss, out, camera, step)

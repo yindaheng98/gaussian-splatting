@@ -158,7 +158,7 @@ def SplitCloneDensifierWrapper(
 
 
 def SplitCloneDensifierTrainerWrapper(
-        base_densifier_constructor: Callable[..., AbstractDensifier],
+        base_densifier_constructor: Callable[..., AbstractDensifier], # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
         model: GaussianModel, scene_extent: float,
         *args, **kwargs):
     return DensificationTrainer.from_densifier_constructor(

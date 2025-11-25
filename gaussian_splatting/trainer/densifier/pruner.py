@@ -58,7 +58,7 @@ class OpacityPruner(DensifierWrapper):
 
 
 def OpacityPrunerDensifierWrapper(
-        base_densifier_constructor: Callable[..., AbstractDensifier],
+        base_densifier_constructor: Callable[..., AbstractDensifier], # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
         model: GaussianModel,
         scene_extent: float,
         *args,

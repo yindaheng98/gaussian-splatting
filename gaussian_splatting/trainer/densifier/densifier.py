@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Callable
 import torch
 from gaussian_splatting.utils import build_rotation
@@ -157,32 +158,11 @@ def SplitCloneDensifierWrapper(
 
 
 def SplitCloneDensifierTrainerWrapper(
-        noargs_base_densifier_constructor: Callable[[GaussianModel, float], AbstractDensifier],
-        model: GaussianModel,
-        scene_extent: float,
-        *args,
-        densify_from_iter=500,
-        densify_until_iter=15000,
-        densify_interval=100,
-        densify_grad_threshold=0.0002,
-        densify_percent_dense=0.01,
-        densify_percent_too_big=0.8,
-        densify_limit_n=None,
-        **kwargs):
-    densifier = noargs_base_densifier_constructor(model, scene_extent)
-    densifier = SplitCloneDensifier(
-        densifier,
-        scene_extent,
-        densify_from_iter=densify_from_iter,
-        densify_until_iter=densify_until_iter,
-        densify_interval=densify_interval,
-        densify_grad_threshold=densify_grad_threshold,
-        densify_percent_dense=densify_percent_dense,
-        densify_percent_too_big=densify_percent_too_big,
-        densify_limit_n=densify_limit_n
-    )
-    return DensificationTrainer(
+        base_densifier_constructor: Callable[..., AbstractDensifier],
+        model: GaussianModel, scene_extent: float,
+        *args, **kwargs):
+    return DensificationTrainer.from_densifier_constructor(
+        partial(SplitCloneDensifierWrapper, base_densifier_constructor),
         model, scene_extent,
-        densifier,
         *args, **kwargs
     )

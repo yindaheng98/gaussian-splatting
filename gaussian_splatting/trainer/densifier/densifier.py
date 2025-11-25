@@ -60,12 +60,14 @@ class SplitCloneDensifier(DensifierWrapper):
         means = torch.zeros((stds.size(0), 3), device=self.model._xyz.device)
         samples = torch.normal(mean=means, std=stds)
         rots = build_rotation(self.model._rotation[selected_pts_mask]).repeat(N, 1, 1)
-        new_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.model.get_xyz[selected_pts_mask].repeat(N, 1)
-        new_scaling = self.model.scaling_inverse_activation(self.model.get_scaling[selected_pts_mask].repeat(N, 1) / (0.8*N))
-        new_rotation = self.model._rotation[selected_pts_mask].repeat(N, 1)
-        new_features_dc = self.model._features_dc[selected_pts_mask].repeat(N, 1, 1)
-        new_features_rest = self.model._features_rest[selected_pts_mask].repeat(N, 1, 1)
-        new_opacity = self.model._opacity[selected_pts_mask].repeat(N, 1)
+        all_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.model.get_xyz[selected_pts_mask].repeat(N, 1)
+        replace_xyz = all_xyz[:selected_pts_mask.sum().item(), ...]
+        new_xyz = all_xyz[selected_pts_mask.sum().item():, ...]
+        new_scaling = self.model.scaling_inverse_activation(self.model.get_scaling[selected_pts_mask] / (0.8*N))
+        new_rotation = self.model._rotation[selected_pts_mask]
+        new_features_dc = self.model._features_dc[selected_pts_mask]
+        new_features_rest = self.model._features_rest[selected_pts_mask]
+        new_opacity = self.model._opacity[selected_pts_mask]
 
         return DensificationInstruct(
             new_xyz=new_xyz,
@@ -74,7 +76,13 @@ class SplitCloneDensifier(DensifierWrapper):
             new_opacities=new_opacity,
             new_scaling=new_scaling,
             new_rotation=new_rotation,
-            remove_mask=selected_pts_mask
+            replace_mask=selected_pts_mask,
+            replace_xyz=replace_xyz,
+            replace_features_dc=new_features_dc,
+            replace_features_rest=new_features_rest,
+            replace_opacities=new_opacity,
+            replace_scaling=new_scaling,
+            replace_rotation=new_rotation
         )
 
     def densify_and_clone(self, grads, grad_threshold, scene_extent):

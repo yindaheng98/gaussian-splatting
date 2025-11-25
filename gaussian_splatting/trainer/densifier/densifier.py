@@ -76,13 +76,10 @@ class SplitCloneDensifier(DensifierWrapper):
             new_opacities=new_opacity,
             new_scaling=new_scaling,
             new_rotation=new_rotation,
-            replace_mask=selected_pts_mask,
+            replace_xyz_mask=selected_pts_mask,
             replace_xyz=replace_xyz,
-            replace_features_dc=new_features_dc,
-            replace_features_rest=new_features_rest,
-            replace_opacities=new_opacity,
+            replace_scaling_mask=selected_pts_mask,
             replace_scaling=new_scaling,
-            replace_rotation=new_rotation
         )
 
     def densify_and_clone(self, grads, grad_threshold, scene_extent):

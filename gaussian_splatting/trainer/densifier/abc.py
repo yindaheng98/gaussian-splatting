@@ -13,13 +13,18 @@ class DensificationInstruct(NamedTuple):
     new_scaling: torch.Tensor = None
     new_rotation: torch.Tensor = None
     remove_mask: torch.Tensor = None
+    replace_xyz_mask: torch.Tensor = None
     replace_xyz: torch.Tensor = None
+    replace_features_dc_mask: torch.Tensor = None
     replace_features_dc: torch.Tensor = None
+    replace_features_rest_mask: torch.Tensor = None
     replace_features_rest: torch.Tensor = None
+    replace_opacities_mask: torch.Tensor = None
     replace_opacities: torch.Tensor = None
+    replace_scaling_mask: torch.Tensor = None
     replace_scaling: torch.Tensor = None
+    replace_rotation_mask: torch.Tensor = None
     replace_rotation: torch.Tensor = None
-    replace_mask: torch.Tensor = None
 
     @staticmethod
     def merge(a: 'DensificationInstruct', b: 'DensificationInstruct'):
@@ -56,13 +61,18 @@ class DensificationInstruct(NamedTuple):
             new_scaling=cat_new(a.new_scaling, b.new_scaling),
             new_rotation=cat_new(a.new_rotation, b.new_rotation),
             remove_mask=or_mask(a.remove_mask, b.remove_mask),
-            replace_mask=or_mask(a.replace_mask, b.replace_mask),
-            replace_xyz=cover_replace(a.replace_mask, a.replace_xyz, b.replace_mask, b.replace_xyz),
-            replace_features_dc=cover_replace(a.replace_mask, a.replace_features_dc, b.replace_mask, b.replace_features_dc),
-            replace_features_rest=cover_replace(a.replace_mask, a.replace_features_rest, b.replace_mask, b.replace_features_rest),
-            replace_opacities=cover_replace(a.replace_mask, a.replace_opacities, b.replace_mask, b.replace_opacities),
-            replace_scaling=cover_replace(a.replace_mask, a.replace_scaling, b.replace_mask, b.replace_scaling),
-            replace_rotation=cover_replace(a.replace_mask, a.replace_rotation, b.replace_mask, b.replace_rotation),
+            replace_xyz_mask=or_mask(a.replace_xyz_mask, b.replace_xyz_mask),
+            replace_xyz=cover_replace(a.replace_xyz_mask, a.replace_xyz, b.replace_xyz_mask, b.replace_xyz),
+            replace_features_dc_mask=or_mask(a.replace_features_dc_mask, b.replace_features_dc_mask),
+            replace_features_dc=cover_replace(a.replace_features_dc_mask, a.replace_features_dc, b.replace_features_dc_mask, b.replace_features_dc),
+            replace_features_rest_mask=or_mask(a.replace_features_rest_mask, b.replace_features_rest_mask),
+            replace_features_rest=cover_replace(a.replace_features_rest_mask, a.replace_features_rest, b.replace_features_rest_mask, b.replace_features_rest),
+            replace_opacities_mask=or_mask(a.replace_opacities_mask, b.replace_opacities_mask),
+            replace_opacities=cover_replace(a.replace_opacities_mask, a.replace_opacities, b.replace_opacities_mask, b.replace_opacities),
+            replace_scaling_mask=or_mask(a.replace_scaling_mask, b.replace_scaling_mask),
+            replace_scaling=cover_replace(a.replace_scaling_mask, a.replace_scaling, b.replace_scaling_mask, b.replace_scaling),
+            replace_rotation_mask=or_mask(a.replace_rotation_mask, b.replace_rotation_mask),
+            replace_rotation=cover_replace(a.replace_rotation_mask, a.replace_rotation, b.replace_rotation_mask, b.replace_rotation),
         )
 
 

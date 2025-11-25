@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 import torch
 import torch.nn as nn
 from gaussian_splatting import GaussianModel
@@ -220,3 +220,41 @@ class DensificationTrainer(BaseTrainer):
     def before_optim_hook(self, loss, out, camera):
         with torch.no_grad():
             self.densify_and_prune(loss, out, camera)
+
+    def from_densifier_constructor(
+        densifier_constructor: Callable[..., AbstractDensifier],
+            model: GaussianModel,
+            scene_extent: float,
+            *args,
+            # copy from BaseTrainer
+            lambda_dssim=0.2,
+            position_lr_init=0.00016,
+            position_lr_final=0.0000016,
+            position_lr_delay_mult=0.01,
+            position_lr_max_steps=30_000,
+            feature_lr=0.0025,
+            opacity_lr=0.025,
+            scaling_lr=0.005,
+            rotation_lr=0.001,
+            mask_mode="none",
+            bg_color=None,
+            # copy from BaseTrainer
+            **kwargs
+    ) -> 'DensificationTrainer':
+        densifier = densifier_constructor(model, scene_extent, *args, **kwargs)
+        return DensificationTrainer(
+            model=model,
+            scene_extent=scene_extent,
+            densifier=densifier,
+            lambda_dssim=lambda_dssim,
+            position_lr_init=position_lr_init,
+            position_lr_final=position_lr_final,
+            position_lr_delay_mult=position_lr_delay_mult,
+            position_lr_max_steps=position_lr_max_steps,
+            feature_lr=feature_lr,
+            opacity_lr=opacity_lr,
+            scaling_lr=scaling_lr,
+            rotation_lr=rotation_lr,
+            mask_mode=mask_mode,
+            bg_color=bg_color,
+        )

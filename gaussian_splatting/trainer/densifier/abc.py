@@ -48,8 +48,8 @@ class DensificationInstruct(NamedTuple):
             if b_mask is None:
                 return a
             tmp = torch.zeros((a_mask.shape[0], *a.shape[1:]), device=a.device, dtype=a.dtype)
-            tmp[a_mask] = a
-            tmp[b_mask] = b
+            tmp[a_mask, ...] = a
+            tmp[b_mask, ...] = b
             mask = torch.logical_or(a_mask, b_mask)
             return tmp[mask, ...]
 

@@ -132,25 +132,7 @@ class SplitCloneDensifier(DensifierWrapper):
         if self.densify_from_iter <= step <= self.densify_until_iter and step % self.densify_interval == 0 \
                 and (self.densify_limit_n is None or self.model.get_xyz.shape[0] < self.densify_limit_n):
             dense = self.densify()
-            if ret.new_xyz is not None:
-                ret = ret._replace(
-                    new_xyz=torch.cat((ret.new_xyz, dense.new_xyz), dim=0),
-                    new_features_dc=torch.cat((ret.new_features_dc, dense.new_features_dc), dim=0),
-                    new_features_rest=torch.cat((ret.new_features_rest, dense.new_features_rest), dim=0),
-                    new_opacities=torch.cat((ret.new_opacities, dense.new_opacities), dim=0),
-                    new_scaling=torch.cat((ret.new_scaling, dense.new_scaling), dim=0),
-                    new_rotation=torch.cat((ret.new_rotation, dense.new_rotation), dim=0),
-                )
-            else:
-                ret = ret._replace(
-                    new_xyz=dense.new_xyz,
-                    new_features_dc=dense.new_features_dc,
-                    new_features_rest=dense.new_features_rest,
-                    new_opacities=dense.new_opacities,
-                    new_scaling=dense.new_scaling,
-                    new_rotation=dense.new_rotation,
-                )
-            ret = ret._replace(remove_mask=dense.remove_mask if ret.remove_mask is None else torch.logical_or(ret.remove_mask, dense.remove_mask))
+            ret = DensificationInstruct.merge(ret, dense)
         return ret
 
     def after_densify_and_prune_hook(self, loss, out, camera):

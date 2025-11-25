@@ -21,6 +21,50 @@ class DensificationInstruct(NamedTuple):
     replace_rotation: torch.Tensor = None
     replace_mask: torch.Tensor = None
 
+    @staticmethod
+    def merge(a: 'DensificationInstruct', b: 'DensificationInstruct'):
+        def cat_new(a: torch.Tensor, b: torch.Tensor):
+            if a is None:
+                return b
+            if b is None:
+                return a
+            return torch.cat([a, b], dim=0)
+
+        def or_mask(a: torch.Tensor, b: torch.Tensor):
+            if a is None:
+                return b
+            if b is None:
+                return a
+            return torch.logical_or(a, b)
+
+        def cover_replace(a_mask: torch.Tensor, a: torch.Tensor, b_mask: torch.Tensor, b: torch.Tensor):
+            if a_mask is None:
+                return b_mask, b
+            if b_mask is None:
+                return a_mask, a
+            tmp = torch.zeros((a_mask.shape[0], *a.shape[1:]), device=a.device, dtype=a.dtype)
+            tmp[a_mask] = a
+            tmp[b_mask] = b
+            mask = torch.logical_or(a_mask, b_mask)
+            return tmp[mask, ...]
+
+        return DensificationInstruct(
+            new_xyz=cat_new(a.new_xyz, b.new_xyz),
+            new_features_dc=cat_new(a.new_features_dc, b.new_features_dc),
+            new_features_rest=cat_new(a.new_features_rest, b.new_features_rest),
+            new_opacities=cat_new(a.new_opacities, b.new_opacities),
+            new_scaling=cat_new(a.new_scaling, b.new_scaling),
+            new_rotation=cat_new(a.new_rotation, b.new_rotation),
+            remove_mask=or_mask(a.remove_mask, b.remove_mask),
+            replace_mask=or_mask(a.replace_mask, b.replace_mask),
+            replace_xyz=cover_replace(a.replace_mask, a.replace_xyz, b.replace_mask, b.replace_xyz),
+            replace_features_dc=cover_replace(a.replace_mask, a.replace_features_dc, b.replace_mask, b.replace_features_dc),
+            replace_features_rest=cover_replace(a.replace_mask, a.replace_features_rest, b.replace_mask, b.replace_features_rest),
+            replace_opacities=cover_replace(a.replace_mask, a.replace_opacities, b.replace_mask, b.replace_opacities),
+            replace_scaling=cover_replace(a.replace_mask, a.replace_scaling, b.replace_mask, b.replace_scaling),
+            replace_rotation=cover_replace(a.replace_mask, a.replace_rotation, b.replace_mask, b.replace_rotation),
+        )
+
 
 class AbstractDensifier(ABC):
 

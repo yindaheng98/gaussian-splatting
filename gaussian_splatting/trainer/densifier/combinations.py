@@ -8,7 +8,7 @@ from .pruner import OpacityPrunerDensifierWrapper
 from .trainer import DensificationTrainer
 
 
-def DensifierWrapper(
+def DensificationDensifierWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],
         model: GaussianModel, scene_extent: float,
         *args, **kwargs) -> AbstractDensifier:
@@ -24,7 +24,7 @@ def DensificationTrainerWrapper(
         model: GaussianModel, scene_extent: float,
         *args, **kwargs):
     return DensificationTrainer.from_densifier_constructor(
-        partial(DensifierWrapper, base_densifier_constructor),
+        partial(DensificationDensifierWrapper, base_densifier_constructor),
         model, scene_extent,
         *args, **kwargs
     )

@@ -78,8 +78,8 @@ class GsplatGaussianModel(GaussianModel):
             "viewspace_points": viewspace_points,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
-            "depth": 1 / depth_image,  # Inria depth is inverse depth, gsplat depth is accumulated depth
-            # original gsplat output
-            "info": info,
+            "invdepth": 1 / depth_image,  # Inria depth is inverse depth, gsplat depth is accumulated depth
+            # gsplat-specific outputs
+            "depth": depth_image,
         }
         return out

@@ -72,8 +72,8 @@ class DepthTrainer(TrainerWrapper):
         loss = super().loss(out, camera)
         if self.curr_step < self.depth_from_iter or camera.ground_truth_depth is None:
             return loss
-        invdepth = out["depth"].squeeze(0)
-        invdepth_gt = camera.ground_truth_depth
+        invdepth = out["invdepth"].squeeze(0)
+        invdepth_gt = 1 / camera.ground_truth_depth
         mask = camera.ground_truth_depth_mask
         assert invdepth.shape == invdepth_gt.shape, f"invdepth shape {invdepth.shape} does not match gt depth shape {invdepth_gt.shape}"
         if self.depth_resize is not None:

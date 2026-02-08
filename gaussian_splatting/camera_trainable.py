@@ -63,7 +63,7 @@ class CameraTrainableGaussianModel(GaussianModel):
         shs = self.get_features
 
         # Rasterize visible Gaussians to image, obtain their radii (on screen).
-        rendered_image, radii, depth_image = rasterizer(
+        rendered_image, radii, invdepth_image = rasterizer(
             means3D=means3D,
             means2D=means2D,
             shs=shs,
@@ -82,6 +82,6 @@ class CameraTrainableGaussianModel(GaussianModel):
             "viewspace_points": screenspace_points,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
-            "depth": depth_image
+            "invdepth": invdepth_image,
         }
         return out

@@ -75,17 +75,17 @@ def rendering(
             f.write('{0:05d}'.format(idx) + f",{psnr_value},{ssim_value},{lpips_value}\n")
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gt_path, '{0:05d}'.format(idx) + ".png"))
-        depth = out["depth"].squeeze(0)
-        tifffile.imwrite(os.path.join(render_path, '{0:05d}'.format(idx) + "_depth.tiff"), depth.cpu().numpy())
+        invdepth = out["invdepth"].squeeze(0)
+        tifffile.imwrite(os.path.join(render_path, '{0:05d}'.format(idx) + "_invdepth.tiff"), invdepth.cpu().numpy())
         if save_pcd:
             import open3d as o3d
             if camera.ground_truth_depth is not None:
                 mask = camera.ground_truth_depth_mask if camera.ground_truth_depth_mask is not None else torch.ones_like(camera.ground_truth_depth)
-                pcd, pcd_gt, invdepth_gt_rescale = build_pcd_rescale(rendering, gt, depth, camera.ground_truth_depth, mask, camera.FoVx, camera.FoVy, rescale_depth_gt)
+                pcd, pcd_gt, invdepth_gt_rescale = build_pcd_rescale(rendering, gt, invdepth, camera.ground_truth_depth, mask, camera.FoVx, camera.FoVy, rescale_depth_gt)
                 o3d.io.write_point_cloud(os.path.join(gt_path, '{0:05d}'.format(idx) + ".ply"), pcd_gt)
-                tifffile.imwrite(os.path.join(gt_path, '{0:05d}'.format(idx) + "_depth.tiff"), invdepth_gt_rescale.cpu().numpy())
+                tifffile.imwrite(os.path.join(gt_path, '{0:05d}'.format(idx) + "_invdepth.tiff"), invdepth_gt_rescale.cpu().numpy())
             else:
-                pcd = build_pcd(rendering, depth, torch.ones_like(depth).bool(), camera.FoVx, camera.FoVy)
+                pcd = build_pcd(rendering, invdepth, torch.ones_like(invdepth).bool(), camera.FoVx, camera.FoVy)
             o3d.io.write_point_cloud(os.path.join(render_path, '{0:05d}'.format(idx) + ".ply"), pcd)
 
 

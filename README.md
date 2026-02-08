@@ -12,7 +12,8 @@ We **refactored the original code following the standard Python package structur
 * [x] depth regularization
 * [x] local relative depth regularization
 * [x] image mask
-* [ ] integrated 2DGS (integrated [gsplat](https://github.com/nerfstudio-project/gsplat) backend)
+* [x] integrated [gsplat](https://github.com/nerfstudio-project/gsplat) backend
+* [ ] integrated 2DGS from [gsplat](https://github.com/nerfstudio-project/gsplat)
 
 ## Install
 
@@ -20,6 +21,7 @@ We **refactored the original code following the standard Python package structur
 
 * [Pytorch](https://pytorch.org/) (>= v2.4 recommended)
 * [CUDA Toolkit](https://developer.nvidia.com/cuda-12-4-0-download-archive) (12.4 recommended, match with PyTorch version)
+* [gsplat](https://github.com/nerfstudio-project/gsplat)
 
 ### PyPI Install
 

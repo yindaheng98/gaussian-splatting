@@ -32,7 +32,7 @@ class GsplatGaussianModel(GaussianModel):
         # Rasterize — copied from gsplat/examples/simple_viewer.py
         render_colors, render_alphas, info = rasterization(
             self.get_xyz,                    # [N, 3]
-            self.get_rotation,               # [N, 4]
+            self._rotation,                  # [N, 4] raw quats — gsplat normalizes internally
             self.get_scaling,                # [N, 3]
             self.get_opacity.squeeze(-1),    # [N]
             self.get_features,               # [N, K, 3]
@@ -58,10 +58,24 @@ class GsplatGaussianModel(GaussianModel):
         # gsplat radii shape: [C, N, 2] (x and y pixel radii), Inria radii shape: [N]
         radii = info["radii"][0].max(dim=-1).values  # [1, N, 2] -> [N]
 
+        # Capture means2d gradient for the Inria-style densifier.
+        #
+        # info["means2d"] (shape [C, N, 2]) IS in the computation graph (projection → rasterization → loss),
+        # so retain_grad() on it works. But .squeeze(0) creates a dead-end view NOT in the loss path,
+        # so retain_grad() on the squeezed tensor would leave .grad as None.
+        #
+        # Solution: retain_grad() on the original tensor, then use register_hook to
+        # forward the gradient onto the squeezed viewspace_points that the densifier expects.
+        # (cf. gsplat DefaultStrategy.step_pre_backward which calls info["means2d"].retain_grad())
+        means2d = info["means2d"]  # [C, N, 2]
+        means2d.retain_grad()
+        viewspace_points = means2d.squeeze(0)  # [N, 2]
+        means2d.register_hook(lambda grad: setattr(viewspace_points, 'grad', grad.squeeze(0)))
+
         out = {
             # capable for Inria GaussianModel
             "render": rendered_image,
-            "viewspace_points": info["means2d"].squeeze(0),  # TODO: is this correct?
+            "viewspace_points": viewspace_points,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
             "depth": 1 / depth_image,  # Inria depth is inverse depth, gsplat depth is accumulated depth

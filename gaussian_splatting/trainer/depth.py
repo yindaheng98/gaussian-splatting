@@ -20,6 +20,7 @@ class DepthTrainer(TrainerWrapper):
             depth_l1_weight_init=1.0,
             depth_l1_weight_final=0.01,
             depth_l1_weight_max_steps=30_000,
+            depth_ground_truth_is_inversed=True,  # Whether the ground truth depth in dataset is inversed
     ):
         super().__init__(base_trainer)
         self.depth_from_iter = depth_from_iter
@@ -32,6 +33,7 @@ class DepthTrainer(TrainerWrapper):
             depth_l1_weight_final,
             depth_l1_weight_max_steps)
         self.depth_l1_weight = self.depth_l1_weight_func(0)
+        self.depth_ground_truth_is_inversed = depth_ground_truth_is_inversed
 
     def update_learning_rate(self):
         super().update_learning_rate()
@@ -73,7 +75,10 @@ class DepthTrainer(TrainerWrapper):
         if self.curr_step < self.depth_from_iter or camera.ground_truth_depth is None:
             return loss
         invdepth = out["invdepth"].squeeze(0)
-        invdepth_gt = 1 / camera.ground_truth_depth
+        if self.depth_ground_truth_is_inversed:
+            invdepth_gt = camera.ground_truth_depth
+        else:
+            invdepth_gt = 1 / camera.ground_truth_depth
         mask = camera.ground_truth_depth_mask
         assert invdepth.shape == invdepth_gt.shape, f"invdepth shape {invdepth.shape} does not match gt depth shape {invdepth_gt.shape}"
         if self.depth_resize is not None:

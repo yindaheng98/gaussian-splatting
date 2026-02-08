@@ -9,15 +9,15 @@ from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 from gaussian_splatting.utils import psnr, ssim, unproject
 from gaussian_splatting.utils.lpipsPyTorch import lpips
-from gaussian_splatting.prepare import prepare_dataset, prepare_gaussians
+from gaussian_splatting.prepare import prepare_dataset, prepare_gaussians, backends
 
 
 def prepare_rendering(
         sh_degree: int, source: str, device: str,
         trainable_camera: bool = False, load_ply: str = None, load_camera: str = None,
-        load_mask=True, load_depth=True) -> Tuple[CameraDataset, GaussianModel]:
+        load_mask=True, load_depth=True, backend: str = "inria") -> Tuple[CameraDataset, GaussianModel]:
     dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=load_mask, load_depth=load_depth)
-    gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply)
+    gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply, backend=backend)
     return dataset, gaussians
 
 
@@ -93,6 +93,7 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument("--sh_degree", default=3, type=int)
+    parser.add_argument("--backend", choices=backends, default="inria")
     parser.add_argument("-s", "--source", required=True, type=str)
     parser.add_argument("-d", "--destination", required=True, type=str)
     parser.add_argument("-i", "--iteration", required=True, type=int)

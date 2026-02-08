@@ -80,6 +80,8 @@
                 "output/truck",
                 "-i",
                 "30000",
+                "--backend",
+                "gsplat",
             ]
         },
         {

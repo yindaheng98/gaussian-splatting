@@ -44,7 +44,7 @@ if os.name == 'nt':
 
 setup(
     name="gaussian_splatting",
-    version='1.22.2',
+    version='1.23.0',
     author='yindaheng98',
     author_email='yindaheng98@gmail.com',
     url='https://github.com/yindaheng98/gaussian-splatting',
@@ -77,6 +77,7 @@ setup(
     install_requires=[
         'torch',
         'torchvision',
+        'gsplat',
         'tqdm',
         'plyfile',
         'tifffile',

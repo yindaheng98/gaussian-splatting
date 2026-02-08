@@ -1,3 +1,4 @@
+from typing import Callable
 from .gaussian_model import GaussianModel
 from .camera_trainable import CameraTrainableGaussianModel
 from .dataset import CameraDataset, FixedTrainableCameraDataset, TrainableCameraDataset
@@ -22,12 +23,27 @@ def prepare_dataset(source: str, device: str, trainable_camera: bool = False, lo
     return dataset
 
 
-def prepare_gaussians(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None) -> GaussianModel:
+backends = ["inria", "gsplat"]
+
+
+def get_gaussian_model(backend: str) -> Callable[[int], GaussianModel]:
+    match backend:
+        case "inria":
+            from .gaussian_model import GaussianModel
+            return GaussianModel
+        case "gsplat":
+            from .models import GsplatGaussianModel
+            return GsplatGaussianModel
+        case _:
+            raise ValueError(f"Unknown backend: {backend}")
+
+
+def prepare_gaussians(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None, backend: str = "inria") -> GaussianModel:
     if trainable_camera:
         gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
         gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
     else:
-        gaussians = GaussianModel(sh_degree).to(device)
+        gaussians = get_gaussian_model(backend)(sh_degree).to(device)
         gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
     return gaussians
 

@@ -125,5 +125,21 @@
                 "output/truck-camera-densify/cameras.json",
             ]
         },
+        {
+            "name": "viewer",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gaussian_splatting.viewer",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-d",
+                "output/truck",
+                "-i",
+                "30000",
+                "--port",
+                "8080",
+            ]
+        },
     ]
 }

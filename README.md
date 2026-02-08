@@ -13,7 +13,7 @@ We **refactored the original code following the standard Python package structur
 * [x] local relative depth regularization
 * [x] image mask
 * [x] integrated [gsplat](https://github.com/nerfstudio-project/gsplat) backend
-* [ ] integrated 2DGS from [gsplat](https://github.com/nerfstudio-project/gsplat)
+* [x] integrated 2DGS from [gsplat](https://github.com/nerfstudio-project/gsplat)
 
 ## Install
 

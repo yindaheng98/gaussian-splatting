@@ -23,7 +23,7 @@ def prepare_dataset(source: str, device: str, trainable_camera: bool = False, lo
     return dataset
 
 
-backends = ["inria", "gsplat"]
+backends = ["inria", "gsplat", "gsplat-2dgs"]
 
 
 def get_gaussian_model(backend: str) -> Callable[[int], GaussianModel]:
@@ -34,6 +34,9 @@ def get_gaussian_model(backend: str) -> Callable[[int], GaussianModel]:
         case "gsplat":
             from .models import GsplatGaussianModel
             return GsplatGaussianModel
+        case "gsplat-2dgs":
+            from .models import Gsplat2DGSGaussianModel
+            return Gsplat2DGSGaussianModel
         case _:
             raise ValueError(f"Unknown backend: {backend}")
 

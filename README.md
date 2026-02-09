@@ -59,9 +59,10 @@ unzip data/tandt_db.zip -d data/
 python -m gaussian_splatting.train -s data/truck -d output/truck -i 30000 --mode densify
 ```
 
-3. Render 3DGS
+3. Render or view 3DGS
 ```shell
 python -m gaussian_splatting.render -s data/truck -d output/truck -i 30000 --mode densify
+python -m gaussian_splatting.viewer -d output/truck -i 30000
 ```
 
 4. Joint training 3DGS and camera (load the trained 3DGS)

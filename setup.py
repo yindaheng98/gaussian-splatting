@@ -44,7 +44,7 @@ if os.name == 'nt':
 
 setup(
     name="gaussian_splatting",
-    version='1.25.1',
+    version='2.0.0',
     author='yindaheng98',
     author_email='yindaheng98@gmail.com',
     url='https://github.com/yindaheng98/gaussian-splatting',

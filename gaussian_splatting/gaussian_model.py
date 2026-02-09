@@ -90,8 +90,28 @@ class GaussianModel(nn.Module):
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
 
     def forward(self, viewpoint_camera: Camera):
+        return self.render(
+            viewpoint_camera=viewpoint_camera,
+            means3D=self.get_xyz,
+            opacity=self.get_opacity,
+            scales=self.get_scaling,
+            rotations=self.get_rotation,
+            shs=self.get_features,
+        )
+
+    def render(
+        self,
+        viewpoint_camera: Camera,
+        means3D: torch.Tensor,
+        opacity: torch.Tensor,
+        scales: torch.Tensor,
+        rotations: torch.Tensor,
+        shs: torch.Tensor,
+        colors_precomp=None,
+        cov3D_precomp=None,
+    ) -> dict:
         # Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
-        screenspace_points = torch.zeros_like(self.get_xyz, dtype=self.get_xyz.dtype, requires_grad=True, device=self._xyz.device) + 0
+        screenspace_points = torch.zeros_like(means3D, dtype=means3D.dtype, requires_grad=True, device=means3D.device) + 0
         try:
             screenspace_points.retain_grad()
         except:
@@ -118,25 +138,18 @@ class GaussianModel(nn.Module):
         )
 
         rasterizer = GaussianRasterizer(raster_settings=raster_settings)
-        means3D = self.get_xyz
         means2D = screenspace_points
-        opacity = self.get_opacity
-
-        scales = self.get_scaling
-        rotations = self.get_rotation
-
-        shs = self.get_features
 
         # Rasterize visible Gaussians to image, obtain their radii (on screen).
         rendered_image, radii, invdepth_image = rasterizer(
             means3D=means3D,
             means2D=means2D,
             shs=shs,
-            colors_precomp=None,
+            colors_precomp=colors_precomp,
             opacities=opacity,
             scales=scales,
             rotations=rotations,
-            cov3D_precomp=None)
+            cov3D_precomp=cov3D_precomp)
         rendered_image = viewpoint_camera.postprocess(viewpoint_camera, rendered_image)
 
         # Those Gaussians that were frustum culled or had a radius of 0 were not visible.

@@ -100,6 +100,13 @@ class Gsplat2DGSGaussianModel(GaussianModel):
         gradient_2dgs = info["gradient_2dgs"]  # [C, N, 2]
         gradient_2dgs.retain_grad()
 
+        # gsplat's gradient_2dgs gradient is in pixel space, but the
+        # Inria-style densifier expects NDC-scale gradients.  gsplat's own
+        # DefaultStrategy multiplies by width/2 and height/2 to compensate
+        # (see gsplat/strategy/default.py  _update_state).  We bake that
+        # scaling into get_viewspace_grad so the densifier works unchanged.
+        _grad_scale = gradient_2dgs.new_tensor([[width / 2.0, height / 2.0]])
+
         out = {
             # compatible with Inria GaussianModel
             "render": rendered_image,
@@ -107,7 +114,7 @@ class Gsplat2DGSGaussianModel(GaussianModel):
             "radii": radii,
             "invdepth": 1 / depth_image,
             # Used by the densifier to get the gradient of the viewspace points
-            "get_viewspace_grad": lambda out: out["gradient_2dgs"].grad.squeeze(0),
+            "get_viewspace_grad": lambda out: out["gradient_2dgs"].grad.squeeze(0) * _grad_scale,
             "gradient_2dgs": gradient_2dgs,
         }
         # Explicitly free the large intermediate tensors from gsplat 2DGS rasterization.

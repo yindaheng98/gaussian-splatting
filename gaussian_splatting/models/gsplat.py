@@ -87,14 +87,6 @@ class GsplatGaussianModel(GaussianModel):
         means2d = info["means2d"]  # [C, N, 2]
         means2d.retain_grad()
 
-        # gsplat's means2d gradient is in pixel space, but the Inria-style
-        # densifier expects NDC-scale gradients (the original Inria rasterizer
-        # backward produces gradients at a larger magnitude).  gsplat's own
-        # DefaultStrategy multiplies by width/2 and height/2 to compensate
-        # (see gsplat/strategy/default.py  _update_state).  We bake that
-        # scaling into get_viewspace_grad so the densifier works unchanged.
-        _grad_scale = means2d.new_tensor([[width / 2.0, height / 2.0]])
-
         out = {
             # compatible with Inria GaussianModel
             "render": rendered_image,
@@ -102,7 +94,13 @@ class GsplatGaussianModel(GaussianModel):
             "radii": radii,
             "invdepth": 1 / depth_image,  # Inria depth is inverse depth, gsplat depth is accumulated depth
             # Used by the densifier to get the gradient of the viewspace points
-            "get_viewspace_grad": lambda out: out["means2d"].grad.squeeze(0) * _grad_scale,
+            # gsplat's means2d gradient is in pixel space, but the Inria-style
+            # densifier expects NDC-scale gradients (the original Inria rasterizer
+            # backward produces gradients at a larger magnitude).  gsplat's own
+            # DefaultStrategy multiplies by width/2 and height/2 to compensate
+            # (see gsplat/strategy/default.py  _update_state).  We bake that
+            # scaling into get_viewspace_grad so the densifier works unchanged.
+            "get_viewspace_grad": lambda out: out["means2d"].grad.squeeze(0) * out["means2d"].new_tensor([[width, height]]) / 2.0,
             "means2d": means2d,
         }
         # Drop Python references to large rasterization intermediates.

@@ -12,6 +12,26 @@ class Gsplat2DGSGaussianModel(GaussianModel):
         self.render_mode = render_mode
 
     def forward(self, viewpoint_camera: Camera):
+        return self.render(
+            viewpoint_camera=viewpoint_camera,
+            means3D=self.get_xyz,
+            opacity=self.get_opacity.squeeze(-1),
+            scales=self.get_scaling,
+            rotations=self._rotation,
+            shs=self.get_features,
+        )
+
+    def render(
+        self,
+        viewpoint_camera: Camera,
+        means3D: torch.Tensor,
+        opacity: torch.Tensor,
+        scales: torch.Tensor,
+        rotations: torch.Tensor,
+        shs: torch.Tensor,
+        colors_precomp=None,
+        cov3D_precomp=None,
+    ) -> dict:
         """Rasterization using gsplat 2DGS backend.
 
         Adapted from gsplat/examples/simple_trainer_2dgs.py and
@@ -20,7 +40,7 @@ class Gsplat2DGSGaussianModel(GaussianModel):
 
         width = int(viewpoint_camera.image_width)
         height = int(viewpoint_camera.image_height)
-        device = self._xyz.device
+        device = means3D.device
 
         # Construct viewmats [1, 4, 4] — undo Inria's transpose convention
         viewmats = viewpoint_camera.world_view_transform.T[None]  # [1, 4, 4]
@@ -43,11 +63,11 @@ class Gsplat2DGSGaussianModel(GaussianModel):
             render_median,
             info,
         ) = rasterization_2dgs(
-            self.get_xyz,                    # [N, 3]
-            self._rotation,                  # [N, 4] raw quats — gsplat normalizes internally
-            self.get_scaling,                # [N, 3]
-            self.get_opacity.squeeze(-1),    # [N]
-            self.get_features,               # [N, K, 3]
+            means3D,                         # [N, 3]
+            rotations,                       # [N, 4] raw quats — gsplat normalizes internally
+            scales,                          # [N, 3]
+            opacity,             # [N]
+            shs,                             # [N, K, 3]
             viewmats,                        # [1, 4, 4]
             Ks,                              # [1, 3, 3]
             width,

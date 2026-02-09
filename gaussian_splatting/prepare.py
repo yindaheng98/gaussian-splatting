@@ -25,7 +25,7 @@ def prepare_dataset(source: str, device: str, trainable_camera: bool = False, lo
 backends = ["inria", "gsplat", "gsplat-2dgs"]
 
 
-def get_gaussian_model(backend: str, trainable_camera: bool = False) -> Callable[[int], GaussianModel]:
+def get_gaussian_model_class(backend: str, trainable_camera: bool = False) -> Callable[[int], GaussianModel]:
     match backend:
         case "inria":
             from .gaussian_model import GaussianModel
@@ -42,7 +42,7 @@ def get_gaussian_model(backend: str, trainable_camera: bool = False) -> Callable
 
 
 def prepare_gaussians(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None, backend: str = "inria") -> GaussianModel:
-    gaussians = get_gaussian_model(backend, trainable_camera=trainable_camera)(sh_degree).to(device)
+    gaussians = get_gaussian_model_class(backend, trainable_camera=trainable_camera)(sh_degree).to(device)
     gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
     return gaussians
 

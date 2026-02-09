@@ -93,6 +93,13 @@ class Gsplat2DGSGaussianModel(GaussianModel):
         # gsplat radii shape: [C, N, 2] (x and y pixel radii), Inria radii shape: [N]
         radii = info["radii"][0].max(dim=-1).values  # [1, N, 2] -> [N]
 
+        # Convert render_normals: [1, H, W, 3] -> [3, H, W]
+        render_normals_out = render_normals[0].permute(2, 0, 1)  # [3, H, W]
+
+        # Convert normals_from_depth: [H, W, 3] -> [3, H, W]
+        # (rasterization_2dgs applies .squeeze(0) internally, so with C=1 this is [H, W, 3])
+        normals_from_depth_out = normals_from_depth.permute(2, 0, 1)  # [3, H, W]
+
         # For 2DGS, the densification gradient is stored in info["gradient_2dgs"].
         # retain_grad() reliably captures its gradient during backward().
         # We expose a get_viewspace_grad() accessor in `out` so the densifier
@@ -116,10 +123,14 @@ class Gsplat2DGSGaussianModel(GaussianModel):
             # Used by the densifier to get the gradient of the viewspace points
             "get_viewspace_grad": lambda out: out["gradient_2dgs"].grad.squeeze(0) * _grad_scale,
             "gradient_2dgs": gradient_2dgs,
+            # Additional outputs from 2DGS (normals and distortion)
+            "render_normals": render_normals_out,
+            "normals_from_depth": normals_from_depth_out,
+            "render_distort": render_distort,
+            "render_median": render_median,
         }
         # Explicitly free the large intermediate tensors from gsplat 2DGS rasterization.
         # (render_normals, normals_from_depth, render_distort, render_median are not
         # used by the current trainer/loss; keeping them in `out` wastes ~70 MB on GPU.)
-        del render_colors, render_alphas, render_normals, normals_from_depth
-        del render_distort, render_median, info
+        del render_colors, render_alphas, info
         return out

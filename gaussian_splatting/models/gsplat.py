@@ -86,7 +86,10 @@ class GsplatGaussianModel(GaussianModel):
         # We expose a get_viewspace_grad() accessor in `out` so the densifier
         # can read means2d.grad without hooks, closures, or reference cycles.
         means2d = info["means2d"]  # [C, N, 2]
-        means2d.retain_grad()
+        try:
+            means2d.retain_grad()
+        except:
+            pass
 
         out = {
             # compatible with Inria GaussianModel

@@ -106,7 +106,10 @@ class Gsplat2DGSGaussianModel(GaussianModel):
         # We expose a get_viewspace_grad() accessor in `out` so the densifier
         # can read gradient_2dgs.grad without hooks, closures, or reference cycles.
         gradient_2dgs = info["gradient_2dgs"]  # [C, N, 2]
-        gradient_2dgs.retain_grad()
+        try:
+            gradient_2dgs.retain_grad()
+        except:
+            pass
 
         out = {
             # compatible with Inria GaussianModel

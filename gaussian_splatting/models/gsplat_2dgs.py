@@ -74,36 +74,25 @@ class Gsplat2DGSGaussianModel(GaussianModel):
         radii = info["radii"][0].max(dim=-1).values  # [1, N, 2] -> [N]
 
         # For 2DGS, the densification gradient is stored in info["gradient_2dgs"].
-        # This is a tensor created inside rasterization_2dgs with requires_grad=True,
-        # and participates in the backward pass for densification.
-        #
-        # Similar to the 3DGS gsplat backend (which uses info["means2d"]):
-        # retain_grad() on the original tensor, then register_hook to forward the
-        # gradient onto the squeezed viewspace_points for the Inria-style densifier.
+        # retain_grad() reliably captures its gradient during backward().
+        # We expose a get_viewspace_grad() accessor in `out` so the densifier
+        # can read gradient_2dgs.grad without hooks, closures, or reference cycles.
         gradient_2dgs = info["gradient_2dgs"]  # [C, N, 2]
         gradient_2dgs.retain_grad()
-        viewspace_points = gradient_2dgs.squeeze(0)  # [N, 2]
-        gradient_2dgs.register_hook(lambda grad: setattr(viewspace_points, 'grad', grad.squeeze(0)))
-
-        # Convert render_normals: [1, H, W, 3] -> [3, H, W]
-        render_normals_out = render_normals[0].permute(2, 0, 1)  # [3, H, W]
-
-        # Convert normals_from_depth: [H, W, 3] -> [3, H, W]
-        # (rasterization_2dgs applies .squeeze(0) internally, so with C=1 this is [H, W, 3])
-        normals_from_depth_out = normals_from_depth.permute(2, 0, 1)  # [3, H, W]
 
         out = {
             # compatible with Inria GaussianModel
             "render": rendered_image,
-            "viewspace_points": viewspace_points,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
             "invdepth": 1 / depth_image,
-            # 2DGS-specific outputs
-            "depth": depth_image,
-            "render_normals": render_normals_out,
-            "normals_from_depth": normals_from_depth_out,
-            "render_distort": render_distort,
-            "render_median": render_median,
+            # Used by the densifier to get the gradient of the viewspace points
+            "get_viewspace_grad": lambda out: out["gradient_2dgs"].grad.squeeze(0),
+            "gradient_2dgs": gradient_2dgs,
         }
+        # Explicitly free the large intermediate tensors from gsplat 2DGS rasterization.
+        # (render_normals, normals_from_depth, render_distort, render_median are not
+        # used by the current trainer/loss; keeping them in `out` wastes ~70 MB on GPU.)
+        del render_colors, render_alphas, render_normals, normals_from_depth
+        del render_distort, render_median, info
         return out

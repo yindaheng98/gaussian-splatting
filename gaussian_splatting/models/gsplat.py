@@ -60,26 +60,23 @@ class GsplatGaussianModel(GaussianModel):
 
         # Capture means2d gradient for the Inria-style densifier.
         #
-        # info["means2d"] (shape [C, N, 2]) IS in the computation graph (projection → rasterization → loss),
-        # so retain_grad() on it works. But .squeeze(0) creates a dead-end view NOT in the loss path,
-        # so retain_grad() on the squeezed tensor would leave .grad as None.
-        #
-        # Solution: retain_grad() on the original tensor, then use register_hook to
-        # forward the gradient onto the squeezed viewspace_points that the densifier expects.
-        # (cf. gsplat DefaultStrategy.step_pre_backward which calls info["means2d"].retain_grad())
+        # info["means2d"] (shape [C, N, 2]) is in the computation graph, so
+        # retain_grad() reliably captures its gradient during backward().
+        # We expose a get_viewspace_grad() accessor in `out` so the densifier
+        # can read means2d.grad without hooks, closures, or reference cycles.
         means2d = info["means2d"]  # [C, N, 2]
         means2d.retain_grad()
-        viewspace_points = means2d.squeeze(0)  # [N, 2]
-        means2d.register_hook(lambda grad: setattr(viewspace_points, 'grad', grad.squeeze(0)))
 
         out = {
-            # capable for Inria GaussianModel
+            # compatible with Inria GaussianModel
             "render": rendered_image,
-            "viewspace_points": viewspace_points,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
             "invdepth": 1 / depth_image,  # Inria depth is inverse depth, gsplat depth is accumulated depth
-            # gsplat-specific outputs
-            "depth": depth_image,
+            # Used by the densifier to get the gradient of the viewspace points
+            "get_viewspace_grad": lambda out: out["means2d"].grad.squeeze(0),
+            "means2d": means2d,
         }
+        # Drop Python references to large rasterization intermediates.
+        del render_colors, render_alphas, info
         return out

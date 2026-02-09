@@ -3,6 +3,7 @@ import torch
 from gsplat.rendering import rasterization_2dgs
 
 from gaussian_splatting import GaussianModel, Camera
+from .gsplat import CameraTrainableGsplatGaussianModel
 
 
 class Gsplat2DGSGaussianModel(GaussianModel):
@@ -132,3 +133,8 @@ class Gsplat2DGSGaussianModel(GaussianModel):
         # used by the current trainer/loss; keeping them in `out` wastes ~70 MB on GPU.)
         del render_colors, render_alphas, info
         return out
+
+
+class CameraTrainableGsplat2DGSGaussianModel(Gsplat2DGSGaussianModel):
+    def forward(self, viewpoint_camera: Camera):
+        return CameraTrainableGsplatGaussianModel.forward(self, viewpoint_camera)

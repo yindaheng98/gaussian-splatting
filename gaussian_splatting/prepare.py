@@ -1,6 +1,5 @@
 from typing import Callable
 from .gaussian_model import GaussianModel
-from .camera_trainable import CameraTrainableGaussianModel
 from .dataset import CameraDataset, FixedTrainableCameraDataset, TrainableCameraDataset
 from .dataset.colmap import ColmapCameraDataset, ColmapTrainableCameraDataset, colmap_init
 from .trainer import *
@@ -26,28 +25,25 @@ def prepare_dataset(source: str, device: str, trainable_camera: bool = False, lo
 backends = ["inria", "gsplat", "gsplat-2dgs"]
 
 
-def get_gaussian_model(backend: str) -> Callable[[int], GaussianModel]:
+def get_gaussian_model(backend: str, trainable_camera: bool = False) -> Callable[[int], GaussianModel]:
     match backend:
         case "inria":
             from .gaussian_model import GaussianModel
-            return GaussianModel
+            from .camera_trainable import CameraTrainableGaussianModel
+            return GaussianModel if not trainable_camera else CameraTrainableGaussianModel
         case "gsplat":
-            from .models import GsplatGaussianModel
-            return GsplatGaussianModel
+            from .models import GsplatGaussianModel, CameraTrainableGsplatGaussianModel
+            return GsplatGaussianModel if not trainable_camera else CameraTrainableGsplatGaussianModel
         case "gsplat-2dgs":
-            from .models import Gsplat2DGSGaussianModel
-            return Gsplat2DGSGaussianModel
+            from .models import Gsplat2DGSGaussianModel, CameraTrainableGsplat2DGSGaussianModel
+            return Gsplat2DGSGaussianModel if not trainable_camera else CameraTrainableGsplat2DGSGaussianModel
         case _:
             raise ValueError(f"Unknown backend: {backend}")
 
 
 def prepare_gaussians(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None, backend: str = "inria") -> GaussianModel:
-    if trainable_camera:
-        gaussians = CameraTrainableGaussianModel(sh_degree).to(device)
-        gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
-    else:
-        gaussians = get_gaussian_model(backend)(sh_degree).to(device)
-        gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
+    gaussians = get_gaussian_model(backend, trainable_camera=trainable_camera)(sh_degree).to(device)
+    gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
     return gaussians
 
 

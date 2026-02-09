@@ -1,2 +1,2 @@
-from .gsplat import GsplatGaussianModel
-from .gsplat_2dgs import Gsplat2DGSGaussianModel
+from .gsplat import GsplatGaussianModel, CameraTrainableGsplatGaussianModel
+from .gsplat_2dgs import Gsplat2DGSGaussianModel, CameraTrainableGsplat2DGSGaussianModel

@@ -35,12 +35,12 @@ class SplitCloneDensifier(DensifierWrapper):
         self.denom = None
 
     def update_densification_stats(self, out):
-        viewspace_points, visibility_filter = out["viewspace_points"], out["visibility_filter"]
+        viewspace_grad, visibility_filter = out["get_viewspace_grad"](out), out["visibility_filter"]
         if self.xyz_gradient_accum is None or self.denom is None:
             new_size = self.model.get_xyz.shape[0]
             self.xyz_gradient_accum = torch.zeros((new_size, 1), device=self.model._xyz.device)
             self.denom = torch.zeros((new_size, 1), device=self.model._xyz.device)
-        self.xyz_gradient_accum[visibility_filter] += torch.norm(viewspace_points.grad[visibility_filter, :2], dim=-1, keepdim=True)
+        self.xyz_gradient_accum[visibility_filter] += torch.norm(viewspace_grad[visibility_filter, :2], dim=-1, keepdim=True)
         self.denom[visibility_filter] += 1
 
     def densify_and_split(self, grads, grad_threshold, scene_extent, N=2):
@@ -158,7 +158,7 @@ def SplitCloneDensifierWrapper(
 
 
 def SplitCloneDensifierTrainerWrapper(
-        base_densifier_constructor: Callable[..., AbstractDensifier], # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
+        base_densifier_constructor: Callable[..., AbstractDensifier],  # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
         model: GaussianModel, scene_extent: float,
         *args, **kwargs):
     return DensificationTrainer.from_densifier_constructor(

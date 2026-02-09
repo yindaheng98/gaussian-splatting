@@ -144,10 +144,12 @@ class GaussianModel(nn.Module):
         rendered_image = rendered_image.clamp(0, 1)
         out = {
             "render": rendered_image,
-            "viewspace_points": screenspace_points,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
             "invdepth": invdepth_image,
+            # Used by the densifier to get the gradient of the viewspace points
+            "get_viewspace_grad": lambda out: out["viewspace_points"].grad,
+            "viewspace_points": screenspace_points,
         }
         return out
 

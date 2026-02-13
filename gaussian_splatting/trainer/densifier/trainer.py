@@ -98,6 +98,14 @@ class DensificationTrainer(BaseTrainer):
     Trainer that densifies the model.
     !This class must inherent from BaseTrainer rather than TrainerWrapper, since it should modify the tensors in the optimizer.
     '''
+    optim_attr_names = {
+        "xyz": "xyz",
+        "f_dc": "features_dc",
+        "f_rest": "features_rest",
+        "opacity": "opacity",
+        "scaling": "scaling",
+        "rotation": "rotation",
+    }  # ! This should fit the param group names set in BaseTrainer.optimizer, and the values should be the same as the tensor names in GaussianModel
 
     def __init__(
             self, model: GaussianModel,
@@ -108,110 +116,63 @@ class DensificationTrainer(BaseTrainer):
         super().__init__(model, scene_extent, *args, **kwargs)
         self.densifier = densifier
 
-    def add_points(self, new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation):
-        optimizable_tensors = cat_tensors_to_optimizer(self.optimizer, {
-            "xyz": new_xyz,
-            "f_dc": new_features_dc,
-            "f_rest": new_features_rest,
-            "opacity": new_opacity,
-            "scaling": new_scaling,
-            "rotation": new_rotation})
+    def add_points(self, **kwargs):
+        # new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation
 
-        self.model.update_points_add(
-            xyz=optimizable_tensors["xyz"],
-            features_dc=optimizable_tensors["f_dc"],
-            features_rest=optimizable_tensors["f_rest"],
-            opacity=optimizable_tensors["opacity"],
-            scaling=optimizable_tensors["scaling"],
-            rotation=optimizable_tensors["rotation"],
-        )
+        optimizable_tensors = cat_tensors_to_optimizer(self.optimizer, {
+            k: kwargs[f"new_{v}"] for k, v in self.optim_attr_names.items()
+        })
+
+        self.model.update_points_add(**{
+            v: optimizable_tensors[k] for k, v in self.optim_attr_names.items()
+        })
 
     def remove_points(self, rm_mask):
-        optimizable_tensors = mask_tensors_in_optimizer(self.optimizer, rm_mask, ["xyz", "f_dc", "f_rest", "opacity", "scaling", "rotation"])
+        optimizable_tensors = mask_tensors_in_optimizer(self.optimizer, rm_mask, list(self.optim_attr_names.keys()))
 
         self.model.update_points_remove(
             removed_mask=rm_mask,
-            xyz=optimizable_tensors["xyz"],
-            features_dc=optimizable_tensors["f_dc"],
-            features_rest=optimizable_tensors["f_rest"],
-            opacity=optimizable_tensors["opacity"],
-            scaling=optimizable_tensors["scaling"],
-            rotation=optimizable_tensors["rotation"],
+            **{v: optimizable_tensors[k] for k, v in self.optim_attr_names.items()},
         )
 
-    def replace_points(
-        self,
-        replace_xyz_mask, replace_xyz,
-        replace_features_dc_mask, replace_features_dc,
-        replace_features_rest_mask, replace_features_rest,
-        replace_opacity_mask, replace_opacity,
-        replace_scaling_mask, replace_scaling,
-        replace_rotation_mask, replace_rotation,
-    ):
+    def replace_points(self, **kwargs):
+        # replace_xyz_mask, replace_xyz,
+        #  replace_features_dc_mask, replace_features_dc,
+        #  replace_features_rest_mask, replace_features_rest,
+        #  replace_opacity_mask, replace_opacity,
+        #  replace_scaling_mask, replace_scaling,
+        #  replace_rotation_mask, replace_rotation
 
         optimizable_tensors = replace_tensors_to_optimizer(self.optimizer, {
-            "xyz": (replace_xyz_mask, replace_xyz),
-            "f_dc": (replace_features_dc_mask, replace_features_dc),
-            "f_rest": (replace_features_rest_mask, replace_features_rest),
-            "opacity": (replace_opacity_mask, replace_opacity),
-            "scaling": (replace_scaling_mask, replace_scaling),
-            "rotation": (replace_rotation_mask, replace_rotation)})
+            k: (kwargs[f"replace_{v}_mask"], kwargs[f"replace_{v}"]) for k, v in self.optim_attr_names.items()
+        })
 
-        self.model.update_points_replace(
-            xyz_mask=replace_xyz_mask, xyz=optimizable_tensors["xyz"],
-            features_dc_mask=replace_features_dc_mask, features_dc=optimizable_tensors["f_dc"],
-            features_rest_mask=replace_features_rest_mask, features_rest=optimizable_tensors["f_rest"],
-            opacity_mask=replace_opacity_mask, opacity=optimizable_tensors["opacity"],
-            scaling_mask=replace_scaling_mask, scaling=optimizable_tensors["scaling"],
-            rotation_mask=replace_rotation_mask, rotation=optimizable_tensors["rotation"],
-        )
+        self.model.update_points_replace(**{
+            **{f"{v}_mask": kwargs[f"replace_{v}_mask"] for v in self.optim_attr_names.values()},
+            **{v: optimizable_tensors[k] for k, v in self.optim_attr_names.items()},
+        })
 
     def densify_and_prune(self, loss, out, camera):
         instruct = self.densifier.densify_and_prune(loss, out, camera, self.curr_step)
         hook = False
-        if instruct.replace_xyz_mask is not None  \
-                or instruct.replace_features_dc_mask is not None \
-                or instruct.replace_features_rest_mask is not None  \
-                or instruct.replace_opacity_mask is not None \
-                or instruct.replace_scaling_mask is not None  \
-                or instruct.replace_rotation_mask is not None:
-            if instruct.replace_xyz_mask is not None:
-                assert instruct.replace_xyz is not None
-            if instruct.replace_features_dc_mask is not None:
-                assert instruct.replace_features_dc is not None
-            if instruct.replace_features_rest_mask is not None:
-                assert instruct.replace_features_rest is not None
-            if instruct.replace_opacity_mask is not None:
-                assert instruct.replace_opacity is not None
-            if instruct.replace_scaling_mask is not None:
-                assert instruct.replace_scaling is not None
-            if instruct.replace_rotation_mask is not None:
-                assert instruct.replace_rotation is not None
-            self.replace_points(
-                instruct.replace_xyz_mask, instruct.replace_xyz,
-                instruct.replace_features_dc_mask, instruct.replace_features_dc,
-                instruct.replace_features_rest_mask, instruct.replace_features_rest,
-                instruct.replace_opacity_mask, instruct.replace_opacity,
-                instruct.replace_scaling_mask, instruct.replace_scaling,
-                instruct.replace_rotation_mask, instruct.replace_rotation,
-            )
+        if any(getattr(instruct, f"replace_{v}_mask") is not None for v in self.optim_attr_names.values()):
+            for v in self.optim_attr_names.values():
+                if getattr(instruct, f"replace_{v}_mask") is not None:
+                    assert getattr(instruct, f"replace_{v}") is not None, f"replace_{v}_mask and replace_{v} should be both None or both not None"
+            self.replace_points(**{
+                **{f"replace_{v}_mask": getattr(instruct, f"replace_{v}_mask") for v in self.optim_attr_names.values()},
+                **{f"replace_{v}": getattr(instruct, f"replace_{v}") for v in self.optim_attr_names.values()},
+            })
             hook = True
         if instruct.remove_mask is not None:
             self.remove_points(instruct.remove_mask)
             hook = True
-        if instruct.new_xyz is not None:
-            assert instruct.new_features_dc is not None
-            assert instruct.new_features_rest is not None
-            assert instruct.new_opacity is not None
-            assert instruct.new_scaling is not None
-            assert instruct.new_rotation is not None
-            self.add_points(
-                instruct.new_xyz,
-                instruct.new_features_dc,
-                instruct.new_features_rest,
-                instruct.new_opacity,
-                instruct.new_scaling,
-                instruct.new_rotation)
+        if any(getattr(instruct, f"new_{v}") is not None for v in self.optim_attr_names.values()):
+            for v in self.optim_attr_names.values():
+                assert getattr(instruct, f"new_{v}") is not None, f"new_{v} should not be None if any of the new points is not None"
+            self.add_points(**{
+                f"new_{v}": getattr(instruct, f"new_{v}") for v in self.optim_attr_names.values()
+            })
             hook = True
         if hook:
             self.densifier.after_densify_and_prune_hook(loss, out, camera)

@@ -45,6 +45,7 @@ def viewer_render_fn(
         R=R, T=T,
         bg_color=bg_color, device=device,
     )
+    print(f"Resolution: {width}x{height}")
 
     # Render
     out = gaussians(camera)
@@ -67,6 +68,7 @@ def viewing(
     try:
         while True:
             time.sleep(1)
+            torch.cuda.empty_cache()
     except KeyboardInterrupt:
         pass
 

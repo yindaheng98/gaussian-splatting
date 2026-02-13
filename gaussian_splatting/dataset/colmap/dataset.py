@@ -1,6 +1,8 @@
 import os
 from typing import List, NamedTuple
+import logging
 import numpy as np
+from PIL import Image
 
 import torch
 
@@ -49,6 +51,11 @@ def parse_colmap_camera(cameras, images, image_dir, load_mask=True, depth_dir=No
             raise ValueError("Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!")
 
         image_path = os.path.join(image_dir, extr.name)
+        with Image.open(image_path) as img:
+            width_file, height_file = img.size
+            if width_file != width or height_file != height:
+                logging.warning(f"Image size mismatch for {image_path}: expected ({width}, {height}), got ({width_file}, {height_file}) in file. Using size from file.")
+                width, height = width_file, height_file
         image_mask_path = None
         if load_mask:
             image_mask_path = os.path.join(image_dir, os.path.splitext(extr.name)[0] + '_mask.tiff')

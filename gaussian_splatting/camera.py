@@ -79,37 +79,26 @@ def build_camera(
     gt_image = None
     if image_path is not None:
         gt_image = read_image(image_path).to(device)
-        if gt_image.shape[1:] != (image_height, image_width):
-            logging.warning(f"gt_image shape {gt_image.shape} does not match expected shape {image_height}x{image_width}, resizing.")
-            gt_image = torch.nn.functional.interpolate(gt_image.unsqueeze(0), size=(image_height, image_width), mode='bilinear', align_corners=False).squeeze(0)
-            # logging.warning(f"gt_image shape {gt_image.shape} does not match expected shape {image_height}x{image_width}, update the shape.")
-            # assert abs((gt_image.shape[1] / image_height) / (gt_image.shape[2] / image_width) - 1) < 1e-3, "Aspect ratio mismatch."
-            # image_height, image_width = gt_image.shape[1:]
+        assert gt_image.shape[1:] == (image_height, image_width), f"gt_image shape {gt_image.shape} does not match expected shape {image_height}x{image_width}"
     gt_image_mask = None
     if image_mask_path is not None:
         if os.path.exists(image_mask_path):
             gt_image_mask = read_image_mask(image_mask_path).to(device)
-            if gt_image_mask.shape != (image_height, image_width):
-                logging.warning(f"gt_image_mask shape {gt_image_mask.shape} does not match expected shape {image_height}x{image_width}, resizing.")
-                gt_image_mask = torch.nn.functional.interpolate(gt_image_mask.unsqueeze(0).unsqueeze(0), size=(image_height, image_width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+            assert gt_image_mask.shape == (image_height, image_width), f"gt_image_mask shape {gt_image_mask.shape} does not match expected shape {image_height}x{image_width}"
         elif not os.path.exists(image_mask_path):
             logging.warning(f"Image mask path {image_mask_path} does not exist, skipping mask loading.")
     gt_depth = None
     if depth_path is not None:
         if os.path.exists(depth_path):
             gt_depth = read_depth(depth_path).to(device)
-            if gt_depth.shape != (image_height, image_width):
-                logging.warning(f"gt_depth shape {gt_depth.shape} does not match expected shape {image_height}x{image_width}, resizing.")
-                gt_depth = torch.nn.functional.interpolate(gt_depth.unsqueeze(0).unsqueeze(0), size=(image_height, image_width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+            assert gt_depth.shape == (image_height, image_width), f"gt_depth shape {gt_depth.shape} does not match expected shape {image_height}x{image_width}"
         elif not os.path.exists(depth_path):
             logging.warning(f"Depth path {depth_path} does not exist, skipping depth loading.")
     gt_depth_mask = None
     if depth_mask_path is not None:
         if os.path.exists(depth_mask_path):
             gt_depth_mask = read_depth_mask(depth_mask_path).to(device)
-            if gt_depth_mask.shape != (image_height, image_width):
-                logging.warning(f"gt_depth_mask shape {gt_depth_mask.shape} does not match expected shape {image_height}x{image_width}, resizing.")
-                gt_depth_mask = torch.nn.functional.interpolate(gt_depth_mask.unsqueeze(0).unsqueeze(0), size=(image_height, image_width), mode='bilinear', align_corners=False).squeeze(0).squeeze(0)
+            assert gt_depth_mask.shape == (image_height, image_width), f"gt_depth_mask shape {gt_depth_mask.shape} does not match expected shape {image_height}x{image_width}"
         elif not os.path.exists(depth_mask_path):
             logging.warning(f"Depth mask path {depth_mask_path} does not exist, skipping depth loading.")
     return Camera(

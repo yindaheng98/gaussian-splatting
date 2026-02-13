@@ -35,8 +35,7 @@ class DensificationInstruct:
     def _replace(self, **kwargs):
         return type(self)(**{**self._asdict(), **kwargs})
 
-    @staticmethod
-    def merge(a: 'DensificationInstruct', b: 'DensificationInstruct'):
+    def merge(a, b: 'DensificationInstruct'):  # a is self, but you can also call this by DensificationInstruct.merge(a, b)
         def cat_new(a: torch.Tensor, b: torch.Tensor):
             if a is None:
                 return b

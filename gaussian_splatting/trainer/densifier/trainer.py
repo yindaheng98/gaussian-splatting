@@ -137,11 +137,11 @@ class DensificationTrainer(BaseTrainer):
 
     def replace_points(self, **kwargs):
         # replace_xyz_mask, replace_xyz,
-        #  replace_features_dc_mask, replace_features_dc,
-        #  replace_features_rest_mask, replace_features_rest,
-        #  replace_opacity_mask, replace_opacity,
-        #  replace_scaling_mask, replace_scaling,
-        #  replace_rotation_mask, replace_rotation
+        # replace_features_dc_mask, replace_features_dc,
+        # replace_features_rest_mask, replace_features_rest,
+        # replace_opacity_mask, replace_opacity,
+        # replace_scaling_mask, replace_scaling,
+        # replace_rotation_mask, replace_rotation,
 
         optimizable_tensors = replace_tensors_to_optimizer(self.optimizer, {
             k: (kwargs[f"replace_{v}_mask"], kwargs[f"replace_{v}"]) for k, v in self.optim_attr_names.items()

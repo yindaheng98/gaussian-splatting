@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import NamedTuple
+from dataclasses import dataclass, fields
 import torch
 
 from gaussian_splatting import GaussianModel
 
 
-class DensificationInstruct(NamedTuple):
+@dataclass(frozen=True)  # frozen=True just like NamedTuple
+class DensificationInstruct:
     new_xyz: torch.Tensor = None
     new_features_dc: torch.Tensor = None
     new_features_rest: torch.Tensor = None
@@ -25,6 +26,14 @@ class DensificationInstruct(NamedTuple):
     replace_scaling: torch.Tensor = None
     replace_rotation_mask: torch.Tensor = None
     replace_rotation: torch.Tensor = None
+
+    # NamedTuple-compatible API
+
+    def _asdict(self):
+        return {f.name: getattr(self, f.name) for f in fields(self)}
+
+    def _replace(self, **kwargs):
+        return type(self)(**{**self._asdict(), **kwargs})
 
     @staticmethod
     def merge(a: 'DensificationInstruct', b: 'DensificationInstruct'):
@@ -53,27 +62,23 @@ class DensificationInstruct(NamedTuple):
             mask = torch.logical_or(a_mask, b_mask)
             return tmp[mask, ...]
 
-        return DensificationInstruct(
-            new_xyz=cat_new(a.new_xyz, b.new_xyz),
-            new_features_dc=cat_new(a.new_features_dc, b.new_features_dc),
-            new_features_rest=cat_new(a.new_features_rest, b.new_features_rest),
-            new_opacity=cat_new(a.new_opacity, b.new_opacity),
-            new_scaling=cat_new(a.new_scaling, b.new_scaling),
-            new_rotation=cat_new(a.new_rotation, b.new_rotation),
-            remove_mask=or_mask(a.remove_mask, b.remove_mask),
-            replace_xyz_mask=or_mask(a.replace_xyz_mask, b.replace_xyz_mask),
-            replace_xyz=cover_replace(a.replace_xyz_mask, a.replace_xyz, b.replace_xyz_mask, b.replace_xyz),
-            replace_features_dc_mask=or_mask(a.replace_features_dc_mask, b.replace_features_dc_mask),
-            replace_features_dc=cover_replace(a.replace_features_dc_mask, a.replace_features_dc, b.replace_features_dc_mask, b.replace_features_dc),
-            replace_features_rest_mask=or_mask(a.replace_features_rest_mask, b.replace_features_rest_mask),
-            replace_features_rest=cover_replace(a.replace_features_rest_mask, a.replace_features_rest, b.replace_features_rest_mask, b.replace_features_rest),
-            replace_opacity_mask=or_mask(a.replace_opacity_mask, b.replace_opacity_mask),
-            replace_opacity=cover_replace(a.replace_opacity_mask, a.replace_opacity, b.replace_opacity_mask, b.replace_opacity),
-            replace_scaling_mask=or_mask(a.replace_scaling_mask, b.replace_scaling_mask),
-            replace_scaling=cover_replace(a.replace_scaling_mask, a.replace_scaling, b.replace_scaling_mask, b.replace_scaling),
-            replace_rotation_mask=or_mask(a.replace_rotation_mask, b.replace_rotation_mask),
-            replace_rotation=cover_replace(a.replace_rotation_mask, a.replace_rotation, b.replace_rotation_mask, b.replace_rotation),
-        )
+        merged_kwargs = {}
+        for f in fields(a):
+            name = f.name
+            a_val = getattr(a, name)
+            b_val = getattr(b, name)
+            if name.startswith("new_"):
+                merged_kwargs[name] = cat_new(a_val, b_val)
+            elif name.endswith("_mask"):
+                merged_kwargs[name] = or_mask(a_val, b_val)
+            elif name.startswith("replace_"):
+                mask_name = f"{name}_mask"
+                merged_kwargs[name] = cover_replace(
+                    getattr(a, mask_name), a_val,
+                    getattr(b, mask_name), b_val
+                )
+
+        return type(a)(**merged_kwargs)
 
 
 class AbstractDensifier(ABC):
@@ -127,12 +132,4 @@ class NoopDensifier(AbstractDensifier):
         return self._model
 
     def densify_and_prune(self, loss, out, camera, step: int) -> DensificationInstruct:
-        return DensificationInstruct(
-            new_xyz=None,
-            new_features_dc=None,
-            new_features_rest=None,
-            new_opacity=None,
-            new_scaling=None,
-            new_rotation=None,
-            remove_mask=None
-        )
+        return DensificationInstruct()

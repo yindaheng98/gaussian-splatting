@@ -31,10 +31,10 @@ def DensificationTrainerWrapper(
 
 
 def BaseDensificationTrainer(
-        model: GaussianModel, scene_extent: float, *args,
+        model: GaussianModel, scene_extent: float,
         **configs):
     return DensificationTrainerWrapper(
-        lambda model, *args, **configs: NoopDensifier(model),
-        model, scene_extent, *args,
+        lambda model, scene_extent, **configs: NoopDensifier(model),
+        model, scene_extent,
         **configs
     )

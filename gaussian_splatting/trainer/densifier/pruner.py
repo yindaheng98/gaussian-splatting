@@ -58,7 +58,7 @@ class OpacityPruner(DensifierWrapper):
 
 
 def OpacityPrunerDensifierWrapper(
-        base_densifier_constructor: Callable[..., AbstractDensifier], # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
+        base_densifier_constructor: Callable[..., AbstractDensifier],  # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
         model: GaussianModel,
         scene_extent: float,
         *args,
@@ -68,9 +68,9 @@ def OpacityPrunerDensifierWrapper(
         prune_screensize_threshold=20,
         prune_percent_too_big=1,
         prune_opacity_threshold=0.005,
-        **kwargs):
+        **configs):
     return OpacityPruner(
-        base_densifier_constructor(model, scene_extent, *args, **kwargs),
+        base_densifier_constructor(model, scene_extent, *args, **configs),
         scene_extent,
         prune_from_iter=prune_from_iter,
         prune_until_iter=prune_until_iter,
@@ -83,10 +83,10 @@ def OpacityPrunerDensifierWrapper(
 
 def OpacityPrunerTrainerWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],
-        model: GaussianModel, scene_extent: float,
-        *args, **kwargs):
+        model: GaussianModel, scene_extent: float, *args,
+        **configs):
     return DensificationTrainer.from_densifier_constructor(
         partial(OpacityPrunerDensifierWrapper, base_densifier_constructor),
-        model, scene_extent,
-        *args, **kwargs
+        model, scene_extent, *args,
+        **configs
     )

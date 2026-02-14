@@ -111,16 +111,16 @@ class DensificationTrainer(BaseTrainer):
             self, model: GaussianModel,
             scene_extent: float,
             densifier: AbstractDensifier,
-            *args, **kwargs
+            **configs
     ):
-        super().__init__(model, scene_extent, *args, **kwargs)
+        super().__init__(model, scene_extent, **configs)
         self.densifier = densifier
 
-    def add_points(self, **kwargs):
+    def add_points(self, **attrs):
         # new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation
 
         optimizable_tensors = cat_tensors_to_optimizer(self.optimizer, {
-            k: kwargs[f"new_{v}"] for k, v in self.optim_attr_names.items()
+            k: attrs[f"new_{v}"] for k, v in self.optim_attr_names.items()
         })
 
         self.model.update_points_add(**{
@@ -135,7 +135,7 @@ class DensificationTrainer(BaseTrainer):
             **{v: optimizable_tensors[k] for k, v in self.optim_attr_names.items()},
         )
 
-    def replace_points(self, **kwargs):
+    def replace_points(self, **attrs):
         # replace_xyz_mask, replace_xyz,
         # replace_features_dc_mask, replace_features_dc,
         # replace_features_rest_mask, replace_features_rest,
@@ -144,11 +144,11 @@ class DensificationTrainer(BaseTrainer):
         # replace_rotation_mask, replace_rotation,
 
         optimizable_tensors = replace_tensors_to_optimizer(self.optimizer, {
-            k: (kwargs[f"replace_{v}_mask"], kwargs[f"replace_{v}"]) for k, v in self.optim_attr_names.items()
+            k: (attrs[f"replace_{v}_mask"], attrs[f"replace_{v}"]) for k, v in self.optim_attr_names.items()
         })
 
         self.model.update_points_replace(**{
-            **{f"{v}_mask": kwargs[f"replace_{v}_mask"] for v in self.optim_attr_names.values()},
+            **{f"{v}_mask": attrs[f"replace_{v}_mask"] for v in self.optim_attr_names.values()},
             **{v: optimizable_tensors[k] for k, v in self.optim_attr_names.items()},
         })
 
@@ -202,13 +202,11 @@ class DensificationTrainer(BaseTrainer):
             mask_mode="none",
             bg_color=None,
             # copy from BaseTrainer
-            **kwargs
+            **configs
     ) -> 'DensificationTrainer':
-        densifier = densifier_constructor(model, scene_extent, *args, **kwargs)
+        densifier = densifier_constructor(model, scene_extent, *args, **configs)
         return cls(
-            model=model,
-            scene_extent=scene_extent,
-            densifier=densifier,
+            model, scene_extent, densifier,
             lambda_dssim=lambda_dssim,
             position_lr_init=position_lr_init,
             position_lr_final=position_lr_final,

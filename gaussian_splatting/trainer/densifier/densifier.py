@@ -143,9 +143,9 @@ def SplitCloneDensifierWrapper(
         densify_percent_dense=0.01,
         densify_percent_too_big=0.8,
         densify_limit_n=None,
-        **kwargs):
+        **configs):
     return SplitCloneDensifier(
-        base_densifier_constructor(model, scene_extent, *args, **kwargs),
+        base_densifier_constructor(model, scene_extent, *args, **configs),
         scene_extent,
         densify_from_iter=densify_from_iter,
         densify_until_iter=densify_until_iter,
@@ -159,10 +159,10 @@ def SplitCloneDensifierWrapper(
 
 def SplitCloneDensifierTrainerWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],  # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
-        model: GaussianModel, scene_extent: float,
-        *args, **kwargs):
+        model: GaussianModel, scene_extent: float, *args,
+        **configs):
     return DensificationTrainer.from_densifier_constructor(
         partial(SplitCloneDensifierWrapper, base_densifier_constructor),
-        model, scene_extent,
-        *args, **kwargs
+        model, scene_extent, *args,
+        **configs
     )

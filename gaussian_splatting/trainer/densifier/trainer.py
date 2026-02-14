@@ -2,6 +2,7 @@ from typing import Callable, Dict, List, Tuple
 import torch
 import torch.nn as nn
 from gaussian_splatting import GaussianModel
+from gaussian_splatting.dataset import CameraDataset
 from gaussian_splatting.trainer import BaseTrainer
 
 from .abc import AbstractDensifier
@@ -109,11 +110,11 @@ class DensificationTrainer(BaseTrainer):
 
     def __init__(
             self, model: GaussianModel,
-            scene_extent: float,
+            dataset: CameraDataset,
             densifier: AbstractDensifier,
             **configs
     ):
-        super().__init__(model, scene_extent, **configs)
+        super().__init__(model, dataset, **configs)
         self.densifier = densifier
 
     def add_points(self, **attrs):
@@ -187,7 +188,7 @@ class DensificationTrainer(BaseTrainer):
         cls,
         densifier_constructor: Callable[..., AbstractDensifier],
             model: GaussianModel,
-            scene_extent: float,
+            dataset: CameraDataset,
             *args,
             # copy from BaseTrainer
             lambda_dssim=0.2,
@@ -204,9 +205,9 @@ class DensificationTrainer(BaseTrainer):
             # copy from BaseTrainer
             **configs
     ) -> 'DensificationTrainer':
-        densifier = densifier_constructor(model, scene_extent, *args, **configs)
+        densifier = densifier_constructor(model, dataset, *args, **configs)
         return cls(
-            model, scene_extent, densifier,
+            model, dataset, densifier,
             lambda_dssim=lambda_dssim,
             position_lr_init=position_lr_init,
             position_lr_final=position_lr_final,

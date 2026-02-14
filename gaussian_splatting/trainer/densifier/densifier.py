@@ -3,6 +3,7 @@ from typing import Callable
 import torch
 from gaussian_splatting.utils import build_rotation
 from gaussian_splatting import GaussianModel
+from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractDensifier, DensifierWrapper, DensificationInstruct
 from .trainer import DensificationTrainer
@@ -12,7 +13,7 @@ class SplitCloneDensifier(DensifierWrapper):
 
     def __init__(
         self, base_densifier: AbstractDensifier,
-        scene_extent,
+        dataset: CameraDataset,
         densify_from_iter=500,
         densify_until_iter=15000,
         densify_interval=100,
@@ -22,7 +23,7 @@ class SplitCloneDensifier(DensifierWrapper):
         densify_limit_n=None
     ):
         super().__init__(base_densifier)
-        self.scene_extent = scene_extent
+        self.scene_extent = dataset.scene_extent()
         self.densify_from_iter = densify_from_iter
         self.densify_until_iter = densify_until_iter
         self.densify_interval = densify_interval
@@ -134,7 +135,7 @@ class SplitCloneDensifier(DensifierWrapper):
 def SplitCloneDensifierWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],
         model: GaussianModel,
-        scene_extent: float,
+        dataset: CameraDataset,
         *args,
         densify_from_iter=500,
         densify_until_iter=15000,
@@ -145,8 +146,8 @@ def SplitCloneDensifierWrapper(
         densify_limit_n=None,
         **configs):
     return SplitCloneDensifier(
-        base_densifier_constructor(model, scene_extent, *args, **configs),
-        scene_extent,
+        base_densifier_constructor(model, dataset, *args, **configs),
+        dataset,
         densify_from_iter=densify_from_iter,
         densify_until_iter=densify_until_iter,
         densify_interval=densify_interval,
@@ -159,10 +160,10 @@ def SplitCloneDensifierWrapper(
 
 def SplitCloneDensifierTrainerWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],  # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
-        model: GaussianModel, scene_extent: float, *args,
+        model: GaussianModel, dataset: CameraDataset, *args,
         **configs):
     return DensificationTrainer.from_densifier_constructor(
         partial(SplitCloneDensifierWrapper, base_densifier_constructor),
-        model, scene_extent, *args,
+        model, dataset, *args,
         **configs
     )

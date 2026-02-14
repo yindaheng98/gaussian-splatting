@@ -2,19 +2,20 @@
 import torch
 
 from gaussian_splatting import Camera, GaussianModel
+from gaussian_splatting.dataset import CameraDataset
 from gaussian_splatting.trainer import AbstractTrainer, TrainerWrapper, BaseTrainer
 
 
 class ScaleRegularizer(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
-            scene_extent: float,
+            dataset: CameraDataset,
             scale_reg_from_iter=3000,
             scale_reg_thr_scale=1.0,
             scale_reg_weight=0.1,
     ):
         super().__init__(base_trainer)
-        self.scale_reg_scale = scene_extent
+        self.scale_reg_scale = dataset.scene_extent()
         self.scale_reg_from_iter = scale_reg_from_iter
         self.scale_reg_thr_scale = scale_reg_thr_scale
         self.scale_reg_weight = scale_reg_weight
@@ -34,7 +35,7 @@ class ScaleRegularizer(TrainerWrapper):
 def ScaleRegularizeTrainerWrapper(
     base_constructor,
     model: GaussianModel,
-    scene_extent: float,
+    dataset: CameraDataset,
     *args,
     scale_reg_from_iter=3000,
     scale_reg_thr_scale=1.0,
@@ -44,15 +45,15 @@ def ScaleRegularizeTrainerWrapper(
     return ScaleRegularizer(
         base_constructor(
             model,
-            scene_extent,
+            dataset,
             *args, **configs
         ),
-        scene_extent=scene_extent,
+        dataset=dataset,
         scale_reg_from_iter=scale_reg_from_iter,
         scale_reg_thr_scale=scale_reg_thr_scale,
         scale_reg_weight=scale_reg_weight,
     )
 
 
-def BaseScaleRegularizeTrainer(model: GaussianModel, scene_extent: float, **configs) -> ScaleRegularizer:
-    return ScaleRegularizeTrainerWrapper(BaseTrainer, model, scene_extent, **configs)
+def BaseScaleRegularizeTrainer(model: GaussianModel, dataset: CameraDataset, **configs) -> ScaleRegularizer:
+    return ScaleRegularizeTrainerWrapper(BaseTrainer, model, dataset, **configs)

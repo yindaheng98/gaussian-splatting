@@ -2,6 +2,7 @@
 import torch
 
 from gaussian_splatting import GaussianModel, Camera
+from gaussian_splatting.dataset import CameraDataset
 from .base import BaseTrainer
 from .abc import AbstractTrainer, TrainerWrapper
 
@@ -28,12 +29,12 @@ class SHLifter(TrainerWrapper):
 
 def BaseSHLiftTrainer(
         model: GaussianModel,
-        scene_extent: float,
+        dataset: CameraDataset,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
         **configs):
     return SHLifter(
-        BaseTrainer(model, scene_extent, **configs),
+        BaseTrainer(model, dataset, **configs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )

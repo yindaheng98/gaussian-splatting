@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 
 from gaussian_splatting import Camera, GaussianModel
+from gaussian_splatting.dataset import CameraDataset
 from gaussian_splatting.utils.schedular import get_expon_lr_func
 from .abc import AbstractTrainer, TrainerWrapper
 from .base import BaseTrainer
@@ -107,7 +108,7 @@ class DepthTrainer(TrainerWrapper):
 def DepthTrainerWrapper(
         base_trainer_constructor: Callable[..., AbstractTrainer],
         model: GaussianModel,
-        scene_extent: float,
+        dataset: CameraDataset,
         *args,
         depth_from_iter=7500,
         depth_resize=None,
@@ -119,7 +120,7 @@ def DepthTrainerWrapper(
         depth_l1_weight_max_steps=30_000,
         **configs) -> DepthTrainer:
     return DepthTrainer(
-        base_trainer=base_trainer_constructor(model, scene_extent, *args, **configs),
+        base_trainer=base_trainer_constructor(model, dataset, *args, **configs),
         depth_from_iter=depth_from_iter,
         depth_resize=depth_resize,
         depth_rescale_mode=depth_rescale_mode,
@@ -131,5 +132,5 @@ def DepthTrainerWrapper(
     )
 
 
-def BaseDepthTrainer(model: GaussianModel, scene_extent: float, **configs) -> DepthTrainer:
-    return DepthTrainerWrapper(BaseTrainer, model, scene_extent, **configs)
+def BaseDepthTrainer(model: GaussianModel, dataset: CameraDataset, **configs) -> DepthTrainer:
+    return DepthTrainerWrapper(BaseTrainer, model, dataset, **configs)

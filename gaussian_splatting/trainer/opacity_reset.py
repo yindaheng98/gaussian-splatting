@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 
 from gaussian_splatting.gaussian_model import GaussianModel
+from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractTrainer, TrainerWrapper
 
@@ -49,14 +50,14 @@ class OpacityResetter(TrainerWrapper):
 def OpacityResetTrainerWrapper(
         base_trainer_constructor: Callable[..., AbstractTrainer],
         model: GaussianModel,
-        scene_extent: float,
+        dataset: CameraDataset,
         *args,
         opacity_reset_from_iter=3000,
         opacity_reset_until_iter=15000,
         opacity_reset_interval=3000,
         **configs) -> OpacityResetter:
     return OpacityResetter(
-        base_trainer=base_trainer_constructor(model, scene_extent, *args, **configs),
+        base_trainer=base_trainer_constructor(model, dataset, *args, **configs),
         opacity_reset_from_iter=opacity_reset_from_iter,
         opacity_reset_until_iter=opacity_reset_until_iter,
         opacity_reset_interval=opacity_reset_interval,

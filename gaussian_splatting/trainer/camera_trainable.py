@@ -10,7 +10,6 @@ class CameraOptimizer(TrainerWrapper):
     def __init__(
             self,  base_trainer: AbstractTrainer,
             dataset: TrainableCameraDataset,
-            scene_extent: float,
             camera_rotation_lr_init=0.0001,
             camera_rotation_lr_final=0.000001,
             camera_rotation_lr_delay_mult=0.01,
@@ -24,6 +23,7 @@ class CameraOptimizer(TrainerWrapper):
             camera_exposure_lr_delay_mult=0.01,
             camera_exposure_lr_max_steps=30_000):
         super().__init__(base_trainer)
+        scene_extent = dataset.scene_extent()
         self.optimizer.add_param_group({'params': [dataset.quaternions], 'lr': camera_rotation_lr_init, "name": "quaternions"})
         self.optimizer.add_param_group({'params': [dataset.Ts], 'lr': camera_position_lr_init * scene_extent, "name": "Ts"})
         self.optimizer.add_param_group({'params': [dataset.exposures], 'lr': camera_exposure_lr_init, "name": "exposures"})
@@ -52,7 +52,6 @@ class CameraOptimizer(TrainerWrapper):
 def CameraTrainerWrapper(
     base_trainer_constructor: Callable[..., AbstractTrainer],
         model: CameraTrainableGaussianModel,
-        scene_extent: float,
         dataset: TrainableCameraDataset,
         *args,
         camera_position_lr_init=0.00016,
@@ -70,8 +69,8 @@ def CameraTrainerWrapper(
         **configs):
     return CameraOptimizer(
         # the same params as itself
-        base_trainer_constructor(model, scene_extent, dataset, *args, **configs),
-        dataset, scene_extent,
+        base_trainer_constructor(model, dataset, *args, **configs),
+        dataset,
         camera_position_lr_init=camera_position_lr_init,
         camera_position_lr_final=camera_position_lr_final,
         camera_position_lr_delay_mult=camera_position_lr_delay_mult,
@@ -89,10 +88,9 @@ def CameraTrainerWrapper(
 
 def BaseCameraTrainer(
         model: CameraTrainableGaussianModel,
-        scene_extent: float,
         dataset: TrainableCameraDataset,
         **configs):
     return CameraTrainerWrapper(
-        lambda model, scene_extent, dataset, **configs: BaseTrainer(model, scene_extent, **configs),
-        model, scene_extent, dataset, **configs
+        lambda model, dataset, **configs: BaseTrainer(model, dataset, **configs),
+        model, dataset, **configs
     )

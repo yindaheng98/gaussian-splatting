@@ -3,8 +3,8 @@ from typing import Callable, Dict
 import torch
 
 from gaussian_splatting import GaussianModel, Camera
-from gaussian_splatting.utils import l1_loss, ssim
-from gaussian_splatting.utils.schedular import get_expon_lr_func
+from gaussian_splatting.dataset import CameraDataset
+from gaussian_splatting.utils import l1_loss, ssim, get_expon_lr_func
 
 from .abc import AbstractTrainer
 
@@ -12,7 +12,7 @@ from .abc import AbstractTrainer
 class BaseTrainer(AbstractTrainer):
     def __init__(
             self, model: GaussianModel,
-            scene_extent: float,
+            dataset: CameraDataset,
             lambda_dssim=0.2,
             position_lr_init=0.00016,
             position_lr_final=0.0000016,
@@ -32,6 +32,7 @@ class BaseTrainer(AbstractTrainer):
             # tuple(float, float, float)=set bg_color to the given color
     ):
         super().__init__()
+        scene_extent = dataset.scene_extent()
         self.lambda_dssim = lambda_dssim
         assert mask_mode in ["none", "ignore", "bg_color"], f"Unknown mask policy: {mask_mode}"
         assert bg_color is None or bg_color == "random" or (

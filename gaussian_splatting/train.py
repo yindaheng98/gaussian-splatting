@@ -19,7 +19,7 @@ def prepare_training(
         with_scale_reg=False, configs={}) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
     dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=load_mask, load_depth=load_depth)
     gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply, backend=backend)
-    trainer = prepare_trainer(gaussians=gaussians, dataset=dataset, mode=mode, trainable_camera=trainable_camera, load_ply=load_ply, with_scale_reg=with_scale_reg, configs=configs)
+    trainer = prepare_trainer(gaussians=gaussians, dataset=dataset, mode=mode, load_ply=load_ply, with_scale_reg=with_scale_reg, configs=configs)
     return dataset, gaussians, trainer
 
 

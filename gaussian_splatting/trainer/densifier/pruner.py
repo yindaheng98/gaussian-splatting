@@ -2,6 +2,7 @@ from functools import partial
 from typing import Callable
 import torch
 from gaussian_splatting import GaussianModel
+from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractDensifier, DensifierWrapper
 from .trainer import DensificationTrainer
@@ -11,7 +12,7 @@ class OpacityPruner(DensifierWrapper):
 
     def __init__(
         self, base_densifier: AbstractDensifier,
-        scene_extent,
+        dataset: CameraDataset,
         prune_from_iter=1000,
         prune_until_iter=15000,
         prune_interval=100,
@@ -20,7 +21,7 @@ class OpacityPruner(DensifierWrapper):
         prune_opacity_threshold=0.005,
     ):
         super().__init__(base_densifier)
-        self.scene_extent = scene_extent
+        self.scene_extent = dataset.scene_extent()
         self.prune_from_iter = prune_from_iter
         self.prune_until_iter = prune_until_iter
         self.prune_interval = prune_interval
@@ -60,7 +61,7 @@ class OpacityPruner(DensifierWrapper):
 def OpacityPrunerDensifierWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],  # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
         model: GaussianModel,
-        scene_extent: float,
+        dataset: CameraDataset,
         *args,
         prune_from_iter=1000,
         prune_until_iter=15000,
@@ -70,8 +71,8 @@ def OpacityPrunerDensifierWrapper(
         prune_opacity_threshold=0.005,
         **configs):
     return OpacityPruner(
-        base_densifier_constructor(model, scene_extent, *args, **configs),
-        scene_extent,
+        base_densifier_constructor(model, dataset, *args, **configs),
+        dataset,
         prune_from_iter=prune_from_iter,
         prune_until_iter=prune_until_iter,
         prune_interval=prune_interval,
@@ -83,10 +84,10 @@ def OpacityPrunerDensifierWrapper(
 
 def OpacityPrunerTrainerWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],
-        model: GaussianModel, scene_extent: float, *args,
+        model: GaussianModel, dataset: CameraDataset, *args,
         **configs):
     return DensificationTrainer.from_densifier_constructor(
         partial(OpacityPrunerDensifierWrapper, base_densifier_constructor),
-        model, scene_extent, *args,
+        model, dataset, *args,
         **configs
     )

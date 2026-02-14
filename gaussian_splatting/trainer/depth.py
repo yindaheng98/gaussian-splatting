@@ -117,9 +117,9 @@ def DepthTrainerWrapper(
         depth_l1_weight_init=1.0,
         depth_l1_weight_final=0.01,
         depth_l1_weight_max_steps=30_000,
-        **kwargs) -> DepthTrainer:
+        **configs) -> DepthTrainer:
     return DepthTrainer(
-        base_trainer=base_trainer_constructor(model, scene_extent, *args, **kwargs),
+        base_trainer=base_trainer_constructor(model, scene_extent, *args, **configs),
         depth_from_iter=depth_from_iter,
         depth_resize=depth_resize,
         depth_rescale_mode=depth_rescale_mode,
@@ -131,5 +131,5 @@ def DepthTrainerWrapper(
     )
 
 
-def BaseDepthTrainer(model: GaussianModel, scene_extent: float, *args, **kwargs) -> DepthTrainer:
-    return DepthTrainerWrapper(BaseTrainer, model, scene_extent, *args, **kwargs)
+def BaseDepthTrainer(model: GaussianModel, scene_extent: float, **configs) -> DepthTrainer:
+    return DepthTrainerWrapper(BaseTrainer, model, scene_extent, **configs)

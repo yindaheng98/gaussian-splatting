@@ -54,9 +54,9 @@ def OpacityResetTrainerWrapper(
         opacity_reset_from_iter=3000,
         opacity_reset_until_iter=15000,
         opacity_reset_interval=3000,
-        **kwargs) -> OpacityResetter:
+        **configs) -> OpacityResetter:
     return OpacityResetter(
-        base_trainer=base_trainer_constructor(model, scene_extent, *args, **kwargs),
+        base_trainer=base_trainer_constructor(model, scene_extent, *args, **configs),
         opacity_reset_from_iter=opacity_reset_from_iter,
         opacity_reset_until_iter=opacity_reset_until_iter,
         opacity_reset_interval=opacity_reset_interval,

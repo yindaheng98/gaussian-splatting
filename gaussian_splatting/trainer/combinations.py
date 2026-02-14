@@ -10,40 +10,40 @@ from .depth import DepthTrainerWrapper, BaseDepthTrainer
 # Camera trainer
 
 
-def DepthCameraTrainer(model: GaussianModel, scene_extent: float, dataset: TrainableCameraDataset, *args, **kwargs):
-    return DepthTrainerWrapper(BaseCameraTrainer, model, scene_extent, dataset, *args, **kwargs)
+def DepthCameraTrainer(model: GaussianModel, scene_extent: float, dataset: TrainableCameraDataset, **configs):
+    return DepthTrainerWrapper(BaseCameraTrainer, model, scene_extent, dataset, **configs)
 
 
 # Densification trainers
 
 
-def BaseOpacityResetDensificationTrainer(model: GaussianModel, scene_extent: float, *args, **kwargs):
-    return OpacityResetTrainerWrapper(BaseDensificationTrainer, model, scene_extent, *args, **kwargs)
+def BaseOpacityResetDensificationTrainer(model: GaussianModel, scene_extent: float, **configs):
+    return OpacityResetTrainerWrapper(BaseDensificationTrainer, model, scene_extent, **configs)
 
 
-def DepthOpacityResetDensificationTrainer(model: GaussianModel, scene_extent: float, *args, **kwargs):
-    return DepthTrainerWrapper(BaseOpacityResetDensificationTrainer, model, scene_extent, *args, **kwargs)
+def DepthOpacityResetDensificationTrainer(model: GaussianModel, scene_extent: float, **configs):
+    return DepthTrainerWrapper(BaseOpacityResetDensificationTrainer, model, scene_extent, **configs)
 
 
-def BaseOpacityResetDensificationCameraTrainer(model: CameraTrainableGaussianModel, scene_extent: float, dataset: TrainableCameraDataset, *args, **kwargs):
+def BaseOpacityResetDensificationCameraTrainer(model: CameraTrainableGaussianModel, scene_extent: float, dataset: TrainableCameraDataset, **configs):
     return CameraTrainerWrapper(
-        lambda model, scene_extent, dataset, *args, **kwargs: BaseOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
-        model, scene_extent, dataset, *args, **kwargs
+        lambda model, scene_extent, dataset, **configs: BaseOpacityResetDensificationTrainer(model, scene_extent, **configs),
+        model, scene_extent, dataset, **configs
     )
 
 
-def DepthOpacityResetDensificationCameraTrainer(model: CameraTrainableGaussianModel, scene_extent: float, dataset: TrainableCameraDataset, *args, **kwargs):
+def DepthOpacityResetDensificationCameraTrainer(model: CameraTrainableGaussianModel, scene_extent: float, dataset: TrainableCameraDataset, **configs):
     return CameraTrainerWrapper(
-        lambda model, scene_extent, dataset, *args, **kwargs: DepthOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
-        model, scene_extent, dataset, *args, **kwargs
+        lambda model, scene_extent, dataset, **configs: DepthOpacityResetDensificationTrainer(model, scene_extent, **configs),
+        model, scene_extent, dataset, **configs
     )
 
 
 # SHLift trainers
 
 
-def DepthSHLiftTrainer(model: GaussianModel, scene_extent: float, *args, **kwargs):
-    return DepthTrainerWrapper(BaseSHLiftTrainer, model, scene_extent, *args, **kwargs)
+def DepthSHLiftTrainer(model: GaussianModel, scene_extent: float, **configs):
+    return DepthTrainerWrapper(BaseSHLiftTrainer, model, scene_extent, **configs)
 
 
 def BaseSHLiftCameraTrainer(
@@ -52,9 +52,9 @@ def BaseSHLiftCameraTrainer(
         dataset: TrainableCameraDataset,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
-        *args, **kwargs):
+        **configs):
     return SHLifter(
-        BaseCameraTrainer(model, scene_extent, dataset, *args, **kwargs),
+        BaseCameraTrainer(model, scene_extent, dataset, **configs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
@@ -66,9 +66,9 @@ def DepthSHLiftCameraTrainer(
         dataset: TrainableCameraDataset,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
-        *args, **kwargs):
+        **configs):
     return SHLifter(
-        DepthCameraTrainer(model, scene_extent, dataset, *args, **kwargs),
+        DepthCameraTrainer(model, scene_extent, dataset, **configs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
@@ -79,9 +79,9 @@ def DepthSHLiftOpacityResetDensificationTrainer(
         scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
-        *args, **kwargs):
+        **configs):
     return SHLifter(
-        DepthOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
+        DepthOpacityResetDensificationTrainer(model, scene_extent, **configs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
@@ -92,9 +92,9 @@ def BaseSHLiftOpacityResetDensificationTrainer(
         scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
-        *args, **kwargs):
+        **configs):
     return SHLifter(
-        BaseOpacityResetDensificationTrainer(model, scene_extent, *args, **kwargs),
+        BaseOpacityResetDensificationTrainer(model, scene_extent, **configs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
@@ -106,9 +106,9 @@ def DepthSHLiftOpacityResetDensificationCameraTrainer(
         dataset: TrainableCameraDataset,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
-        *args, **kwargs):
+        **configs):
     return SHLifter(
-        DepthOpacityResetDensificationCameraTrainer(model, scene_extent, dataset, *args, **kwargs),
+        DepthOpacityResetDensificationCameraTrainer(model, scene_extent, dataset, **configs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )
@@ -120,9 +120,9 @@ def BaseSHLiftOpacityResetDensificationCameraTrainer(
         dataset: TrainableCameraDataset,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
-        *args, **kwargs):
+        **configs):
     return SHLifter(
-        BaseOpacityResetDensificationCameraTrainer(model, scene_extent, dataset, *args, **kwargs),
+        BaseOpacityResetDensificationCameraTrainer(model, scene_extent, dataset, **configs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )

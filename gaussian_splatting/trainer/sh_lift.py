@@ -31,9 +31,9 @@ def BaseSHLiftTrainer(
         scene_extent: float,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
-        *args, **kwargs):
+        **configs):
     return SHLifter(
-        BaseTrainer(model, scene_extent, *args, **kwargs),
+        BaseTrainer(model, scene_extent, **configs),
         sh_degree_up_interval=sh_degree_up_interval,
         initial_sh_degree=initial_sh_degree
     )

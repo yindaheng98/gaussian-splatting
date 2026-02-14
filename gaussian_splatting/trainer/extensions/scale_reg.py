@@ -39,13 +39,13 @@ def ScaleRegularizeTrainerWrapper(
     scale_reg_from_iter=3000,
     scale_reg_thr_scale=1.0,
     scale_reg_weight=0.1,
-    **kwargs
+    **configs
 ) -> ScaleRegularizer:
     return ScaleRegularizer(
         base_constructor(
             model,
             scene_extent,
-            *args, **kwargs
+            *args, **configs
         ),
         scene_extent=scene_extent,
         scale_reg_from_iter=scale_reg_from_iter,
@@ -54,5 +54,5 @@ def ScaleRegularizeTrainerWrapper(
     )
 
 
-def BaseScaleRegularizeTrainer(model: GaussianModel, scene_extent: float, *args, **kwargs) -> ScaleRegularizer:
-    return ScaleRegularizeTrainerWrapper(BaseTrainer, model, scene_extent, *args, **kwargs)
+def BaseScaleRegularizeTrainer(model: GaussianModel, scene_extent: float, **configs) -> ScaleRegularizer:
+    return ScaleRegularizeTrainerWrapper(BaseTrainer, model, scene_extent, **configs)

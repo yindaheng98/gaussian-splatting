@@ -20,7 +20,10 @@ We **refactored the original code following the standard Python package structur
 * [**InstantSplat**](https://github.com/yindaheng98/instantsplat)(Refactored): Z. Fan et al., "[InstantSplat: Sparse-view Gaussian Splatting in Seconds](https://arxiv.org/abs/2403.20309)," CVPR NRI 2024
 * [**reduced-3dgs**](https://github.com/yindaheng98/reduced-3dgs)(Refactored): P. Papantonakis et al., "[Reducing the Memory Footprint of 3D Gaussian Splatting](https://doi.org/10.1145/3651282)," Proceedings of the ACM on Computer Graphics and Interactive Techniques, vol. 7, no. 1, May 2024
 * [**3dgs-mcmc**](https://github.com/yindaheng98/3dgs-mcmc)(Refactored): S. Kheradmand et al., "[3D Gaussian Splatting as Markov Chain Monte Carlo](https://proceedings.neurips.cc/paper_files/paper/2024/hash/93be245fce00a9bb2333c17ceae4b732-Abstract-Conference.html)," NeurIPS Spotlight Presentation 2024
-* [**TrackerSplat**](https://github.com/yindaheng98/TrackerSplat) (Original): D. Yin et al., "[TrackerSplat: Exploiting Point Tracking for Fast and Robust Dynamic 3D Gaussians Reconstruction](https://doi.org/10.1145/3757377.3763829)," SIGGRAPH Asia 2025
+* [**lapis-gs**](https://github.com/yindaheng98/lapis-gs)(Refactored): Y. Shi et al., "[LapisGS: Layered Progressive 3D Gaussian Splatting for Adaptive Streaming](https://doi.org/10.1109/3DV66043.2025.00096)," 3DV 2025
+* [**gscompressor**](https://github.com/yindaheng98/gscompressor)(Original): Compress 3DGS scenes by Draco.
+* [**gsvvcompressor**](https://github.com/yindaheng98/gsvvcompressor)(Original): A modular video compression framework for Gaussian Splatting models.
+* [**TrackerSplat**](https://github.com/yindaheng98/TrackerSplat)(Original): D. Yin et al., "[TrackerSplat: Exploiting Point Tracking for Fast and Robust Dynamic 3D Gaussians Reconstruction](https://doi.org/10.1145/3757377.3763829)," SIGGRAPH Asia 2025
 
 ## Install
 

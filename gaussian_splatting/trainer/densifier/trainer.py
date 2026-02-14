@@ -182,7 +182,9 @@ class DensificationTrainer(BaseTrainer):
         with torch.no_grad():
             self.densify_and_prune(loss, out, camera)
 
+    @classmethod
     def from_densifier_constructor(
+        cls,
         densifier_constructor: Callable[..., AbstractDensifier],
             model: GaussianModel,
             scene_extent: float,
@@ -203,7 +205,7 @@ class DensificationTrainer(BaseTrainer):
             **kwargs
     ) -> 'DensificationTrainer':
         densifier = densifier_constructor(model, scene_extent, *args, **kwargs)
-        return DensificationTrainer(
+        return cls(
             model=model,
             scene_extent=scene_extent,
             densifier=densifier,

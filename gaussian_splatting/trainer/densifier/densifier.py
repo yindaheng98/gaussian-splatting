@@ -113,7 +113,7 @@ class SplitCloneDensifier(DensifierWrapper):
         clone = self.densify_and_clone(grads, self.densify_grad_threshold, self.scene_extent)
         split = self.densify_and_split(grads, self.densify_grad_threshold, self.scene_extent)
 
-        return DensificationInstruct.merge(clone, split)
+        return clone.merge(split)
 
     def densify_and_prune(self, loss, out, camera, step: int):
         ret = super().densify_and_prune(loss, out, camera, step)
@@ -122,7 +122,7 @@ class SplitCloneDensifier(DensifierWrapper):
         if self.densify_from_iter <= step <= self.densify_until_iter and step % self.densify_interval == 0 \
                 and (self.densify_limit_n is None or self.model.get_xyz.shape[0] < self.densify_limit_n):
             dense = self.densify()
-            ret = DensificationInstruct.merge(ret, dense)
+            ret = dense.merge(ret)
         return ret
 
     def after_densify_and_prune_hook(self, loss, out, camera):

@@ -64,8 +64,8 @@ class DensificationInstruct:
         merged_kwargs = {}
         for f in fields(a):
             name = f.name
-            a_val = getattr(a, name)
-            b_val = getattr(b, name)
+            a_val = getattr(a, name, None)
+            b_val = getattr(b, name, None)
             if name.startswith("new_"):
                 merged_kwargs[name] = cat_new(a_val, b_val)
             elif name.endswith("_mask"):
@@ -73,8 +73,8 @@ class DensificationInstruct:
             elif name.startswith("replace_"):
                 mask_name = f"{name}_mask"
                 merged_kwargs[name] = cover_replace(
-                    getattr(a, mask_name), a_val,
-                    getattr(b, mask_name), b_val
+                    getattr(a, mask_name, None), a_val,
+                    getattr(b, mask_name, None), b_val
                 )
 
         return type(a)(**merged_kwargs)

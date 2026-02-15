@@ -71,9 +71,9 @@ def replace_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict:
 def mask_tensors_in_optimizer(optimizer: torch.optim.Optimizer, prune_mask: torch.Tensor, tensors_names: List[str]):
     optimizable_tensors = {}
     for group in optimizer.param_groups:
-        assert len(group["params"]) == 1
         if group["name"] not in tensors_names:
             continue
+        assert len(group["params"]) == 1
         mask = ~prune_mask
         stored_state = optimizer.state.get(group['params'][0], None)
         if stored_state is not None:

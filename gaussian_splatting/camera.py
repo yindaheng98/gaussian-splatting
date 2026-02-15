@@ -1,6 +1,7 @@
 import os
 from typing import NamedTuple, Callable, Tuple
 import torch
+import torch.nn.functional as F
 import logging
 from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, read_image, read_image_mask, read_depth, read_depth_mask, matrix_to_quaternion
 
@@ -57,6 +58,10 @@ def camera2dict(camera: Camera, id):
     return camera_entry
 
 
+def default_resize_if_mismatch(image: torch.Tensor, expected_height: int, expected_width: int):
+    return torch.nn.functional.interpolate(image.unsqueeze(0), size=(expected_height, expected_width), mode='bilinear', align_corners=False).squeeze(0)
+
+
 def build_camera(
         image_height: int, image_width: int,
         FoVx: float, FoVy: float,
@@ -64,7 +69,7 @@ def build_camera(
         image_path: str = None, image_mask_path: str = None,
         depth_path: str = None, depth_mask_path: str = None,
         bg_color: Tuple[float, float, float] = (0., 0., 0.),
-        device="cuda", custom_data: dict = {}
+        device="cuda", custom_data: dict = {}, resize_if_mismatch=default_resize_if_mismatch
 ):
     R, T = R.to(device=device, dtype=torch.float), T.to(device=device, dtype=torch.float)
     zfar = 100.0
@@ -79,11 +84,17 @@ def build_camera(
     gt_image = None
     if image_path is not None:
         gt_image = read_image(image_path).to(device)
+        if resize_if_mismatch and gt_image.shape[1:] != (image_height, image_width):
+            logging.warning(f"gt_image shape {gt_image.shape} does not match expected shape {image_height}x{image_width}, resizing.")
+            gt_image = resize_if_mismatch(image=gt_image, expected_height=image_height, expected_width=image_width)
         assert gt_image.shape[1:] == (image_height, image_width), f"gt_image shape {gt_image.shape} does not match expected shape {image_height}x{image_width}"
     gt_image_mask = None
     if image_mask_path is not None:
         if os.path.exists(image_mask_path):
             gt_image_mask = read_image_mask(image_mask_path).to(device)
+            if resize_if_mismatch and gt_image_mask.shape != (image_height, image_width):
+                logging.warning(f"gt_image_mask shape {gt_image_mask.shape} does not match expected shape {image_height}x{image_width}, resizing.")
+                gt_image_mask = resize_if_mismatch(image=gt_image_mask.unsqueeze(0), expected_height=image_height, expected_width=image_width).squeeze(0)
             assert gt_image_mask.shape == (image_height, image_width), f"gt_image_mask shape {gt_image_mask.shape} does not match expected shape {image_height}x{image_width}"
         elif not os.path.exists(image_mask_path):
             logging.warning(f"Image mask path {image_mask_path} does not exist, skipping mask loading.")
@@ -91,6 +102,9 @@ def build_camera(
     if depth_path is not None:
         if os.path.exists(depth_path):
             gt_depth = read_depth(depth_path).to(device)
+            if resize_if_mismatch and gt_depth.shape != (image_height, image_width):
+                logging.warning(f"gt_depth shape {gt_depth.shape} does not match expected shape {image_height}x{image_width}, resizing.")
+                gt_depth = resize_if_mismatch(image=gt_depth.unsqueeze(0), expected_height=image_height, expected_width=image_width).squeeze(0)
             assert gt_depth.shape == (image_height, image_width), f"gt_depth shape {gt_depth.shape} does not match expected shape {image_height}x{image_width}"
         elif not os.path.exists(depth_path):
             logging.warning(f"Depth path {depth_path} does not exist, skipping depth loading.")
@@ -98,6 +112,9 @@ def build_camera(
     if depth_mask_path is not None:
         if os.path.exists(depth_mask_path):
             gt_depth_mask = read_depth_mask(depth_mask_path).to(device)
+            if resize_if_mismatch and gt_depth_mask.shape != (image_height, image_width):
+                logging.warning(f"gt_depth_mask shape {gt_depth_mask.shape} does not match expected shape {image_height}x{image_width}, resizing.")
+                gt_depth_mask = resize_if_mismatch(image=gt_depth_mask.unsqueeze(0), expected_height=image_height, expected_width=image_width).squeeze(0)
             assert gt_depth_mask.shape == (image_height, image_width), f"gt_depth_mask shape {gt_depth_mask.shape} does not match expected shape {image_height}x{image_width}"
         elif not os.path.exists(depth_mask_path):
             logging.warning(f"Depth mask path {depth_mask_path} does not exist, skipping depth loading.")

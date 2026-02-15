@@ -11,9 +11,9 @@ from .abc import AbstractDensifier
 def cat_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dict[str, torch.Tensor]):
     optimizable_tensors = {}
     for group in optimizer.param_groups:
-        assert len(group["params"]) == 1
         if group["name"] not in tensors_dict:
             continue
+        assert len(group["params"]) == 1
         extension_tensor = tensors_dict[group["name"]]
         stored_state = optimizer.state.get(group['params'][0], None)
         if stored_state is not None:
@@ -42,10 +42,9 @@ def _replace(tensor: torch.Tensor, replace_mask: torch.Tensor, replace_tensor: t
 def replace_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dict[str, Tuple[torch.Tensor, torch.Tensor]]):
     optimizable_tensors = {}
     for group in optimizer.param_groups:
-        assert len(group["params"]) == 1
         if group["name"] not in tensors_dict:
             continue
-
+        assert len(group["params"]) == 1
         replace_mask, replace_tensor = tensors_dict[group["name"]]
         if replace_mask is None or replace_tensor is None:
             optimizable_tensors[group["name"]] = group["params"][0]

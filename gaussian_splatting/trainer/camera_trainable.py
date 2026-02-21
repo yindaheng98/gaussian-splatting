@@ -86,11 +86,5 @@ def CameraTrainerWrapper(
     )
 
 
-def BaseCameraTrainer(
-        model: CameraTrainableGaussianModel,
-        dataset: TrainableCameraDataset,
-        **configs):
-    return CameraTrainerWrapper(
-        lambda model, dataset, **configs: BaseTrainer(model, dataset, **configs),
-        model, dataset, **configs
-    )
+def BaseCameraTrainer(model: CameraTrainableGaussianModel, dataset: TrainableCameraDataset, **configs):
+    return CameraTrainerWrapper(BaseTrainer, model, dataset, **configs)

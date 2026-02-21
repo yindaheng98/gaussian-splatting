@@ -26,17 +26,11 @@ def DepthOpacityResetDensificationTrainer(model: GaussianModel, dataset: CameraD
 
 
 def BaseOpacityResetDensificationCameraTrainer(model: CameraTrainableGaussianModel, dataset: TrainableCameraDataset, **configs):
-    return CameraTrainerWrapper(
-        lambda model, dataset, **configs: BaseOpacityResetDensificationTrainer(model, dataset, **configs),
-        model, dataset, **configs
-    )
+    return CameraTrainerWrapper(BaseOpacityResetDensificationTrainer, model, dataset, **configs)
 
 
 def DepthOpacityResetDensificationCameraTrainer(model: CameraTrainableGaussianModel, dataset: TrainableCameraDataset, **configs):
-    return CameraTrainerWrapper(
-        lambda model, dataset, **configs: DepthOpacityResetDensificationTrainer(model, dataset, **configs),
-        model, dataset, **configs
-    )
+    return CameraTrainerWrapper(DepthOpacityResetDensificationTrainer, model, dataset, **configs)
 
 
 # SHLift trainers

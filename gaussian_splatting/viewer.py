@@ -48,11 +48,7 @@ def viewer_render_fn(
     print(f"Resolution: {width}x{height}")
 
     # Render
-    out = gaussians(camera)
-    rendered_image = out["render"]  # [3, H, W], clamped to [0, 1]
-
-    # Convert [3, H, W] to [H, W, 3] numpy
-    return rendered_image
+    return gaussians(camera)
 
 
 def viewing(
@@ -61,7 +57,7 @@ def viewing(
     server = viser.ViserServer(port=port, verbose=False)
     viewer = nerfview.Viewer(
         server=server,
-        render_fn=lambda cs, rts: viewer_render_fn(cs, rts, gaussians, device, bg_color).permute(1, 2, 0).cpu().numpy(),
+        render_fn=lambda cs, rts: viewer_render_fn(cs, rts, gaussians, device, bg_color)["render"].permute(1, 2, 0).cpu().numpy(),
         mode="rendering",
     )
     print(f"Viewer running on port {port}... Ctrl+C to exit.")

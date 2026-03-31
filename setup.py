@@ -44,7 +44,7 @@ if os.name == 'nt':
 
 setup(
     name="gaussian_splatting",
-    version='2.3.5',
+    version='2.3.6',
     author='yindaheng98',
     author_email='yindaheng98@gmail.com',
     url='https://github.com/yindaheng98/gaussian-splatting',
@@ -84,13 +84,15 @@ setup(
         'numpy',
         'opencv-python',
         'pillow',
-        'open3d',
     ],
     extras_require={
         'viewer': [
             'viser',
             'nerfview',
             'splines',
+        ],
+        'render-pcd': [
+            'open3d',
         ],
     },
 )

@@ -29,7 +29,7 @@ def save_cfg_args(destination: str, sh_degree: int, source: str):
         cfg_log_f.write(str(Namespace(sh_degree=sh_degree, source_path=source)))
 
 
-def training(dataset: CameraDataset, gaussians: GaussianModel, trainer: AbstractTrainer, destination: str, iteration: int, save_iterations: List[int], device: str, empty_cache_every_step=False):
+def training(dataset: CameraDataset, gaussians: GaussianModel, trainer: AbstractTrainer, destination: str, iteration: int, save_iterations: List[int], empty_cache_every_step=False):
     shutil.rmtree(os.path.join(destination, "point_cloud"), ignore_errors=True)  # remove the previous point cloud
     pbar = tqdm(range(1, iteration+1), dynamic_ncols=True, desc="Training")
     epoch = list(range(len(dataset)))
@@ -111,4 +111,4 @@ if __name__ == "__main__":
     training(
         dataset=dataset, gaussians=gaussians, trainer=trainer,
         destination=args.destination, iteration=args.iteration, save_iterations=args.save_iterations,
-        device=args.device, empty_cache_every_step=args.empty_cache_every_step)
+        empty_cache_every_step=args.empty_cache_every_step)

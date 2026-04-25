@@ -34,7 +34,7 @@ jobs:
             yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo && 
             yum install --setopt=obsoletes=0 -y cuda-nvcc-12-4-12.4.99-1 cuda-cudart-devel-12-4-12.4.99-1 && 
             export LD_LIBRARY_PATH="/usr/local/lib:/usr/local/cuda/lib64:$LD_LIBRARY_PATH" && export BUILD_WITH_CUDA=1 && 
-            python -m pip install -U torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124 && 
+            python -m pip install -U torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --extra-index-url https://download.pytorch.org/whl/cu124 && 
             python -c "import torch,os;print(os.path.join(os.path.dirname(torch.__file__),'lib'))" > /etc/ld.so.conf.d/999_torch.conf && 
             python -m pip install -U auditwheel
           CIBW_BUILD: ${{ matrix.cibw-version }}

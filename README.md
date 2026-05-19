@@ -1,5 +1,12 @@
 # 3D Gaussian Splatting (Packaged Python Version)
 
+[![Python versions](https://img.shields.io/pypi/pyversions/gaussian-splatting.svg?logo=python)](https://pypi.org/project/gaussian-splatting/)
+[![PyPI version](https://img.shields.io/pypi/v/gaussian-splatting.svg?logo=pypi)](https://pypi.org/project/gaussian-splatting/)
+[![Downloads](https://api.pepy.tech/personalized-badge/gaussian-splatting?period=month&left_color=grey&right_color=brightgreen&left_text=monthly%20downloads)](https://pepy.tech/project/gaussian-splatting)
+[![Total downloads](https://api.pepy.tech/personalized-badge/gaussian-splatting?period=total&left_color=grey&right_color=brightgreen&left_text=total%20downloads)](https://pepy.tech/project/gaussian-splatting)
+[![CI](https://github.com/yindaheng98/gaussian-splatting/actions/workflows/build-release-linux.yml/badge.svg)](https://github.com/yindaheng98/gaussian-splatting/actions/workflows/ci.yml)
+[![CI](https://github.com/yindaheng98/gaussian-splatting/actions/workflows/build-release-win.yml/badge.svg)](https://github.com/yindaheng98/gaussian-splatting/actions/workflows/ci.yml)
+
 This repo is the **refactored python training and inference code for [3D Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting)**.
 Forked from commit [a2a91d9093fd791fb01f556fa717f8d9f2cfbdd7](https://github.com/graphdeco-inria/gaussian-splatting/tree/a2a91d9093fd791fb01f556fa717f8d9f2cfbdd7).
 We **refactored the original code following the standard Python package structure**, while **keeping the algorithms used in the code identical to the original version**.

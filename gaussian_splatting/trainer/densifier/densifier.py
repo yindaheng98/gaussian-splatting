@@ -20,6 +20,7 @@ class SplitCloneDensifier(DensifierWrapper):
         densify_grad_threshold=0.0002,
         densify_percent_dense=0.01,
         densify_percent_too_big=0.8,
+        densify_min_scale=1e-6,
         densify_limit_n=None
     ):
         super().__init__(base_densifier)
@@ -30,6 +31,7 @@ class SplitCloneDensifier(DensifierWrapper):
         self.densify_grad_threshold = densify_grad_threshold
         self.densify_percent_dense = densify_percent_dense
         self.densify_percent_too_big = densify_percent_too_big
+        self.densify_min_scale = densify_min_scale
         self.densify_limit_n = densify_limit_n
 
         self.xyz_gradient_accum = None
@@ -65,7 +67,7 @@ class SplitCloneDensifier(DensifierWrapper):
         all_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.model.get_xyz[selected_pts_mask].repeat(N, 1)
         replace_xyz = all_xyz[:selected_pts_mask.sum().item(), ...]
         new_xyz = all_xyz[selected_pts_mask.sum().item():, ...]
-        new_scaling = self.model.scaling_inverse_activation(self.model.get_scaling[selected_pts_mask] / (0.8*N))
+        new_scaling = self.model.scaling_inverse_activation((self.model.get_scaling[selected_pts_mask] / (0.8*N)).clamp_min(self.densify_min_scale))
         new_rotation = self.model._rotation[selected_pts_mask]
         new_features_dc = self.model._features_dc[selected_pts_mask]
         new_features_rest = self.model._features_rest[selected_pts_mask]
@@ -143,6 +145,7 @@ def SplitCloneDensifierWrapper(
         densify_grad_threshold=0.0002,
         densify_percent_dense=0.01,
         densify_percent_too_big=0.8,
+        densify_min_scale=1e-6,
         densify_limit_n=None,
         **configs):
     return SplitCloneDensifier(
@@ -154,6 +157,7 @@ def SplitCloneDensifierWrapper(
         densify_grad_threshold=densify_grad_threshold,
         densify_percent_dense=densify_percent_dense,
         densify_percent_too_big=densify_percent_too_big,
+        densify_min_scale=densify_min_scale,
         densify_limit_n=densify_limit_n
     )
 

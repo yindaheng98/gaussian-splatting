@@ -116,6 +116,7 @@ class Gsplat2DGSGaussianModel(GaussianModel):
             "render": rendered_image,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
+            "depth": depth_image,
             "invdepth": 1 / depth_image,
             # Used by the densifier to get the gradient of the viewspace points
             # gsplat's gradient_2dgs gradient is in pixel space, but the

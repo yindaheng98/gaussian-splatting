@@ -159,6 +159,7 @@ class GaussianModel(nn.Module):
             "render": rendered_image,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
+            "depth": 1 / invdepth_image,  # The Inria rasterizer natively returns accumulated inverse depth.
             "invdepth": invdepth_image,
             # Used by the densifier to get the gradient of the viewspace points
             "get_viewspace_grad": lambda out: out["viewspace_points"].grad,

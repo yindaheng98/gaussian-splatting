@@ -96,6 +96,7 @@ class GsplatGaussianModel(GaussianModel):
             "render": rendered_image,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
+            "depth": depth_image,
             "invdepth": 1 / depth_image,  # Inria depth is inverse depth, gsplat depth is accumulated depth
             # Used by the densifier to get the gradient of the viewspace points
             # gsplat's means2d gradient is in pixel space, but the Inria-style

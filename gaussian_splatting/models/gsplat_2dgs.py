@@ -8,10 +8,6 @@ from .gsplat import CameraTrainableGsplatGaussianModel
 
 class Gsplat2DGSGaussianModel(GaussianModel):
 
-    def __init__(self, sh_degree, render_mode="RGB+D"):
-        super(Gsplat2DGSGaussianModel, self).__init__(sh_degree)
-        self.render_mode = render_mode
-
     def forward(self, viewpoint_camera: Camera):
         return self.render(
             viewpoint_camera=viewpoint_camera,
@@ -74,19 +70,28 @@ class Gsplat2DGSGaussianModel(GaussianModel):
             width,
             height,
             sh_degree=self.active_sh_degree,
-            render_mode=self.render_mode,
+            render_mode="RGB+ED",
             packed=False,
             backgrounds=viewpoint_camera.bg_color[None],  # [1, 3]
+            # Compute the per-pixel L1 pairwise depth-spread map
+            # sum_ij(w_i * w_j * |z_i - z_j|).  This only produces
+            # out["render_distort"]; the trainer must add it to the loss.
+            distloss=True,
+            # Use smooth, alpha-normalized expected depth for depth normals.
+            depth_mode="expected",
         )
-        # render_colors: [1, H, W, 4] (RGB+D), render_alphas: [1, H, W, 1]
+        # render_colors: [1, H, W, 4] (RGB+depth), render_alphas: [1, H, W, 1]
         # render_normals: [1, H, W, 3]  — always present from rasterize_to_pixels_2dgs
-        # normals_from_depth: [H, W, 3] — present when render_mode in ["RGB+D", "RGB+ED"]
+        # normals_from_depth: [H, W, 3]
         #                                  (.squeeze(0) reduces [1,H,W,3] to [H,W,3] since C=1)
         # render_distort: [1, H, W, 1], render_median: [1, H, W, 1]
 
         # Convert gsplat [1, H, W, C] output to Inria [C, H, W] convention
         rendered_image = render_colors[0, ..., 0:3].permute(2, 0, 1)  # [3, H, W]
-        depth_image = render_colors[0, ..., 3:4].permute(2, 0, 1)     # [1, H, W]
+        # Expected depth is the default surface; median depth remains available
+        # separately for diagnostics or surface extraction.
+        expected_depth = render_colors[0, ..., 3:4].permute(2, 0, 1)  # [1, H, W]
+        depth_image = expected_depth
 
         rendered_image = viewpoint_camera.postprocess(viewpoint_camera, rendered_image)
         rendered_image = rendered_image.clamp(0, 1)

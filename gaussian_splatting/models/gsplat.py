@@ -8,13 +8,8 @@ from gaussian_splatting.utils import normalize_quaternion, quaternion_to_matrix,
 
 class GsplatGaussianModel(GaussianModel):
 
-    def __init__(self, sh_degree, render_mode="RGB+D"):
+    def __init__(self, sh_degree):
         super(GsplatGaussianModel, self).__init__(sh_degree)
-        if render_mode not in ("RGB+D", "RGB+ED"):
-            raise ValueError(
-                f"GsplatGaussianModel requires a color-and-depth render mode, got {render_mode!r}"
-            )
-        self.render_mode = render_mode
 
     def forward(self, viewpoint_camera: Camera):
         return self.render(
@@ -66,7 +61,9 @@ class GsplatGaussianModel(GaussianModel):
             width,
             height,
             sh_degree=self.active_sh_degree,
-            render_mode=self.render_mode,
+            # RGB+ED returns alpha-normalized expected projection depth.
+            # Should be more accurate than "RGB+D"
+            render_mode="RGB+ED",
             packed=False,
             rasterize_mode="antialiased" if self.antialiasing else "classic",
             backgrounds=viewpoint_camera.bg_color[None],  # [1, 3]

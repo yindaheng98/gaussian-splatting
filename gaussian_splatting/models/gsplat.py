@@ -10,6 +10,10 @@ class GsplatGaussianModel(GaussianModel):
 
     def __init__(self, sh_degree, render_mode="RGB+D"):
         super(GsplatGaussianModel, self).__init__(sh_degree)
+        if render_mode not in ("RGB+D", "RGB+ED"):
+            raise ValueError(
+                f"GsplatGaussianModel requires a color-and-depth render mode, got {render_mode!r}"
+            )
         self.render_mode = render_mode
 
     def forward(self, viewpoint_camera: Camera):

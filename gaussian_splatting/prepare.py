@@ -56,6 +56,10 @@ basemodes = {
     "nodepth-densify": BaseOpacityResetDensificationTrainer,
     "nodepth-camera": BaseCameraTrainer,
     "nodepth-camera-densify": BaseOpacityResetDensificationCameraTrainer,
+    "normal-base": NormalTrainer,
+    "normal-densify": NormalOpacityResetDensificationTrainer,
+    "normal-camera": NormalCameraTrainer,
+    "normal-camera-densify": NormalOpacityResetDensificationCameraTrainer,
 }
 shliftmodes = {
     "base": SHLiftTrainer,
@@ -66,6 +70,10 @@ shliftmodes = {
     "nodepth-densify": BaseSHLiftOpacityResetDensificationTrainer,
     "nodepth-camera": BaseSHLiftCameraTrainer,
     "nodepth-camera-densify": BaseSHLiftOpacityResetDensificationCameraTrainer,
+    "normal-base": NormalSHLiftTrainer,
+    "normal-densify": NormalSHLiftOpacityResetDensificationTrainer,
+    "normal-camera": NormalSHLiftCameraTrainer,
+    "normal-camera-densify": NormalSHLiftOpacityResetDensificationCameraTrainer,
 }
 
 

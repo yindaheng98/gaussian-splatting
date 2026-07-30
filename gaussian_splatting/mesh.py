@@ -11,18 +11,6 @@ from gaussian_splatting.render import prepare_rendering
 from gaussian_splatting.utils import fov2focal
 
 
-def post_process_mesh(mesh: o3d.geometry.TriangleMesh, n_cluster_to_keep: int, min_cluster_triangles: int) -> o3d.geometry.TriangleMesh:
-    clusters, sizes, _ = mesh.cluster_connected_triangles()
-    clusters, sizes = np.asarray(clusters), np.asarray(sizes)
-    if not len(sizes):
-        return mesh
-    n_cluster_to_keep = min(n_cluster_to_keep, len(sizes))
-    mesh.remove_triangles_by_mask(sizes[clusters] < max(np.sort(sizes)[-n_cluster_to_keep], min_cluster_triangles))
-    mesh.remove_unreferenced_vertices()
-    mesh.remove_degenerate_triangles()
-    return mesh
-
-
 @torch.no_grad()
 def extract_mesh(
         dataset: CameraDataset, gaussians: GaussianModel, save: str,
@@ -60,12 +48,24 @@ def extract_mesh(
             color, depth, depth_scale=1, depth_trunc=depth_trunc, convert_rgb_to_intensity=False
         )
         volume.integrate(rgbd, intrinsic, camera.world_view_transform.T.cpu().numpy())
+
     os.makedirs(save, exist_ok=True)
+
     mesh = volume.extract_triangle_mesh()
-    raw_path, post_path = os.path.join(save, "fuse.ply"), os.path.join(save, "fuse_post.ply")
-    o3d.io.write_triangle_mesh(raw_path, mesh)
-    o3d.io.write_triangle_mesh(post_path, post_process_mesh(mesh, n_cluster_to_keep, min_cluster_triangles))
-    print(f"mesh saved at {raw_path}\npost-processed mesh saved at {post_path}")
+    path = os.path.join(save, "fuse.ply")
+    o3d.io.write_triangle_mesh(path, mesh)
+    print(f"mesh saved at {path}")
+
+    clusters, sizes, _ = mesh.cluster_connected_triangles()
+    clusters, sizes = np.asarray(clusters), np.asarray(sizes)
+    if len(sizes):
+        n_cluster_to_keep = min(n_cluster_to_keep, len(sizes))
+        mesh.remove_triangles_by_mask(sizes[clusters] < max(np.sort(sizes)[-n_cluster_to_keep], min_cluster_triangles))
+        mesh.remove_unreferenced_vertices()
+        mesh.remove_degenerate_triangles()
+    path = os.path.join(save, "fuse_post.ply")
+    o3d.io.write_triangle_mesh(path, mesh)
+    print(f"mesh post-processed saved at {path}")
 
 
 if __name__ == "__main__":

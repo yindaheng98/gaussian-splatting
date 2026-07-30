@@ -11,20 +11,23 @@ from gaussian_splatting.render import prepare_rendering
 from gaussian_splatting.utils import fov2focal
 
 
-def post_process_mesh(mesh: o3d.geometry.TriangleMesh, cluster_to_keep: int) -> o3d.geometry.TriangleMesh:
+def post_process_mesh(mesh: o3d.geometry.TriangleMesh, n_cluster_to_keep: int, min_cluster_triangles: int) -> o3d.geometry.TriangleMesh:
     clusters, sizes, _ = mesh.cluster_connected_triangles()
     clusters, sizes = np.asarray(clusters), np.asarray(sizes)
     if not len(sizes):
         return mesh
-    cluster_to_keep = min(cluster_to_keep, len(sizes))
-    mesh.remove_triangles_by_mask(sizes[clusters] < max(np.sort(sizes)[-cluster_to_keep], 50))
+    n_cluster_to_keep = min(n_cluster_to_keep, len(sizes))
+    mesh.remove_triangles_by_mask(sizes[clusters] < max(np.sort(sizes)[-n_cluster_to_keep], min_cluster_triangles))
     mesh.remove_unreferenced_vertices()
     mesh.remove_degenerate_triangles()
     return mesh
 
 
 @torch.no_grad()
-def extract_mesh(dataset: CameraDataset, gaussians: GaussianModel, save: str, depth_trunc_scale: float = 2.0, voxel_size_scale: float = 1.0, sdf_trunc_scale: float = 5.0, num_cluster: int = 50, mesh_res: int = 1024) -> None:
+def extract_mesh(
+        dataset: CameraDataset, gaussians: GaussianModel, save: str,
+        depth_trunc_scale: float = 2.0, voxel_size_scale: float = 1.0, sdf_trunc_scale: float = 5.0, mesh_res: int = 1024,
+        n_cluster_to_keep: int = 50, min_cluster_triangles: int = 50) -> None:
     gaussians.active_sh_degree = 0
     scene_extent = dataset.scene_extent()
     depth_trunc = depth_trunc_scale * scene_extent
@@ -61,7 +64,7 @@ def extract_mesh(dataset: CameraDataset, gaussians: GaussianModel, save: str, de
     mesh = volume.extract_triangle_mesh()
     raw_path, post_path = os.path.join(save, "fuse.ply"), os.path.join(save, "fuse_post.ply")
     o3d.io.write_triangle_mesh(raw_path, mesh)
-    o3d.io.write_triangle_mesh(post_path, post_process_mesh(mesh, num_cluster))
+    o3d.io.write_triangle_mesh(post_path, post_process_mesh(mesh, n_cluster_to_keep, min_cluster_triangles))
     print(f"mesh saved at {raw_path}\npost-processed mesh saved at {post_path}")
 
 

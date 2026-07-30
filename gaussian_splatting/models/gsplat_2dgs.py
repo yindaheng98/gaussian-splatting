@@ -108,6 +108,7 @@ class Gsplat2DGSGaussianModel(GaussianModel):
 
         # Convert gsplat [1, H, W, C] output to Inria [C, H, W] convention
         rendered_image = render_colors[0, ..., 0:3].permute(2, 0, 1)  # [3, H, W]
+        render_alphas_out = render_alphas[0].permute(2, 0, 1)         # [1, H, W]
         # Expected depth is the default surface; median depth remains available
         # separately for diagnostics or surface extraction.
         expected_depth = render_colors[0, ..., 3:4].permute(2, 0, 1)  # [1, H, W]
@@ -154,6 +155,7 @@ class Gsplat2DGSGaussianModel(GaussianModel):
             # Additional outputs from 2DGS (normals and distortion)
             "render_normals": render_normals_out,
             "normals_from_depth": normals_from_depth_out,
+            "render_alphas": render_alphas_out,
             "render_distort": render_distort,
             "render_median": render_median,
         }

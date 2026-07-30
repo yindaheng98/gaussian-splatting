@@ -78,7 +78,7 @@ shliftmodes = {
 
 
 def prepare_trainer(gaussians: GaussianModel, dataset: CameraDataset, mode: str, load_ply: str = None, with_scale_reg=False, configs={}) -> AbstractTrainer:
-    modes = shliftmodes if load_ply else basemodes
+    modes = basemodes if load_ply else shliftmodes
     constructor = modes[mode]
     if with_scale_reg:
         constructor = lambda *args, **configs: ScaleRegularizeTrainerWrapper(modes[mode], *args, **configs)

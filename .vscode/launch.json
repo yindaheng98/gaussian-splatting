@@ -25,6 +25,31 @@
             ]
         },
         {
+            "name": "train 2dgs",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gaussian_splatting.train",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-s",
+                "data/truck",
+                "-d",
+                "output/truck-2dgs",
+                "-i",
+                "30000",
+                "--mode",
+                "normal-densify",
+                "--backend",
+                "gsplat-2dgs",
+                "--empty_cache_every_step",
+                "-oopacity_lr=0.05",
+                "-oprune_from_iter=500",
+                "-oprune_percent_too_big=0.1",
+                "-oprune_opacity_threshold=0.05",
+            ]
+        },
+        {
             "name": "train camera",
             "type": "debugpy",
             "request": "launch",

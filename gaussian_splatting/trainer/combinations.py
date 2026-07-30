@@ -1,3 +1,5 @@
+from functools import partial
+
 from gaussian_splatting import GaussianModel, CameraTrainableGaussianModel
 from gaussian_splatting.dataset import CameraDataset, TrainableCameraDataset
 from .camera_trainable import CameraTrainerWrapper, BaseCameraTrainer
@@ -5,6 +7,7 @@ from .densifier import BaseDensificationTrainer
 from .opacity_reset import OpacityResetTrainerWrapper
 from .sh_lift import SHLifter, BaseSHLiftTrainer
 from .depth import DepthTrainerWrapper, BaseDepthTrainer
+from .normal import NormalTrainerWrapper
 
 
 # Camera trainer
@@ -127,3 +130,14 @@ SHLiftTrainer = DepthSHLiftTrainer
 SHLiftCameraTrainer = DepthSHLiftCameraTrainer
 SHLiftOpacityResetDensificationTrainer = DepthSHLiftOpacityResetDensificationTrainer
 SHLiftOpacityResetDensificationCameraTrainer = DepthSHLiftOpacityResetDensificationCameraTrainer
+
+
+# 2DGS normal consistency and depth distortion trainers
+NormalTrainer = partial(NormalTrainerWrapper, Trainer)
+NormalCameraTrainer = partial(NormalTrainerWrapper, CameraTrainer)
+NormalOpacityResetDensificationTrainer = partial(NormalTrainerWrapper, OpacityResetDensificationTrainer)
+NormalOpacityResetDensificationCameraTrainer = partial(NormalTrainerWrapper, OpacityResetDensificationCameraTrainer)
+NormalSHLiftTrainer = partial(NormalTrainerWrapper, SHLiftTrainer)
+NormalSHLiftCameraTrainer = partial(NormalTrainerWrapper, SHLiftCameraTrainer)
+NormalSHLiftOpacityResetDensificationTrainer = partial(NormalTrainerWrapper, SHLiftOpacityResetDensificationTrainer)
+NormalSHLiftOpacityResetDensificationCameraTrainer = partial(NormalTrainerWrapper, SHLiftOpacityResetDensificationCameraTrainer)

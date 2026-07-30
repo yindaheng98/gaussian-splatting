@@ -141,3 +141,30 @@ NormalSHLiftTrainer = partial(NormalTrainerWrapper, SHLiftTrainer)
 NormalSHLiftCameraTrainer = partial(NormalTrainerWrapper, SHLiftCameraTrainer)
 NormalSHLiftOpacityResetDensificationTrainer = partial(NormalTrainerWrapper, SHLiftOpacityResetDensificationTrainer)
 NormalSHLiftOpacityResetDensificationCameraTrainer = partial(NormalTrainerWrapper, SHLiftOpacityResetDensificationCameraTrainer)
+
+
+__all__ = [
+    "BaseOpacityResetDensificationTrainer",
+    "BaseOpacityResetDensificationCameraTrainer",
+    "BaseSHLiftCameraTrainer",
+    "BaseSHLiftOpacityResetDensificationTrainer",
+    "BaseSHLiftOpacityResetDensificationCameraTrainer",
+
+    "Trainer",
+    "CameraTrainer",
+    "OpacityResetDensificationTrainer",
+    "OpacityResetDensificationCameraTrainer",
+    "SHLiftTrainer",
+    "SHLiftCameraTrainer",
+    "SHLiftOpacityResetDensificationTrainer",
+    "SHLiftOpacityResetDensificationCameraTrainer",
+
+    "NormalTrainer",
+    "NormalCameraTrainer",
+    "NormalOpacityResetDensificationTrainer",
+    "NormalOpacityResetDensificationCameraTrainer",
+    "NormalSHLiftTrainer",
+    "NormalSHLiftCameraTrainer",
+    "NormalSHLiftOpacityResetDensificationTrainer",
+    "NormalSHLiftOpacityResetDensificationCameraTrainer",
+]

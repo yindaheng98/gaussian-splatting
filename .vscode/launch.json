@@ -119,6 +119,24 @@
             ]
         },
         {
+            "name": "mesh",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gaussian_splatting.mesh",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "-s",
+                "data/truck",
+                "-d",
+                "output/truck",
+                "-i",
+                "30000",
+                // "--backend",
+                // "gsplat-2dgs",
+            ]
+        },
+        {
             "name": "render camera",
             "type": "debugpy",
             "request": "launch",

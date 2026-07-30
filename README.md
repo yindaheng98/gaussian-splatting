@@ -97,6 +97,33 @@ python -m gaussian_splatting.render -s data/truck -d output/truck-camera -i 3000
 
 > 💡 See [.vscode/launch.json](.vscode/launch.json) for more example. See [gaussian_splatting.train](gaussian_splatting/train.py) and [gaussian_splatting.render](gaussian_splatting/render.py) for full options.
 
+## 2D Gaussian Splatting (2DGS)
+
+1. Train 2DGS with densification
+
+```shell
+python -m gaussian_splatting.train -s data/truck -d output/truck-2dgs -i 30000 --mode normal-densify --backend gsplat-2dgs
+```
+
+2. Render or view 2DGS
+
+```shell
+python -m gaussian_splatting.render -s data/truck -d output/truck-2dgs -i 30000 --backend gsplat-2dgs
+python -m gaussian_splatting.viewer -d output/truck-2dgs -i 30000 --backend gsplat-2dgs
+```
+
+3. Joint training 2DGS and camera (load the trained 2DGS)
+
+```shell
+python -m gaussian_splatting.train -s data/truck -d output/truck-2dgs-camera -i 30000 --mode normal-camera -l output/truck-2dgs/point_cloud/iteration_30000/point_cloud.ply --backend gsplat-2dgs
+```
+
+4. Render 2DGS with optimized cameras
+
+```shell
+python -m gaussian_splatting.render -s data/truck -d output/truck-2dgs-camera -i 30000 --mode camera --load_camera output/truck-2dgs-camera/cameras.json --backend gsplat-2dgs
+```
+
 ### (Optional) Generate depth maps before training
 
 1. Prepare Depth-Anything-V2

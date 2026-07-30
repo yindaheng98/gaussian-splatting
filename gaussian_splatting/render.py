@@ -110,5 +110,5 @@ if __name__ == "__main__":
         dataset, gaussians = prepare_rendering(
             sh_degree=args.sh_degree, source=args.source, device=args.device, trainable_camera=args.mode == "camera",
             load_ply=load_ply, load_camera=args.load_camera,
-            load_mask=not args.no_image_mask, load_depth=args.save_depth_pcd)
+            load_mask=not args.no_image_mask, load_depth=args.save_depth_pcd, backend=args.backend)
         rendering(dataset, gaussians, save, save_pcd=args.save_depth_pcd, rescale_depth_gt=not args.no_rescale_depth_gt)

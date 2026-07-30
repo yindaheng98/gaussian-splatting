@@ -159,9 +159,8 @@ class Gsplat2DGSGaussianModel(GaussianModel):
             "render_distort": render_distort,
             "render_median": render_median,
         }
-        # Explicitly free the large intermediate tensors from gsplat 2DGS rasterization.
-        # (render_normals, normals_from_depth, render_distort, render_median are not
-        # used by the current trainer/loss; keeping them in `out` wastes ~70 MB on GPU.)
+        # Explicitly free only intermediate containers. The geometry outputs
+        # remain referenced by `out` for normal consistency and depth distortion.
         del render_colors, render_alphas, info
         return out
 

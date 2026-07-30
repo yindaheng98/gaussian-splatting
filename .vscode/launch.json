@@ -17,6 +17,9 @@
                 "30000",
                 "--mode",
                 "densify",
+                // "normal-densify",
+                // "--backend",
+                // "gsplat-2dgs",
                 "--empty_cache_every_step",
                 "-odensify_grad_threshold=0.0001",
             ]
@@ -37,6 +40,9 @@
                 "30000",
                 "--mode",
                 "camera",
+                // "normal-camera",
+                // "--backend",
+                // "gsplat-2dgs",
                 "-l",
                 "output/truck/point_cloud/iteration_30000/point_cloud.ply",
                 "--load_camera",
@@ -61,6 +67,9 @@
                 "30000",
                 "--mode",
                 "camera-densify",
+                // "normal-camera-densify",
+                // "--backend",
+                // "gsplat-2dgs",
                 "--with_scale_reg",
                 "-odensify_grad_threshold=0.0001",
                 "--empty_cache_every_step",
@@ -80,8 +89,8 @@
                 "output/truck",
                 "-i",
                 "30000",
-                "--backend",
-                "gsplat",
+                // "--backend",
+                // "gsplat-2dgs",
             ]
         },
         {
@@ -100,6 +109,8 @@
                 "30000",
                 "--mode",
                 "camera",
+                // "--backend",
+                // "gsplat-2dgs",
                 "--load_camera",
                 "output/truck-camera/cameras.json",
                 "--save_depth_pcd",
@@ -121,6 +132,8 @@
                 "30000",
                 "--mode",
                 "camera",
+                // "--backend",
+                // "gsplat-2dgs",
                 "--load_camera",
                 "output/truck-camera-densify/cameras.json",
             ]
@@ -137,6 +150,8 @@
                 "output/truck",
                 "-i",
                 "30000",
+                // "--backend",
+                // "gsplat-2dgs",
             ]
         },
     ]

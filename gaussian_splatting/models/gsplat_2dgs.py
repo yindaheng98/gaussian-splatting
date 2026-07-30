@@ -8,6 +8,26 @@ from .gsplat import CameraTrainableGsplatGaussianModel
 
 class Gsplat2DGSGaussianModel(GaussianModel):
 
+    def __init__(self, sh_degree, min_scale=1e-6):
+        super(Gsplat2DGSGaussianModel, self).__init__(sh_degree)
+        self.min_scaling = self.scaling_inverse_activation(torch.tensor(min_scale)).item()
+
+    def create_from_pcd(self, points: torch.Tensor, colors: torch.Tensor):
+        super().create_from_pcd(points, colors)
+        with torch.no_grad():
+            self._scaling[:, 2] = self.min_scaling
+        return self
+
+    def load_ply(self, path: str):
+        super().load_ply(path)
+        with torch.no_grad():
+            self._scaling[:, 2] = self.min_scaling
+
+    def save_ply(self, path: str):
+        with torch.no_grad():
+            self._scaling[:, 2] = self.min_scaling
+        super().save_ply(path)
+
     def forward(self, viewpoint_camera: Camera):
         return self.render(
             viewpoint_camera=viewpoint_camera,

@@ -21,9 +21,9 @@ def prepare_rendering(
     return dataset, gaussians
 
 
-def build_pcd(color: torch.Tensor, invdepth: torch.Tensor, mask: torch.Tensor, FoVx, FoVy) -> torch.Tensor:
+def build_pcd(color: torch.Tensor, invdepth: torch.Tensor, mask: torch.Tensor, K: torch.Tensor) -> torch.Tensor:
     assert color.shape[-2:] == invdepth.shape[-2:], ValueError("Size of depth map should match color image")
-    xyz = unproject(1 / invdepth, FoVx, FoVy)
+    xyz = unproject(1 / invdepth, K)
     color = color.permute(1, 2, 0)
     import open3d as o3d
     pcd = o3d.geometry.PointCloud()
@@ -35,7 +35,7 @@ def build_pcd(color: torch.Tensor, invdepth: torch.Tensor, mask: torch.Tensor, F
 def build_pcd_rescale(
         color: torch.Tensor, color_gt: torch.Tensor,
         invdepth: torch.Tensor, invdepth_gt: torch.Tensor, mask: torch.Tensor,
-        FoVx, FoVy,
+        K: torch.Tensor,
         rescale_depth_gt=True) -> torch.Tensor:
     invdepth_gt_rescale = invdepth_gt
     mask = (mask > 1e-6)
@@ -43,8 +43,8 @@ def build_pcd_rescale(
         mean_gt, std_gt = invdepth_gt.mean(), invdepth_gt.std()
         mean, std = invdepth.mean(), invdepth.std()
         invdepth_gt_rescale = (invdepth_gt - mean_gt) / std_gt * std + mean
-    pcd = build_pcd(color, invdepth, mask, FoVx, FoVy)
-    pcd_gt = build_pcd(color_gt, invdepth_gt_rescale, mask, FoVx, FoVy)
+    pcd = build_pcd(color, invdepth, mask, K)
+    pcd_gt = build_pcd(color_gt, invdepth_gt_rescale, mask, K)
     return pcd, pcd_gt, invdepth_gt_rescale
 
 
@@ -81,11 +81,11 @@ def rendering(
             import open3d as o3d
             if camera.ground_truth_depth is not None:
                 mask = camera.ground_truth_depth_mask if camera.ground_truth_depth_mask is not None else torch.ones_like(camera.ground_truth_depth)
-                pcd, pcd_gt, invdepth_gt_rescale = build_pcd_rescale(rendering, gt, invdepth, camera.ground_truth_depth, mask, camera.FoVx, camera.FoVy, rescale_depth_gt)
+                pcd, pcd_gt, invdepth_gt_rescale = build_pcd_rescale(rendering, gt, invdepth, camera.ground_truth_depth, mask, camera.K, rescale_depth_gt)
                 o3d.io.write_point_cloud(os.path.join(gt_path, '{0:05d}'.format(idx) + ".ply"), pcd_gt)
                 tifffile.imwrite(os.path.join(gt_path, '{0:05d}'.format(idx) + "_invdepth.tiff"), invdepth_gt_rescale.cpu().numpy())
             else:
-                pcd = build_pcd(rendering, invdepth, torch.ones_like(invdepth).bool(), camera.FoVx, camera.FoVy)
+                pcd = build_pcd(rendering, invdepth, torch.ones_like(invdepth).bool(), camera.K)
             o3d.io.write_point_cloud(os.path.join(render_path, '{0:05d}'.format(idx) + ".ply"), pcd)
 
 

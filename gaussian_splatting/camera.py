@@ -3,7 +3,7 @@ from typing import NamedTuple, Callable, Tuple
 import torch
 import torch.nn.functional as F
 import logging
-from .utils import fov2focal, focal2fov, getK, getProjectionMatrix, getWorld2View2, read_image, read_image_mask, read_depth, read_depth_mask, matrix_to_quaternion
+from .utils import focal2fov, getK, getProjectionMatrix, getWorld2View2, read_image, read_image_mask, read_depth, read_depth_mask, matrix_to_quaternion
 
 
 class Camera(NamedTuple):
@@ -48,8 +48,8 @@ def camera2dict(camera: Camera, id):
         'height': camera.image_height,
         'position': pos.tolist(),
         'rotation': serializable_array_2d,
-        'fx': fov2focal(camera.FoVx, camera.image_width),
-        'fy': fov2focal(camera.FoVy, camera.image_height),
+        'fx': float(camera.K[0, 0].detach().cpu()),
+        'fy': float(camera.K[1, 1].detach().cpu()),
         'ground_truth_image_path': camera.ground_truth_image_path.replace("\\", "/") if camera.ground_truth_image_path else None,
         'ground_truth_image_mask_path': camera.ground_truth_image_mask_path.replace("\\", "/") if camera.ground_truth_image_mask_path else None,
         'ground_truth_depth_path': camera.ground_truth_depth_path.replace("\\", "/") if camera.ground_truth_depth_path else None,

@@ -1,4 +1,3 @@
-import math
 import torch
 from gsplat import rasterization
 
@@ -41,13 +40,7 @@ class GsplatGaussianModel(GaussianModel):
         # Construct viewmats [1, 4, 4] — undo Inria's transpose convention
         viewmats = viewpoint_camera.world_view_transform.T[None]  # [1, 4, 4]
 
-        # Construct Ks [1, 3, 3] from FoV
-        fx = width / (2 * math.tan(viewpoint_camera.FoVx * 0.5))
-        fy = height / (2 * math.tan(viewpoint_camera.FoVy * 0.5))
-        Ks = torch.tensor(
-            [[fx, 0, width / 2.0], [0, fy, height / 2.0], [0, 0, 1]],
-            device=device,
-        )[None]  # [1, 3, 3]
+        Ks = viewpoint_camera.K.to(device=device, dtype=means3D.dtype)[None]  # [1, 3, 3]
 
         # Rasterize — copied from gsplat/examples/simple_viewer.py
         render_colors, render_alphas, info = rasterization(

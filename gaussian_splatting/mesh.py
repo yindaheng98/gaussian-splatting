@@ -8,7 +8,6 @@ from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 from gaussian_splatting.prepare import backends
 from gaussian_splatting.render import prepare_rendering
-from gaussian_splatting.utils import fov2focal
 
 
 @torch.no_grad()
@@ -36,9 +35,11 @@ def extract_mesh(
         if mask is not None:
             depth[mask.cpu() < 0.5] = 0
         width, height = camera.image_width, camera.image_height
+        K = camera.K.detach().cpu()
         intrinsic = o3d.camera.PinholeCameraIntrinsic(
-            width, height, fov2focal(camera.FoVx, width), fov2focal(camera.FoVy, height),
-            (width - 1) / 2, (height - 1) / 2,
+            width, height,
+            float(K[0, 0]), float(K[1, 1]),
+            float(K[0, 2]), float(K[1, 2]),
         )
         color = o3d.geometry.Image(np.asarray(
             rgb.permute(1, 2, 0).clamp(0, 1).numpy() * 255, order="C", dtype=np.uint8

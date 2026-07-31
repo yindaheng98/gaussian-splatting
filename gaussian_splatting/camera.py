@@ -3,7 +3,7 @@ from typing import NamedTuple, Callable, Tuple
 import torch
 import torch.nn.functional as F
 import logging
-from .utils import fov2focal, focal2fov, getProjectionMatrix, getWorld2View2, read_image, read_image_mask, read_depth, read_depth_mask, matrix_to_quaternion
+from .utils import fov2focal, focal2fov, getK, getProjectionMatrix, getWorld2View2, read_image, read_image_mask, read_depth, read_depth_mask, matrix_to_quaternion
 
 
 class Camera(NamedTuple):
@@ -11,6 +11,7 @@ class Camera(NamedTuple):
     image_width: int
     FoVx: float
     FoVy: float
+    K: torch.Tensor
     R: torch.Tensor
     T: torch.Tensor
     world_view_transform: torch.Tensor
@@ -76,6 +77,7 @@ def build_camera(
     znear = 0.01
     trans = torch.zeros(3, device=R.device)
     scale = 1.0
+    K = getK(FoVx, FoVy, image_width, image_height).to(device=device, dtype=torch.float)
     world_view_transform = getWorld2View2(R, T, trans, scale).transpose(0, 1)
     projection_matrix = getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy).to(device).transpose(0, 1)
     full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
@@ -123,7 +125,7 @@ def build_camera(
         # image_width=colmap_camera.image_width, # colmap_camera.image_width is read from cameras.bin, maybe dfferent from the actual image size
         image_height=image_height, image_width=image_width,
         FoVx=FoVx, FoVy=FoVy,
-        R=R, T=T,
+        K=K, R=R, T=T,
         world_view_transform=world_view_transform,
         projection_matrix=projection_matrix,
         full_proj_transform=full_proj_transform,

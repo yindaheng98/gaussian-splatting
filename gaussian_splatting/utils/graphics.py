@@ -64,3 +64,15 @@ def fov2focal(fov, pixels):
 
 def focal2fov(focal, pixels):
     return 2*math.atan(pixels/(2*focal))
+
+
+def getK(fovX, fovY, width, height):
+    fx = fov2focal(fovX, width)
+    fy = fov2focal(fovY, height)
+    K = torch.zeros((3, 3))
+    K[0, 0] = fx
+    K[1, 1] = fy
+    K[0, 2] = width / 2.0
+    K[1, 2] = height / 2.0
+    K[2, 2] = 1.0
+    return K

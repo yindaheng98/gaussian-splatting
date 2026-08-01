@@ -34,8 +34,8 @@ class TrainableCameraDataset(CameraDataset):
     def __getitem__(self, idx) -> Camera:
         viewpoint_camera: Camera = self.cameras[idx]
         rel_w2c = torch.eye(4, device=self.quaternions.device)
-        quaternion = self.quaternions[idx, ...]
-        rel_w2c[:3, :3] = quaternion_to_matrix(normalize_quaternion(quaternion.unsqueeze(0))).squeeze(0)
+        quaternion = normalize_quaternion(self.quaternions[idx, ...].unsqueeze(0)).squeeze(0)
+        rel_w2c[:3, :3] = quaternion_to_matrix(quaternion)
         rel_w2c[:3, 3] = self.Ts[idx, ...]
 
         # use the computed camera matrices rather than the ones from the dataset
@@ -47,10 +47,11 @@ class TrainableCameraDataset(CameraDataset):
 
         return Camera(**{
             **self.cameras[idx]._asdict(),
+            'R': rel_w2c[:3, :3],
             'world_view_transform': w2c,
             'full_proj_transform': projmatrix,
             'camera_center': campos,
-            'quaternion': self.quaternions[idx, ...],
+            'quaternion': quaternion,
             'T': self.Ts[idx, ...],
             'postprocess': exposure_postprocess,
             'custom_data': {
@@ -67,16 +68,10 @@ class TrainableCameraDataset(CameraDataset):
         return self
 
     def save_cameras(self, path):
-        cameras = []
-        for idx, camera in enumerate(self):
-            cameras.append({
-                **camera2dict(Camera(**{
-                    **camera._asdict(),
-                    'R': quaternion_to_matrix(self.quaternions[idx, ...]),
-                    'T': self.Ts[idx, ...],
-                }), idx),
-                "exposure": self.exposures[idx, ...].detach().tolist(),
-            })
+        cameras = [{
+            **camera2dict(self[idx], idx),
+            "exposure": self.exposures[idx, ...].detach().tolist(),
+        } for idx in range(len(self))]
         with open(path, 'w') as f:
             json.dump(cameras, f, indent=2)
 

@@ -35,7 +35,7 @@ def BaseDensificationTrainer(
         model: GaussianModel, dataset: CameraDataset,
         **configs):
     return DensificationTrainerWrapper(
-        lambda model, dataset, **configs: NoopDensifier(model),
+        NoopDensifier,
         model, dataset,
         **configs
     )

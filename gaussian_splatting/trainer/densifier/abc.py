@@ -3,6 +3,7 @@ from dataclasses import dataclass, fields
 import torch
 
 from gaussian_splatting import GaussianModel
+from gaussian_splatting.dataset import CameraDataset
 
 
 @dataclass(frozen=True)  # frozen=True just like NamedTuple
@@ -122,7 +123,7 @@ class NoopDensifier(AbstractDensifier):
     It is used as the base of all densifier wrapper.
     '''
 
-    def __init__(self, model: GaussianModel):
+    def __init__(self, model: GaussianModel, dataset: CameraDataset, *args, **configs):
         super().__init__()
         self._model = model
 

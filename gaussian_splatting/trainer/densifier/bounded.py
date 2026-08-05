@@ -17,10 +17,12 @@ class BoundedSplitCloneDensifier(SplitCloneDensifier):
         self,
         *args,
         densify_target_lower_bound=10000,
+        densify_target_upper_bound=10000*1000,
         **kwargs
     ):
         super().__init__(*args, **kwargs)
         self.densify_target_lower_bound = densify_target_lower_bound
+        self.densify_target_upper_bound = densify_target_upper_bound
 
     def densify(self) -> DensificationInstruct:
         grads = self.xyz_gradient_accum / self.denom

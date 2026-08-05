@@ -64,8 +64,9 @@ class DepthTrainer(TrainerWrapper):
         local_center_invdepth_gt = local_invdepth_gt[center_idx, :].unsqueeze(0)
         local_scale_invdepth = local_invdepth.std(0).unsqueeze(0).detach()  # some region std may be 0, which will cause NaN in backward
         local_scale_invdepth_gt = local_invdepth_gt.std(0).unsqueeze(0)
-        local_scale = local_scale_invdepth / local_scale_invdepth_gt
-        local_scale[..., local_scale_invdepth_gt < 1e-6] = 1.0  # some region std may be 0, which will cause NaN in backward
+        local_scale_eps = torch.finfo(local_scale_invdepth_gt.dtype).eps
+        local_scale = local_scale_invdepth / local_scale_invdepth_gt.clamp_min(local_scale_eps)
+        local_scale = torch.where(local_scale_invdepth_gt < local_scale_eps, torch.ones_like(local_scale), local_scale)
         local_invdepth_gt_rescaled = (local_invdepth_gt - local_center_invdepth_gt) * local_scale + local_center_invdepth
         local_loss = local_invdepth - local_invdepth_gt_rescaled
         if mask is not None:

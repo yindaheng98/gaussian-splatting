@@ -41,11 +41,12 @@ class DepthTrainer(TrainerWrapper):
         self.depth_l1_weight = self.depth_l1_weight_func(self.curr_step)
 
     def compute_global_relative_depth_loss(self, invdepth: torch.Tensor, invdepth_gt: torch.Tensor, mask: torch.Tensor = None, rescale_gt: bool = True):
-        mean_gt, std_gt = invdepth_gt.mean(), invdepth_gt.std()
+        invdepth_eps = torch.finfo(invdepth.dtype).eps
+        mean_gt, std_gt = invdepth_gt.mean(), invdepth_gt.std().clamp_min(invdepth_eps)
         mean, std = mean_gt, std_gt
         if rescale_gt:
-            mean_gt, std_gt = invdepth_gt.mean(), invdepth_gt.std()
-            mean, std = invdepth.mean(), invdepth.std()
+            mean_gt, std_gt = invdepth_gt.mean(), invdepth_gt.std().clamp_min(invdepth_eps)
+            mean, std = invdepth.mean(), invdepth.std().clamp_min(invdepth_eps)
         norm_depth = (invdepth - mean) / std
         norm_depth_gt = (invdepth_gt - mean_gt) / std_gt
         depth_dist = torch.abs(norm_depth - norm_depth_gt)

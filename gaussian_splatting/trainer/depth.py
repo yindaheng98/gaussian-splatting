@@ -80,7 +80,7 @@ class DepthTrainer(TrainerWrapper):
         if self.depth_ground_truth_is_inversed:
             invdepth_gt = camera.ground_truth_depth
         else:
-            invdepth_gt = 1 / camera.ground_truth_depth
+            invdepth_gt = self.model.inverse_depth(camera.ground_truth_depth)
         mask = camera.ground_truth_depth_mask
         assert invdepth.shape == invdepth_gt.shape, f"invdepth shape {invdepth.shape} does not match gt depth shape {invdepth_gt.shape}"
         if self.depth_resize is not None:

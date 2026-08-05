@@ -13,11 +13,12 @@ from gaussian_splatting.render import prepare_rendering
 @torch.no_grad()
 def extract_mesh(
         dataset: CameraDataset, gaussians: GaussianModel, save: str,
+        min_depth: float = 0.1, max_depth: float = 100.0,
         depth_trunc_scale: float = 2.0, voxel_size_scale: float = 1.0, sdf_trunc_scale: float = 5.0, mesh_res: int = 1024,
         n_cluster_to_keep: int = 50, min_cluster_triangles: int = 50) -> None:
     gaussians.active_sh_degree = 0
     scene_extent = dataset.scene_extent()
-    depth_trunc = depth_trunc_scale * scene_extent
+    depth_trunc = min(max_depth, depth_trunc_scale * scene_extent)
     voxel_size = voxel_size_scale * depth_trunc / mesh_res
     sdf_trunc = sdf_trunc_scale * voxel_size
     volume = o3d.pipelines.integration.ScalableTSDFVolume(
@@ -30,10 +31,12 @@ def extract_mesh(
         if "render" not in out or "depth" not in out:
             raise KeyError("Mesh extraction requires render and depth outputs")
         rgb = out["render"].cpu()
-        depth = torch.nan_to_num(out["depth"].squeeze(0), nan=0, posinf=0, neginf=0).cpu()
+        depth = out["depth"].squeeze(0)
+        usable = (depth > min_depth) & (depth <= max_depth)
         mask = camera.ground_truth_image_mask
         if mask is not None:
-            depth[mask.cpu() < 0.5] = 0
+            usable = usable & (mask.squeeze() >= 0.5)
+        depth = torch.where(usable, depth, torch.zeros_like(depth)).cpu()
         width, height = camera.image_width, camera.image_height
         K = camera.K.detach().cpu()
         intrinsic = o3d.camera.PinholeCameraIntrinsic(

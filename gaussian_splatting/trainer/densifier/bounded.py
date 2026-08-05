@@ -27,9 +27,14 @@ class BoundedSplitCloneDensifier(SplitCloneDensifier):
     def densify(self) -> DensificationInstruct:
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
+        n_points = grads.shape[0]
 
         too_big_pts_mask = torch.max(self.model.get_scaling, dim=1).values > self.densify_percent_too_big*self.scene_extent
-        n_should_select = max(0, self.densify_target_lower_bound - grads.shape[0] - too_big_pts_mask.sum().item())
+        n_too_big = too_big_pts_mask.sum().item()
+
+        n_lower_select = max(0, self.densify_target_lower_bound - n_points - n_too_big)
+        n_upper_select = max(0, self.densify_target_upper_bound - n_points - n_too_big)
+
         gradscore = torch.norm(grads, dim=-1)
         gradscore_rest = gradscore[~too_big_pts_mask]
 

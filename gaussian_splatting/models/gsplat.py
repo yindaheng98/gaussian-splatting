@@ -71,6 +71,7 @@ class GsplatGaussianModel(GaussianModel):
 
         rendered_image = viewpoint_camera.postprocess(viewpoint_camera, rendered_image)
         rendered_image = rendered_image.clamp(0, 1)
+        # Invalid depth is always encoded as zero; any non-zero depth is valid.
         depth_eps = torch.finfo(depth_image.dtype).eps
         invdepth_image = (depth_image > depth_eps).to(depth_image.dtype) / depth_image.clamp_min(depth_eps)
 

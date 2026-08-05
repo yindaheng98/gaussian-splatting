@@ -155,6 +155,7 @@ class GaussianModel(nn.Module):
         # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
         # They will be excluded from value updates used in the splitting criteria.
         rendered_image = rendered_image.clamp(0, 1)
+        # Invalid inverse depth is always encoded as zero; any non-zero value is valid.
         invdepth_eps = torch.finfo(invdepth_image.dtype).eps
         depth_image = (invdepth_image > invdepth_eps).to(invdepth_image.dtype) / invdepth_image.clamp_min(invdepth_eps)
         out = {

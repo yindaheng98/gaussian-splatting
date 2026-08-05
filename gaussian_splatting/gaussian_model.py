@@ -155,11 +155,13 @@ class GaussianModel(nn.Module):
         # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
         # They will be excluded from value updates used in the splitting criteria.
         rendered_image = rendered_image.clamp(0, 1)
+        invdepth_eps = torch.finfo(invdepth_image.dtype).eps
+        depth_image = (invdepth_image > invdepth_eps).to(invdepth_image.dtype) / invdepth_image.clamp_min(invdepth_eps)
         out = {
             "render": rendered_image,
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
-            "depth": 1 / invdepth_image,  # The Inria rasterizer natively returns accumulated inverse depth.
+            "depth": depth_image,  # The Inria rasterizer natively returns accumulated inverse depth.
             "invdepth": invdepth_image,
             # Used by the densifier to get the gradient of the viewspace points
             "get_viewspace_grad": lambda out: out["viewspace_points"].grad,

@@ -108,6 +108,8 @@ class Gsplat2DGSGaussianModel(GaussianModel):
 
         rendered_image = viewpoint_camera.postprocess(viewpoint_camera, rendered_image)
         rendered_image = rendered_image.clamp(0, 1)
+        depth_eps = torch.finfo(depth_image.dtype).eps
+        invdepth_image = (depth_image > depth_eps).to(depth_image.dtype) / depth_image.clamp_min(depth_eps)
 
         # gsplat radii shape: [C, N, 2] (x and y pixel radii), Inria radii shape: [N]
         radii = info["radii"][0].max(dim=-1).values  # [1, N, 2] -> [N]
@@ -135,8 +137,7 @@ class Gsplat2DGSGaussianModel(GaussianModel):
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
             "depth": depth_image,
-            # Direct reciprocal intentionally maps uncovered depth zero to Inf.
-            "invdepth": 1 / depth_image,
+            "invdepth": invdepth_image,
             # Used by the densifier to get the gradient of the viewspace points
             # gsplat's gradient_2dgs gradient is in pixel space, but the
             # Inria-style densifier expects NDC-scale gradients.  gsplat's own

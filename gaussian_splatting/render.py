@@ -38,10 +38,18 @@ def build_pcd_rescale(
         K: torch.Tensor,
         rescale_depth_gt=True) -> torch.Tensor:
     invdepth_gt_rescale = invdepth_gt
-    mask = (mask > 1e-6)
-    if rescale_depth_gt:
-        mean_gt, std_gt = invdepth_gt.mean(), invdepth_gt.std()
-        mean, std = invdepth.mean(), invdepth.std()
+    mask = (
+        mask
+        & torch.isfinite(invdepth) & (invdepth > 0)
+        & torch.isfinite(invdepth_gt) & (invdepth_gt > 0)
+    )
+    if rescale_depth_gt and mask.any():
+        predicted_samples = invdepth[mask]
+        target_samples = invdepth_gt[mask]
+        mean_gt = target_samples.mean()
+        std_gt = target_samples.std(unbiased=False).clamp_min(torch.finfo(target_samples.dtype).eps)
+        mean = predicted_samples.mean()
+        std = predicted_samples.std(unbiased=False)
         invdepth_gt_rescale = (invdepth_gt - mean_gt) / std_gt * std + mean
     pcd = build_pcd(color, invdepth, mask, K)
     pcd_gt = build_pcd(color_gt, invdepth_gt_rescale, mask, K)
@@ -80,7 +88,7 @@ def rendering(
         if save_pcd:
             import open3d as o3d
             if camera.ground_truth_depth is not None:
-                mask = camera.ground_truth_depth_mask if camera.ground_truth_depth_mask is not None else torch.ones_like(camera.ground_truth_depth)
+                mask = (camera.ground_truth_depth_mask) > 0.5 if camera.ground_truth_depth_mask is not None else torch.ones_like(camera.ground_truth_depth).bool()
                 pcd, pcd_gt, invdepth_gt_rescale = build_pcd_rescale(rendering, gt, invdepth, camera.ground_truth_depth, mask, camera.K, rescale_depth_gt)
                 o3d.io.write_point_cloud(os.path.join(gt_path, '{0:05d}'.format(idx) + ".ply"), pcd_gt)
                 tifffile.imwrite(os.path.join(gt_path, '{0:05d}'.format(idx) + "_invdepth.tiff"), invdepth_gt_rescale.cpu().numpy())

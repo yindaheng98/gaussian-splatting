@@ -4,7 +4,7 @@ from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractDensifier, NoopDensifier
-from .densifier import SplitCloneDensifierWrapper
+from .bounded import BoundedSplitCloneDensifierWrapper
 from .pruner import OpacityPrunerDensifierWrapper
 from .trainer import DensificationTrainer
 
@@ -14,7 +14,7 @@ def DensificationDensifierWrapper(
         model: GaussianModel, dataset: CameraDataset, *args,
         **configs) -> AbstractDensifier:
     return OpacityPrunerDensifierWrapper(
-        partial(SplitCloneDensifierWrapper, base_densifier_constructor),
+        partial(BoundedSplitCloneDensifierWrapper, base_densifier_constructor),
         model, dataset, *args,
         **configs
     )

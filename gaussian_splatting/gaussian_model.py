@@ -20,6 +20,17 @@ def build_covariance_from_scaling_rotation(scaling, scaling_modifier, rotation):
 
 class GaussianModel(nn.Module):
 
+    @staticmethod
+    def inverse_depth(depth: torch.Tensor) -> torch.Tensor:
+        """Return reciprocal depth, with zero output as the invalid-value sentinel.
+
+        Use this for both depth-to-invdepth and invdepth-to-depth conversion.
+        Input values larger than dtype epsilon are considered valid and produce
+        non-zero output; all other inputs produce zero.
+        """
+        eps = torch.finfo(depth.dtype).eps
+        return (depth > eps).to(depth.dtype) / depth.clamp_min(eps)
+
     def setup_functions(self):
 
         self.scaling_activation = torch.exp
@@ -155,9 +166,7 @@ class GaussianModel(nn.Module):
         # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
         # They will be excluded from value updates used in the splitting criteria.
         rendered_image = rendered_image.clamp(0, 1)
-        # Invalid inverse depth is always encoded as zero; any non-zero value is valid.
-        invdepth_eps = torch.finfo(invdepth_image.dtype).eps
-        depth_image = (invdepth_image > invdepth_eps).to(invdepth_image.dtype) / invdepth_image.clamp_min(invdepth_eps)
+        depth_image = self.inverse_depth(invdepth_image)
         out = {
             "render": rendered_image,
             "visibility_filter": (radii > 0).nonzero(),

@@ -108,9 +108,7 @@ class Gsplat2DGSGaussianModel(GaussianModel):
 
         rendered_image = viewpoint_camera.postprocess(viewpoint_camera, rendered_image)
         rendered_image = rendered_image.clamp(0, 1)
-        # Invalid depth is always encoded as zero; any non-zero depth is valid.
-        depth_eps = torch.finfo(depth_image.dtype).eps
-        invdepth_image = (depth_image > depth_eps).to(depth_image.dtype) / depth_image.clamp_min(depth_eps)
+        invdepth_image = self.inverse_depth(depth_image)
 
         # gsplat radii shape: [C, N, 2] (x and y pixel radii), Inria radii shape: [N]
         radii = info["radii"][0].max(dim=-1).values  # [1, N, 2] -> [N]

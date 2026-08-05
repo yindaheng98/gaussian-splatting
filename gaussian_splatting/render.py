@@ -23,7 +23,7 @@ def prepare_rendering(
 
 def build_pcd(color: torch.Tensor, invdepth: torch.Tensor, mask: torch.Tensor, K: torch.Tensor) -> torch.Tensor:
     assert color.shape[-2:] == invdepth.shape[-2:], ValueError("Size of depth map should match color image")
-    xyz = unproject(1 / invdepth, K)
+    xyz = unproject(GaussianModel.inverse_depth(invdepth), K)
     color = color.permute(1, 2, 0)
     import open3d as o3d
     pcd = o3d.geometry.PointCloud()

@@ -65,6 +65,8 @@ class GsplatGaussianModel(GaussianModel):
 
         # Convert gsplat [1, H, W, C] output to Inria [C, H, W] convention
         rendered_image = render_colors[0, ..., 0:3].permute(2, 0, 1)  # [3, H, W]
+        # Match original PGSR: the zero rasterization background leaves
+        # uncovered pixels at depth zero.
         depth_image = render_colors[0, ..., 3:4].permute(2, 0, 1)     # [1, H, W]
 
         rendered_image = viewpoint_camera.postprocess(viewpoint_camera, rendered_image)
@@ -91,7 +93,8 @@ class GsplatGaussianModel(GaussianModel):
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
             "depth": depth_image,
-            "invdepth": 1 / depth_image,  # Inria depth is inverse depth, gsplat depth is accumulated depth
+            # Direct reciprocal intentionally maps uncovered depth zero to Inf.
+            "invdepth": 1 / depth_image,
             # Used by the densifier to get the gradient of the viewspace points
             # gsplat's means2d gradient is in pixel space, but the Inria-style
             # densifier expects NDC-scale gradients (the original Inria rasterizer

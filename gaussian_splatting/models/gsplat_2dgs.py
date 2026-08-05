@@ -102,10 +102,9 @@ class Gsplat2DGSGaussianModel(GaussianModel):
         # Convert gsplat [1, H, W, C] output to Inria [C, H, W] convention
         rendered_image = render_colors[0, ..., 0:3].permute(2, 0, 1)  # [3, H, W]
         render_alphas_out = render_alphas[0].permute(2, 0, 1)         # [1, H, W]
-        # Expected depth is the default surface; median depth remains available
-        # separately for diagnostics or surface extraction.
-        expected_depth = render_colors[0, ..., 3:4].permute(2, 0, 1)  # [1, H, W]
-        depth_image = expected_depth
+        # Expected depth is the default surface; matching original PGSR, its
+        # zero rasterization background leaves uncovered pixels at depth zero.
+        depth_image = render_colors[0, ..., 3:4].permute(2, 0, 1)  # [1, H, W]
 
         rendered_image = viewpoint_camera.postprocess(viewpoint_camera, rendered_image)
         rendered_image = rendered_image.clamp(0, 1)
@@ -136,6 +135,7 @@ class Gsplat2DGSGaussianModel(GaussianModel):
             "visibility_filter": (radii > 0).nonzero(),
             "radii": radii,
             "depth": depth_image,
+            # Direct reciprocal intentionally maps uncovered depth zero to Inf.
             "invdepth": 1 / depth_image,
             # Used by the densifier to get the gradient of the viewspace points
             # gsplat's gradient_2dgs gradient is in pixel space, but the

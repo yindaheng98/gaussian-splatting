@@ -1,4 +1,4 @@
-
+from typing import Callable
 import torch
 
 from gaussian_splatting import GaussianModel, Camera
@@ -27,14 +27,21 @@ class SHLifter(TrainerWrapper):
         return super().loss(out, camera)
 
 
-def BaseSHLiftTrainer(
+def SHLiftTrainerWrapper(
+        base_trainer_constructor: Callable[..., AbstractTrainer],
         model: GaussianModel,
         dataset: CameraDataset,
+        *args,
         sh_degree_up_interval=1000,
         initial_sh_degree=0,
-        **configs):
+        **configs) -> SHLifter:
     return SHLifter(
-        BaseTrainer(model, dataset, **configs),
+        base_trainer=base_trainer_constructor(model, dataset, *args, **configs),
         sh_degree_up_interval=sh_degree_up_interval,
-        initial_sh_degree=initial_sh_degree
+        initial_sh_degree=initial_sh_degree,
     )
+
+
+def BaseSHLiftTrainer(model: GaussianModel, dataset: CameraDataset, **configs) -> SHLifter:
+    return SHLiftTrainerWrapper(BaseTrainer, model, dataset, **configs)
+

@@ -5,7 +5,7 @@ from gaussian_splatting.dataset import CameraDataset, TrainableCameraDataset
 from .camera_trainable import CameraTrainerWrapper, BaseCameraTrainer
 from .densifier import BaseDensificationTrainer
 from .opacity_reset import OpacityResetTrainerWrapper
-from .sh_lift import SHLifter, BaseSHLiftTrainer
+from .sh_lift import SHLiftTrainerWrapper, BaseSHLiftTrainer
 from .depth import DepthTrainerWrapper, BaseDepthTrainer
 from .normal import NormalTrainerWrapper
 
@@ -43,82 +43,28 @@ def DepthSHLiftTrainer(model: GaussianModel, dataset: CameraDataset, **configs):
     return DepthTrainerWrapper(BaseSHLiftTrainer, model, dataset, **configs)
 
 
-def BaseSHLiftCameraTrainer(
-        model: GaussianModel,
-        dataset: TrainableCameraDataset,
-        sh_degree_up_interval=1000,
-        initial_sh_degree=0,
-        **configs):
-    return SHLifter(
-        BaseCameraTrainer(model, dataset, **configs),
-        sh_degree_up_interval=sh_degree_up_interval,
-        initial_sh_degree=initial_sh_degree
-    )
+def BaseSHLiftCameraTrainer(model: GaussianModel, dataset: TrainableCameraDataset, **configs):
+    return SHLiftTrainerWrapper(BaseCameraTrainer, model, dataset, **configs)
 
 
-def DepthSHLiftCameraTrainer(
-        model: GaussianModel,
-        dataset: TrainableCameraDataset,
-        sh_degree_up_interval=1000,
-        initial_sh_degree=0,
-        **configs):
-    return SHLifter(
-        DepthCameraTrainer(model, dataset, **configs),
-        sh_degree_up_interval=sh_degree_up_interval,
-        initial_sh_degree=initial_sh_degree
-    )
+def DepthSHLiftCameraTrainer(model: GaussianModel, dataset: TrainableCameraDataset, **configs):
+    return SHLiftTrainerWrapper(DepthCameraTrainer, model, dataset, **configs)
 
 
-def DepthSHLiftOpacityResetDensificationTrainer(
-        model: GaussianModel,
-        dataset: CameraDataset,
-        sh_degree_up_interval=1000,
-        initial_sh_degree=0,
-        **configs):
-    return SHLifter(
-        DepthOpacityResetDensificationTrainer(model, dataset, **configs),
-        sh_degree_up_interval=sh_degree_up_interval,
-        initial_sh_degree=initial_sh_degree
-    )
+def DepthSHLiftOpacityResetDensificationTrainer(model: GaussianModel, dataset: CameraDataset, **configs):
+    return SHLiftTrainerWrapper(DepthOpacityResetDensificationTrainer, model, dataset, **configs)
 
 
-def BaseSHLiftOpacityResetDensificationTrainer(
-        model: GaussianModel,
-        dataset: CameraDataset,
-        sh_degree_up_interval=1000,
-        initial_sh_degree=0,
-        **configs):
-    return SHLifter(
-        BaseOpacityResetDensificationTrainer(model, dataset, **configs),
-        sh_degree_up_interval=sh_degree_up_interval,
-        initial_sh_degree=initial_sh_degree
-    )
+def BaseSHLiftOpacityResetDensificationTrainer(model: GaussianModel, dataset: CameraDataset, **configs):
+    return SHLiftTrainerWrapper(BaseOpacityResetDensificationTrainer, model, dataset, **configs)
 
 
-def DepthSHLiftOpacityResetDensificationCameraTrainer(
-        model: GaussianModel,
-        dataset: TrainableCameraDataset,
-        sh_degree_up_interval=1000,
-        initial_sh_degree=0,
-        **configs):
-    return SHLifter(
-        DepthOpacityResetDensificationCameraTrainer(model, dataset, **configs),
-        sh_degree_up_interval=sh_degree_up_interval,
-        initial_sh_degree=initial_sh_degree
-    )
+def DepthSHLiftOpacityResetDensificationCameraTrainer(model: GaussianModel, dataset: TrainableCameraDataset, **configs):
+    return SHLiftTrainerWrapper(DepthOpacityResetDensificationCameraTrainer, model, dataset, **configs)
 
 
-def BaseSHLiftOpacityResetDensificationCameraTrainer(
-        model: GaussianModel,
-        dataset: TrainableCameraDataset,
-        sh_degree_up_interval=1000,
-        initial_sh_degree=0,
-        **configs):
-    return SHLifter(
-        BaseOpacityResetDensificationCameraTrainer(model, dataset, **configs),
-        sh_degree_up_interval=sh_degree_up_interval,
-        initial_sh_degree=initial_sh_degree
-    )
+def BaseSHLiftOpacityResetDensificationCameraTrainer(model: GaussianModel, dataset: TrainableCameraDataset, **configs):
+    return SHLiftTrainerWrapper(BaseOpacityResetDensificationCameraTrainer, model, dataset, **configs)
 
 
 # Aliases for default trainers

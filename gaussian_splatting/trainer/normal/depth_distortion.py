@@ -8,7 +8,6 @@ from ..abc import AbstractTrainer, TrainerWrapper
 from ..registry import trainer_wrap
 
 
-@trainer_wrap("depthdistortion")
 class DepthDistortionTrainer(TrainerWrapper):
 
     def __init__(
@@ -35,6 +34,7 @@ class DepthDistortionTrainer(TrainerWrapper):
         return loss + depth_distortion.mean() * self.depth_distortion_weight
 
 
+@trainer_wrap("depthdistortion")
 def DepthDistortionTrainerWrapper(
         base_trainer_constructor: Callable[..., AbstractTrainer],
         model: GaussianModel,

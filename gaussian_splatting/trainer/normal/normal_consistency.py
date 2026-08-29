@@ -8,7 +8,6 @@ from ..abc import AbstractTrainer, TrainerWrapper
 from ..registry import trainer_wrap
 
 
-@trainer_wrap("normalconsistency")
 class NormalConsistencyTrainer(TrainerWrapper):
 
     def __init__(
@@ -40,6 +39,7 @@ class NormalConsistencyTrainer(TrainerWrapper):
         return loss + normal_error.mean() * self.normal_consistency_weight
 
 
+@trainer_wrap("normalconsistency")
 def NormalConsistencyTrainerWrapper(
         base_trainer_constructor: Callable[..., AbstractTrainer],
         model: GaussianModel,

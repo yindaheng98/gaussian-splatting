@@ -25,7 +25,6 @@ def replace_tensor_to_optimizer(optimizer: torch.optim.Optimizer, tensor, name):
     return optimizable_tensors
 
 
-@trainer_wrap("opacityreset")
 class OpacityResetter(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
@@ -49,6 +48,7 @@ class OpacityResetter(TrainerWrapper):
         return super().optim_step()
 
 
+@trainer_wrap("opacityreset")
 def OpacityResetTrainerWrapper(
         base_trainer_constructor: Callable[..., AbstractTrainer],
         model: GaussianModel,

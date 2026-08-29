@@ -1,3 +1,4 @@
+from typing import Callable
 
 import torch
 
@@ -8,7 +9,6 @@ from gaussian_splatting.trainer.base import BaseTrainer
 from gaussian_splatting.trainer.registry import trainer_wrap
 
 
-@trainer_wrap("scalereg")
 class ScaleRegularizer(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,
@@ -35,8 +35,9 @@ class ScaleRegularizer(TrainerWrapper):
         return super().loss(out, camera) + scale_reg * self.scale_reg_weight
 
 
+@trainer_wrap("scalereg")
 def ScaleRegularizeTrainerWrapper(
-    base_constructor,
+    base_constructor: Callable[..., AbstractTrainer],
     model: GaussianModel,
     dataset: CameraDataset,
     *args,

@@ -7,7 +7,6 @@ from .base import BaseTrainer
 from .registry import trainer_wrap
 
 
-@trainer_wrap("camera")
 class CameraOptimizer(TrainerWrapper):
     def __init__(
             self,  base_trainer: AbstractTrainer,
@@ -51,6 +50,7 @@ class CameraOptimizer(TrainerWrapper):
 
 # Training camera is the one of the core components of the Gaussian Splatting
 # so give it a wrapper to make it easier to use
+@trainer_wrap("camera")
 def CameraTrainerWrapper(
     base_trainer_constructor: Callable[..., AbstractTrainer],
         model: CameraTrainableGaussianModel,

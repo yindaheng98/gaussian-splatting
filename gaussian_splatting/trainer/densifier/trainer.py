@@ -231,8 +231,19 @@ class DensifyTrainerEntry(TrainerRootEntry):
             raise TypeError(f"{cls.__name__} must be a subclass of DensificationTrainer")
         super().__init__(cls)
 
-    def construct(self, values: list[str], model: GaussianModel, dataset: CameraDataset, **configs) -> DensificationTrainer:
-        return self.cls.from_densifier_constructor(build_constructor(values), model, dataset, **configs)
+    def construct(
+        self,
+        components: tuple[str, ...],
+        model: GaussianModel,
+        dataset: CameraDataset,
+        **configs,
+    ) -> DensificationTrainer:
+        return self.cls.from_densifier_constructor(
+            build_constructor(components),
+            model,
+            dataset,
+            **configs,
+        )
 
 
 trainer_root("densify", DensifyTrainerEntry)(DensificationTrainer)

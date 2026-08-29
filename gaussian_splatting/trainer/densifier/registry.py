@@ -1,10 +1,12 @@
+from collections.abc import Sequence
 from functools import partial
 from typing import Callable, Concatenate, Dict
 
 from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 
-from ..registry import WRAPPER_SEP, ROOT_KEY_SEP, ROOT_VALUE_SEP, validate_wrap_signature
+from ..dsl import NAME_PATTERN, NAME_RE
+from ..registry import validate_wrap_signature
 from .abc import AbstractDensifier, NoopDensifier
 
 DensifierConstructor = Callable[..., AbstractDensifier]
@@ -18,56 +20,48 @@ class DensifierEntry:
 
 
 DENSIFIERS: Dict[str, DensifierEntry] = {}
-ALIASES: Dict[str, list[str]] = {}
 
 
-def validate_key(key: str):
-    if not isinstance(key, str):
-        raise TypeError("densifier key must be a string")
-    if WRAPPER_SEP in key or ROOT_KEY_SEP in key or ROOT_VALUE_SEP in key:
-        raise ValueError(
-            f"densifier key {key!r} must not contain {WRAPPER_SEP!r}, {ROOT_KEY_SEP!r} or {ROOT_VALUE_SEP!r}"
-        )
-    if key in DENSIFIERS:
-        raise ValueError(f"densifier {key!r} is already registered: {DENSIFIERS[key]}")
-    if key in ALIASES:
-        raise ValueError(f"densifier {key!r} is already registered as alias: {ALIASES[key]}")
+def register(name: str, entry: DensifierEntry):
+    if not isinstance(name, str):
+        raise TypeError("densifier name must be a string")
+    if NAME_RE.fullmatch(name) is None:
+        raise ValueError(f"densifier name {name!r} must match {NAME_PATTERN}")
+    if name in DENSIFIERS:
+        raise ValueError(f"densifier {name!r} is already registered: {DENSIFIERS[name]}")
+    DENSIFIERS[name] = entry
 
 
-def register(key: str, entry: DensifierEntry):
-    validate_key(key)
-    DENSIFIERS[key] = entry
-
-
-def register_alias(key: str, keys: list[str]):
-    validate_key(key)
-    if not keys:
-        raise ValueError("alias names must be a non-empty list")
-    for k in keys:
-        if k not in DENSIFIERS and k not in ALIASES:
-            raise KeyError(f"{k!r} is not a registered densifier or alias")
-    ALIASES[key] = list(keys)
-
-
-def expand_alias(key: str) -> list[str]:
-    if key not in ALIASES:
-        return [key]
-    return [n for part in ALIASES[key] for n in expand_alias(part)]
-
-
-def parse_names(names: list[str]) -> list[str]:
-    return [n for name in names for n in expand_alias(name)]
-
-
-def densifier(key: str):
+def densifier(name: str):
     def decorator(fn: DensifierWrapFn) -> DensifierWrapFn:
-        register(key, DensifierEntry(fn))
+        register(name, DensifierEntry(fn))
         return fn
     return decorator
 
 
-def build_constructor(values: list[str]) -> DensifierConstructor:
+def build_constructor(names: Sequence[str]) -> DensifierConstructor:
+    if isinstance(names, (str, bytes)) or not isinstance(names, Sequence):
+        raise TypeError("densifier names must be a sequence of strings")
+
+    seen_names = set()
+    for index, name in enumerate(names):
+        if not isinstance(name, str):
+            raise TypeError(f"densifier name at index {index} must be a string")
+        if NAME_RE.fullmatch(name) is None:
+            raise ValueError(
+                f"densifier name at index {index} {name!r} must match {NAME_PATTERN}"
+            )
+        if name in seen_names:
+            raise ValueError(f"duplicate densifier {name!r}")
+        seen_names.add(name)
+
     constructor: DensifierConstructor = NoopDensifier
-    for wrap_name in parse_names(values):
-        constructor = partial(DENSIFIERS[wrap_name].fn, constructor)
+    for name in names:
+        entry = DENSIFIERS.get(name)
+        if entry is None:
+            raise KeyError(
+                f"unknown densifier {name!r}; "
+                f"available densifiers: {sorted(DENSIFIERS)}"
+            )
+        constructor = partial(entry.fn, constructor)
     return constructor

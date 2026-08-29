@@ -1,4 +1,5 @@
 import inspect
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Callable, Dict, List, Tuple, Type
 
@@ -8,7 +9,7 @@ from gaussian_splatting.dataset import CameraDataset
 from .abc import AbstractTrainer
 
 
-class TrainerEntry:
+class TrainerEntry(ABC):
     def __init__(self, name: str, cls: Type[AbstractTrainer]):
         if not isinstance(name, str):
             raise TypeError("trainer name must be a string")
@@ -17,8 +18,13 @@ class TrainerEntry:
         self.name = name
         self.cls = cls
 
+    @abstractmethod
     def params_for(self, name: str) -> Tuple[str, ...]:
-        raise NotImplementedError
+        ...
+
+    @abstractmethod
+    def construct(self, name: str, first, dataset: CameraDataset, **configs) -> AbstractTrainer:
+        ...
 
 
 class TrainerRootEntry(TrainerEntry):

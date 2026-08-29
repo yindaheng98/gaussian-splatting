@@ -6,6 +6,7 @@ from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractDensifier, DensifierWrapper, DensificationInstruct
+from .registry import densifier
 from .trainer import DensificationTrainer
 
 
@@ -134,6 +135,7 @@ class SplitCloneDensifier(DensifierWrapper):
         return super().after_densify_and_prune_hook(loss, out, camera)
 
 
+@densifier("splitclone")
 def SplitCloneDensifierWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],
         model: GaussianModel,

@@ -5,6 +5,7 @@ from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractDensifier, DensifierWrapper
+from .registry import densifier
 from .trainer import DensificationTrainer
 
 
@@ -58,6 +59,7 @@ class OpacityPruner(DensifierWrapper):
         return super().after_densify_and_prune_hook(loss, out, camera)
 
 
+@densifier("pruner")
 def OpacityPrunerDensifierWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],  # this is not Callable[..., AbstractTrainer]. Since DensificationTrainer cannot contain a base_trainer
         model: GaussianModel,

@@ -7,6 +7,7 @@ from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractDensifier, DensificationInstruct
+from .registry import densifier
 from .trainer import DensificationTrainer
 from .densifier import SplitCloneDensifier
 
@@ -58,35 +59,21 @@ class BoundedSplitCloneDensifier(SplitCloneDensifier):
         return clone.merge(split)
 
 
+@densifier("bounded")
 def BoundedSplitCloneDensifierWrapper(
         base_densifier_constructor: Callable[..., AbstractDensifier],
         model: GaussianModel,
         dataset: CameraDataset,
         *args,
-        densify_from_iter=500,
-        densify_until_iter=15000,
-        densify_interval=100,
-        densify_grad_threshold=0.0002,
-        densify_percent_dense=0.01,
-        densify_percent_too_big=0.8,
-        densify_min_scale=1e-6,
-        densify_limit_n=None,
         densify_target_lower_bound=10000,
         densify_target_upper_bound=10000*1000,
         **configs):
     return BoundedSplitCloneDensifier(
         base_densifier_constructor(model, dataset, *args, **configs),
         dataset,
-        densify_from_iter=densify_from_iter,
-        densify_until_iter=densify_until_iter,
-        densify_interval=densify_interval,
-        densify_grad_threshold=densify_grad_threshold,
-        densify_percent_dense=densify_percent_dense,
-        densify_percent_too_big=densify_percent_too_big,
-        densify_min_scale=densify_min_scale,
-        densify_limit_n=densify_limit_n,
         densify_target_lower_bound=densify_target_lower_bound,
         densify_target_upper_bound=densify_target_upper_bound,
+        **configs,
     )
 
 

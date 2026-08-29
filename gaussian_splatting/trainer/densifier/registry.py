@@ -64,3 +64,49 @@ def densifier(key: str):
     def decorator(cls: Type[AbstractDensifier]) -> Type[AbstractDensifier]:
         return register(key, DensifierEntry(cls))
     return decorator
+
+
+def build_densifier(values: list[str], model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractDensifier:
+    """Wrap NoopDensifier with registry densifiers, applied inside-out.
+
+    Each config key must belong to exactly one densifier in the list.
+    """
+    param_users: Dict[str, List[str]] = defaultdict(list)
+    wraps: List[DensifierEntry] = []
+    for wrap_name in values:
+        entry = DENSIFIERS[wrap_name]
+        for p in entry.params:
+            param_users[p].append(wrap_name)
+        wraps.append(entry)
+
+    duplicated = {p: users for p, users in param_users.items() if p in configs and len(users) > 1}
+    if duplicated:
+        raise ValueError(f"duplicate params: {duplicated}")
+
+    unused = [k for k in configs if k not in param_users]
+    if unused:
+        raise TypeError(f"unused input configs: {unused}; accepted: {sorted(param_users)}")
+
+    split = {name: {} for name in values}
+    for k, v in configs.items():
+        split[param_users[k][0]][k] = v
+
+    densifier = NoopDensifier(model, dataset)
+    for wrap_name, entry in zip(values, wraps):
+        densifier = entry.build(densifier, dataset, **split[wrap_name])
+    return densifier
+
+
+class DensifyTrainerEntry(TrainerRootEntry):
+    def params_for(self, values: list[str]) -> Tuple[str, ...]:
+        params = list(p.name for p in inspect.signature(BaseTrainer.__init__).parameters.values())[3:]
+        for wrap_name in values:
+            params.extend(DENSIFIERS[wrap_name].params)
+        return tuple(params)
+
+    def construct(self, values: list[str], model: GaussianModel, dataset: CameraDataset, **configs):
+        trainer_keys = set(p.name for p in list(inspect.signature(BaseTrainer.__init__).parameters.values())[3:])
+        trainer_configs = {k: v for k, v in configs.items() if k in trainer_keys}
+        densifier_configs = {k: v for k, v in configs.items() if k not in trainer_keys}
+        densifier = build_densifier(values, model, dataset, **densifier_configs)
+        return self.cls(model, dataset, densifier, **trainer_configs)

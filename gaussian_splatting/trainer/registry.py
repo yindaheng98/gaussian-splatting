@@ -77,17 +77,44 @@ class TrainerWrapEntry(TrainerEntry):
 
 
 TRAINERS: Dict[str, TrainerEntry] = {}
+ALIASES: Dict[str, list[str]] = {}
+
+
+def validate_key(key: str):
+    if not isinstance(key, str):
+        raise TypeError(f"key must be a string")
+    if WRAPPER_SEP in key or ROOT_KEY_SEP in key or ROOT_VALUE_SEP in key:
+        raise ValueError(f"key {key!r} must not contain {WRAPPER_SEP!r}, {ROOT_KEY_SEP!r} or {ROOT_VALUE_SEP!r}")
+    if key in TRAINERS:
+        raise ValueError(f"{key!r} is already registered as trainer: {TRAINERS[key]}")
+    if key in ALIASES:
+        raise ValueError(f"{key!r} is already registered as alias: {ALIASES[key]}")
 
 
 def register(key: str, entry: TrainerEntry):
-    if not isinstance(key, str):
-        raise TypeError("trainer key must be a string")
-    if WRAPPER_SEP in key or ROOT_KEY_SEP in key or ROOT_VALUE_SEP in key:
-        raise ValueError(f"trainer key {key!r} must not contain {WRAPPER_SEP!r}, {ROOT_KEY_SEP!r} or {ROOT_VALUE_SEP!r}")
-    if key in TRAINERS:
-        raise ValueError(f"trainer {key!r} is already registered: {TRAINERS[key]}")
+    validate_key(key)
     TRAINERS[key] = entry
     return entry.cls
+
+
+def register_alias(key: str, keys: list[str]):
+    validate_key(key)
+    if not keys:
+        raise ValueError("alias names must be a non-empty list")
+    for k in keys:
+        if k not in TRAINERS and k not in ALIASES:
+            raise KeyError(f"{k!r} is not a registered trainer or alias")
+    ALIASES[key] = list(keys)
+
+
+def expand_alias(key: str) -> list[str]:
+    if key not in ALIASES:
+        return [key]
+    return [n for part in ALIASES[key] for n in expand_alias(part)]
+
+
+def parse_names(names: str) -> list[str]:
+    return [n for name in names.split(WRAPPER_SEP) for n in expand_alias(name)]
 
 
 def trainer(key: str, entry_cls: Type[TrainerEntry]):
@@ -109,11 +136,13 @@ def trainer_wrap(key: str):
 def build_trainer(names: str, model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
     """Construct a nested trainer from registry names.
 
-    `names` is split by NAME_SEP; the first token is a trainer_root, optionally key + VALUE_SEP + values
-    joined by VALUES_SEP; the rest are trainer_wraps applied inside-out.
+    `names` is split by WRAPPER_SEP; each token that is a registered alias is expanded
+    (recursively) in place. The first remaining token is a trainer_root, optionally
+    key + ROOT_KEY_SEP + values joined by ROOT_VALUE_SEP; the rest are trainer_wraps
+    applied inside-out.
     Each config key must belong to exactly one trainer in the list.
     """
-    names = names.split(WRAPPER_SEP)
+    names = parse_names(names)
     if not names or not names[0]:
         raise ValueError("names must be a non-empty string")
     root_name, *wrap_names = names

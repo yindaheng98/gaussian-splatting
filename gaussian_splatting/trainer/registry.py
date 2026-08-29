@@ -8,13 +8,10 @@ from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractTrainer
+from .dsl import NAME_PATTERN, NAME_RE, TrainerSpec
 
 TrainerConstructor = Callable[..., AbstractTrainer]
 TrainerWrapFn = Callable[Concatenate[TrainerConstructor, GaussianModel, CameraDataset, ...], AbstractTrainer]
-
-WRAPPER_SEP = "-"
-ROOT_KEY_SEP = ":"
-ROOT_VALUE_SEP = ","
 
 
 class TrainerEntry(ABC):
@@ -40,7 +37,18 @@ class TrainerRootEntry(TrainerEntry):
             )
         self.cls = cls
 
-    def construct(self, values: list[str], model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
+    def construct(
+        self,
+        components: tuple[str, ...],
+        model: GaussianModel,
+        dataset: CameraDataset,
+        **configs,
+    ) -> AbstractTrainer:
+        if components:
+            raise ValueError(
+                f"trainer root {self.cls.__name__!r} does not accept components, "
+                f"got {components}"
+            )
         return self.cls(model, dataset, **configs)
 
 
@@ -91,85 +99,75 @@ class TrainerWrapEntry(TrainerEntry):
 
 
 TRAINERS: Dict[str, TrainerEntry] = {}
-ALIASES: Dict[str, list[str]] = {}
 
 
-def validate_key(key: str):
-    if not isinstance(key, str):
+def validate_name(name: str):
+    if not isinstance(name, str):
         raise TypeError("key must be a string")
-    if WRAPPER_SEP in key or ROOT_KEY_SEP in key or ROOT_VALUE_SEP in key:
-        raise ValueError(f"key {key!r} must not contain {WRAPPER_SEP!r}, {ROOT_KEY_SEP!r} or {ROOT_VALUE_SEP!r}")
-    if key in TRAINERS:
-        raise ValueError(f"{key!r} is already registered as trainer: {TRAINERS[key]}")
-    if key in ALIASES:
-        raise ValueError(f"{key!r} is already registered as alias: {ALIASES[key]}")
+    if NAME_RE.fullmatch(name) is None:
+        raise ValueError(f"key {name!r} must match {NAME_PATTERN}")
+    if name in TRAINERS:
+        raise ValueError(f"{name!r} is already registered as trainer: {TRAINERS[name]}")
 
 
-def register(key: str, entry: TrainerEntry):
-    validate_key(key)
-    TRAINERS[key] = entry
+def register(name: str, entry: TrainerEntry):
+    validate_name(name)
+    TRAINERS[name] = entry
 
 
-def register_alias(key: str, keys: list[str]):
-    validate_key(key)
-    if not keys:
-        raise ValueError("alias names must be a non-empty list")
-    for k in keys:
-        if k not in TRAINERS and k not in ALIASES:
-            raise KeyError(f"{k!r} is not a registered trainer or alias")
-    ALIASES[key] = list(keys)
-
-
-def expand_alias(key: str) -> list[str]:
-    if key not in ALIASES:
-        return [key]
-    return [n for part in ALIASES[key] for n in expand_alias(part)]
-
-
-def parse_names(names: str) -> list[str]:
-    return [n for name in names.split(WRAPPER_SEP) for n in expand_alias(name)]
-
-
-def trainer_root(key: str, entry_cls: Type[TrainerRootEntry] = TrainerRootEntry):
-    assert issubclass(entry_cls, TrainerRootEntry)
+def trainer_root(name: str, entry_cls: Type[TrainerRootEntry] = TrainerRootEntry):
+    if not issubclass(entry_cls, TrainerRootEntry):
+        raise TypeError("entry_cls must be a TrainerRootEntry subclass")
 
     def decorator(cls: Type[AbstractTrainer]) -> Type[AbstractTrainer]:
-        register(key, entry_cls(cls))
+        register(name, entry_cls(cls))
         return cls
     return decorator
 
 
-def trainer_wrap(key: str):
+def trainer_wrap(name: str):
     def decorator(fn: TrainerWrapFn) -> TrainerWrapFn:
-        register(key, TrainerWrapEntry(fn))
+        register(name, TrainerWrapEntry(fn))
         return fn
     return decorator
 
 
-def build_trainer(names: str, model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
-    """Construct a nested trainer from registry names.
+def build_trainer(
+    spec: TrainerSpec,
+    model: GaussianModel,
+    dataset: CameraDataset,
+    **configs,
+) -> AbstractTrainer:
+    """Build a trainer from a fully resolved :class:`TrainerSpec`."""
+    if not isinstance(spec, TrainerSpec):
+        raise TypeError("spec must be a TrainerSpec; parse strings with parse_trainer_spec()")
 
-    `names` is split by WRAPPER_SEP; each token that is a registered alias is expanded
-    (recursively) in place. The first remaining token is a trainer_root, optionally
-    key + ROOT_KEY_SEP + values joined by ROOT_VALUE_SEP; the rest are trainer_wraps
-    applied inside-out. Each wrap peels its own kwargs and forwards **configs inward.
-    """
-    names = parse_names(names)
-    if not names or not names[0]:
-        raise ValueError("names must be a non-empty string")
-    root_name, *wrap_names = names
-    key, _, value = root_name.partition(ROOT_KEY_SEP)
-    values = [t for t in value.split(ROOT_VALUE_SEP) if t]
-    root = TRAINERS[key]
+    root = TRAINERS.get(spec.root)
+    if root is None:
+        raise KeyError(
+            f"unknown trainer root {spec.root!r}; "
+            f"available roots: {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerRootEntry))}"
+        )
     if not isinstance(root, TrainerRootEntry):
-        raise KeyError(f"first name {root_name!r} must be a trainer_root, got {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerRootEntry))}")
+        raise KeyError(
+            f"first component {spec.root!r} must be a trainer root; "
+            f"available roots: {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerRootEntry))}"
+        )
 
     def constructor(model, dataset, **configs):
-        return root.construct(values, model, dataset, **configs)
+        return root.construct(spec.root_components, model, dataset, **configs)
 
-    for wrap_name in wrap_names:
-        entry = TRAINERS[wrap_name]
+    for wrap_name in spec.wrappers:
+        entry = TRAINERS.get(wrap_name)
+        if entry is None:
+            raise KeyError(
+                f"unknown trainer wrapper {wrap_name!r}; "
+                f"available wrappers: {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerWrapEntry))}"
+            )
         if not isinstance(entry, TrainerWrapEntry):
-            raise KeyError(f"{wrap_name!r} must be a trainer_wrap, got {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerWrapEntry))}")
+            raise KeyError(
+                f"{wrap_name!r} must be a trainer wrapper; "
+                f"available wrappers: {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerWrapEntry))}"
+            )
         constructor = partial(entry.fn, constructor)
     return constructor(model, dataset, **configs)

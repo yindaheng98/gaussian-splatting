@@ -7,10 +7,6 @@ NAME_RE = re.compile(NAME_PATTERN)
 ROOT_RE = re.compile(rf"(?P<name>{NAME_PATTERN})(?:\s*\((?P<components>[^()]*)\))?")
 
 
-class TrainerSpecSyntaxError(ValueError):
-    """Raised when a trainer DSL expression is malformed."""
-
-
 @dataclass(frozen=True)
 class TrainerSpec:
     root: str
@@ -43,19 +39,19 @@ def parse_trainer_spec(source: str) -> TrainerSpec:
     if not isinstance(source, str):
         raise TypeError("trainer specification must be a string")
     if not source.strip():
-        raise TrainerSpecSyntaxError("trainer specification must not be empty")
+        raise ValueError("trainer specification must not be empty")
 
     components = source.split("|")
     for index, component in enumerate(components, start=1):
         if not component.strip():
-            raise TrainerSpecSyntaxError(
+            raise ValueError(
                 f"component {index} is empty in trainer specification {source!r}"
             )
 
     root_source, *wrapper_sources = (component.strip() for component in components)
     root_match = ROOT_RE.fullmatch(root_source)
     if root_match is None:
-        raise TrainerSpecSyntaxError(
+        raise ValueError(
             f"invalid root {root_source!r}; expected NAME or NAME(arg1, arg2)"
         )
     components_source = root_match.group("components")
@@ -64,7 +60,7 @@ def parse_trainer_spec(source: str) -> TrainerSpec:
     else:
         raw_components = components_source.split(",")
         if any(not component.strip() for component in raw_components):
-            raise TrainerSpecSyntaxError(
+            raise ValueError(
                 f"invalid components in root {root_source!r}; expected comma-separated names"
             )
         root_components = tuple(component.strip() for component in raw_components)
@@ -72,7 +68,7 @@ def parse_trainer_spec(source: str) -> TrainerSpec:
     wrappers = []
     for wrapper_source in wrapper_sources:
         if NAME_RE.fullmatch(wrapper_source) is None:
-            raise TrainerSpecSyntaxError(
+            raise ValueError(
                 f"invalid wrapper {wrapper_source!r}; expected {NAME_PATTERN}"
             )
         wrappers.append(wrapper_source)

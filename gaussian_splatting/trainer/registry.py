@@ -10,7 +10,7 @@ from .abc import AbstractTrainer
 
 WRAPPER_SEP = "-"
 ROOT_KEY_SEP = ":"
-ROOT_VALUE_SEP = "/"
+ROOT_VALUE_SEP = ","
 
 
 class TrainerEntry(ABC):

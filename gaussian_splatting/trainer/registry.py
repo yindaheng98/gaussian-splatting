@@ -8,6 +8,9 @@ from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractTrainer
 
+NAME_SEP = "-"
+VALUE_SEP = ":"
+
 
 class TrainerEntry(ABC):
     def __init__(self, cls: Type[AbstractTrainer]):
@@ -78,6 +81,8 @@ TRAINERS: Dict[str, TrainerEntry] = {}
 def register(key: str, entry: TrainerEntry):
     if not isinstance(key, str):
         raise TypeError("trainer key must be a string")
+    if NAME_SEP in key or VALUE_SEP in key:
+        raise ValueError(f"trainer key {key!r} must not contain {NAME_SEP!r} or {VALUE_SEP!r}")
     if key in TRAINERS:
         raise ValueError(f"trainer {key!r} is already registered: {TRAINERS[key]}")
     TRAINERS[key] = entry
@@ -100,16 +105,18 @@ def trainer_wrap(key: str):
     return trainer(key, TrainerWrapEntry)
 
 
-def build_trainer(names: list[str], model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
+def build_trainer(names: str, model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
     """Construct a nested trainer from registry names.
 
-    names[0] is a trainer_root, optionally `key:value`; names[1:] are trainer_wraps applied inside-out.
+    `names` is split by NAME_SEP; the first token is a trainer_root, optionally key + VALUE_SEP + value;
+    the rest are trainer_wraps applied inside-out.
     Each config key must belong to exactly one trainer in the list.
     """
-    if not names:
-        raise ValueError("names must be a non-empty list")
+    names = names.split(NAME_SEP)
+    if not names or not names[0]:
+        raise ValueError("names must be a non-empty string")
     root_name, *wrap_names = names
-    key, _, value = root_name.partition(":")
+    key, _, value = root_name.partition(VALUE_SEP)
     root = TRAINERS[key]
     if not isinstance(root, TrainerRootEntry):
         raise KeyError(f"first name {root_name!r} must be a trainer_root, got {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerRootEntry))}")

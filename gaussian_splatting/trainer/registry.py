@@ -22,10 +22,6 @@ class TrainerEntry(ABC):
     def params_for(self, name: str) -> Tuple[str, ...]:
         ...
 
-    @abstractmethod
-    def construct(self, name: str, first, dataset: CameraDataset, **configs) -> AbstractTrainer:
-        ...
-
 
 class TrainerRootEntry(TrainerEntry):
     def __init__(self, name: str, cls: Type[AbstractTrainer]):

@@ -1,36 +1,36 @@
 import inspect
-from typing import Dict, Type
+from collections import defaultdict
+from typing import Callable, Dict, List, Tuple, Type
 
 from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 
-from .abc import AbstractTrainer, TrainerWrapper
-
-TRAINER_ROOTS: Dict[str, Type[AbstractTrainer]] = {}
-TRAINER_WRAPS: Dict[str, Type[TrainerWrapper]] = {}
-TRAINER_WRAPS_TAKES_DATASET: Dict[str, bool] = {}
+from .abc import AbstractTrainer
 
 
-def trainer_root(name: str):
-    """Register a direct subclass of AbstractTrainer (the root of a wrapping chain)."""
-    if not isinstance(name, str):
-        raise TypeError("@trainer_root requires a name string, e.g. @trainer_root('base')")
+class TrainerEntry:
+    def __init__(self, name: str, cls: Type[AbstractTrainer]):
+        if not isinstance(name, str):
+            raise TypeError("trainer name must be a string")
+        if not issubclass(cls, AbstractTrainer):
+            raise TypeError(f"{cls.__name__} must be a subclass of AbstractTrainer")
+        self.name = name
+        self.cls = cls
 
-    def decorator(cls: Type[AbstractTrainer]) -> Type[AbstractTrainer]:
-        if AbstractTrainer not in cls.__bases__:
-            raise TypeError(f"@trainer_root is for direct subclasses of AbstractTrainer, got {cls.__name__}")
-        if issubclass(cls, TrainerWrapper):
-            raise TypeError(f"{cls.__name__} is a TrainerWrapper; use @trainer_wrap instead")
+    def params_for(self, name: str) -> Tuple[str, ...]:
+        raise NotImplementedError
 
+
+class TrainerRootEntry(TrainerEntry):
+    def __init__(self, name: str, cls: Type[AbstractTrainer]):
+        super().__init__(name, cls)
         params = list(inspect.signature(cls.__init__).parameters.values())
-
         p = params[1]
         if p.default is not inspect.Parameter.empty or not issubclass(p.annotation, GaussianModel):
             raise TypeError(
                 f"{cls.__name__}.__init__ first parameter must be a GaussianModel subclass "
                 f"without a default, got {p.name}: {p.annotation}"
             )
-
         p = params[2]
         if p.default is not inspect.Parameter.empty or not issubclass(p.annotation, CameraDataset):
             raise TypeError(
@@ -38,35 +38,24 @@ def trainer_root(name: str):
                 f"without a default, got {p.name}: {p.annotation}"
             )
 
-        if name in TRAINER_ROOTS:
-            raise ValueError(f"trainer_root {name!r} is already registered: {TRAINER_ROOTS[name]}")
-        TRAINER_ROOTS[name] = cls
-        return cls
+    def params_for(self, name: str) -> Tuple[str, ...]:
+        return tuple(p.name for p in inspect.signature(self.cls.__init__).parameters.values())[3:]
 
-    return decorator
+    def construct(self, name: str, model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
+        return self.cls(model, dataset, **configs)
 
 
-def trainer_wrap(name: str):
-    """Register a subclass of TrainerWrapper."""
-    if not isinstance(name, str):
-        raise TypeError("@trainer_wrap requires a name string, e.g. @trainer_wrap('depth')")
-
-    def decorator(cls: Type[TrainerWrapper]) -> Type[TrainerWrapper]:
-        if not issubclass(cls, TrainerWrapper) or cls is TrainerWrapper:
-            raise TypeError(
-                f"@trainer_wrap is for subclasses of TrainerWrapper, got {cls.__name__}"
-            )
-
+class TrainerWrapEntry(TrainerEntry):
+    def __init__(self, name: str, cls: Type[AbstractTrainer]):
+        super().__init__(name, cls)
         params = list(inspect.signature(cls.__init__).parameters.values())
-
         p = params[1]
         if p.default is not inspect.Parameter.empty or not issubclass(p.annotation, AbstractTrainer):
             raise TypeError(
                 f"{cls.__name__}.__init__ first parameter must be an AbstractTrainer subclass "
                 f"without a default, got {p.name}: {p.annotation}"
             )
-
-        takes_dataset = False
+        take_dataset = False
         if len(params) > 2:
             p = params[2]
             if p.default is inspect.Parameter.empty:
@@ -75,12 +64,23 @@ def trainer_wrap(name: str):
                         f"{cls.__name__}.__init__ second parameter, if required, must be a "
                         f"CameraDataset subclass without a default, got {p.name}: {p.annotation}"
                     )
-                takes_dataset = True
+                take_dataset = True
+        self.take_dataset = take_dataset
 
-        if name in TRAINER_WRAPS:
-            raise ValueError(f"trainer_wrap {name!r} is already registered: {TRAINER_WRAPS[name]}")
-        TRAINER_WRAPS[name] = cls
-        TRAINER_WRAPS_TAKES_DATASET[name] = takes_dataset
-        return cls
+    def params_for(self, name: str) -> Tuple[str, ...]:
+        return tuple(p.name for p in inspect.signature(self.cls.__init__).parameters.values())[3 if self.take_dataset else 2:]
 
-    return decorator
+    def construct(self, name: str, trainer: AbstractTrainer, dataset: CameraDataset, **configs) -> AbstractTrainer:
+        if self.take_dataset:
+            return self.cls(trainer, dataset, **configs)
+        return self.cls(trainer, **configs)
+
+
+TRAINERS: Dict[str, TrainerEntry] = {}
+
+
+def register(entry: TrainerEntry):
+    if entry.name in TRAINERS:
+        raise ValueError(f"trainer {entry.name!r} is already registered: {TRAINERS[entry.name]}")
+    TRAINERS[entry.name] = entry
+    return entry.cls

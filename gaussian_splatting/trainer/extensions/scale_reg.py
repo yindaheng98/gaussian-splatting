@@ -3,9 +3,12 @@ import torch
 
 from gaussian_splatting import Camera, GaussianModel
 from gaussian_splatting.dataset import CameraDataset
-from gaussian_splatting.trainer import AbstractTrainer, TrainerWrapper, BaseTrainer
+from gaussian_splatting.trainer.abc import AbstractTrainer, TrainerWrapper
+from gaussian_splatting.trainer.base import BaseTrainer
+from gaussian_splatting.trainer.registry import trainer_wrap
 
 
+@trainer_wrap("scalereg")
 class ScaleRegularizer(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,

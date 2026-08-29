@@ -7,8 +7,10 @@ from gaussian_splatting.dataset import CameraDataset
 from gaussian_splatting.utils import l1_loss, ssim, get_expon_lr_func
 
 from .abc import AbstractTrainer
+from .registry import trainer_root
 
 
+@trainer_root("base")
 class BaseTrainer(AbstractTrainer):
     def __init__(
             self, model: GaussianModel,

@@ -5,8 +5,10 @@ from gaussian_splatting import GaussianModel, Camera
 from gaussian_splatting.dataset import CameraDataset
 from .base import BaseTrainer
 from .abc import AbstractTrainer, TrainerWrapper
+from .registry import trainer_wrap
 
 
+@trainer_wrap("shlift")
 class SHLifter(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,

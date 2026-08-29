@@ -8,8 +8,10 @@ from gaussian_splatting.dataset import CameraDataset
 from gaussian_splatting.utils.schedular import get_expon_lr_func
 from .abc import AbstractTrainer, TrainerWrapper
 from .base import BaseTrainer
+from .registry import trainer_wrap
 
 
+@trainer_wrap("depth")
 class DepthTrainer(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,

@@ -5,8 +5,10 @@ import torch
 from gaussian_splatting import Camera, GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 from ..abc import AbstractTrainer, TrainerWrapper
+from ..registry import trainer_wrap
 
 
+@trainer_wrap("normalconsistency")
 class NormalConsistencyTrainer(TrainerWrapper):
 
     def __init__(

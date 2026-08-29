@@ -6,6 +6,7 @@ from gaussian_splatting.gaussian_model import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractTrainer, TrainerWrapper
+from .registry import trainer_wrap
 
 
 def replace_tensor_to_optimizer(optimizer: torch.optim.Optimizer, tensor, name):
@@ -24,6 +25,7 @@ def replace_tensor_to_optimizer(optimizer: torch.optim.Optimizer, tensor, name):
     return optimizable_tensors
 
 
+@trainer_wrap("opacityreset")
 class OpacityResetter(TrainerWrapper):
     def __init__(
             self, base_trainer: AbstractTrainer,

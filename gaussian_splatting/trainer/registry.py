@@ -8,8 +8,9 @@ from gaussian_splatting.dataset import CameraDataset
 
 from .abc import AbstractTrainer
 
-NAME_SEP = "-"
-VALUE_SEP = ":"
+WRAPPER_SEP = "-"
+ROOT_KEY_SEP = ":"
+ROOT_VALUE_SEP = "/"
 
 
 class TrainerEntry(ABC):
@@ -36,10 +37,10 @@ class TrainerRootEntry(TrainerEntry):
                 f"without a default, got {p.name}: {p.annotation}"
             )
 
-    def params_for(self, value: str) -> Tuple[str, ...]:
+    def params_for(self, values: list[str]) -> Tuple[str, ...]:
         return tuple(p.name for p in inspect.signature(self.cls.__init__).parameters.values())[3:]
 
-    def construct(self, value: str, model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
+    def construct(self, values: list[str], model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
         return self.cls(model, dataset, **configs)
 
 
@@ -81,8 +82,8 @@ TRAINERS: Dict[str, TrainerEntry] = {}
 def register(key: str, entry: TrainerEntry):
     if not isinstance(key, str):
         raise TypeError("trainer key must be a string")
-    if NAME_SEP in key or VALUE_SEP in key:
-        raise ValueError(f"trainer key {key!r} must not contain {NAME_SEP!r} or {VALUE_SEP!r}")
+    if WRAPPER_SEP in key or ROOT_KEY_SEP in key or ROOT_VALUE_SEP in key:
+        raise ValueError(f"trainer key {key!r} must not contain {WRAPPER_SEP!r}, {ROOT_KEY_SEP!r} or {ROOT_VALUE_SEP!r}")
     if key in TRAINERS:
         raise ValueError(f"trainer {key!r} is already registered: {TRAINERS[key]}")
     TRAINERS[key] = entry
@@ -108,20 +109,21 @@ def trainer_wrap(key: str):
 def build_trainer(names: str, model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
     """Construct a nested trainer from registry names.
 
-    `names` is split by NAME_SEP; the first token is a trainer_root, optionally key + VALUE_SEP + value;
-    the rest are trainer_wraps applied inside-out.
+    `names` is split by NAME_SEP; the first token is a trainer_root, optionally key + VALUE_SEP + values
+    joined by VALUES_SEP; the rest are trainer_wraps applied inside-out.
     Each config key must belong to exactly one trainer in the list.
     """
-    names = names.split(NAME_SEP)
+    names = names.split(WRAPPER_SEP)
     if not names or not names[0]:
         raise ValueError("names must be a non-empty string")
     root_name, *wrap_names = names
-    key, _, value = root_name.partition(VALUE_SEP)
+    key, _, value = root_name.partition(ROOT_KEY_SEP)
+    values = [t for t in value.split(ROOT_VALUE_SEP) if t]
     root = TRAINERS[key]
     if not isinstance(root, TrainerRootEntry):
         raise KeyError(f"first name {root_name!r} must be a trainer_root, got {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerRootEntry))}")
     param_users: Dict[str, List[str]] = defaultdict(list)
-    for p in root.params_for(value):
+    for p in root.params_for(values):
         param_users[p].append(root_name)
 
     wraps: List[TrainerWrapEntry] = []
@@ -145,7 +147,7 @@ def build_trainer(names: str, model: GaussianModel, dataset: CameraDataset, **co
     for k, v in configs.items():
         split[param_users[k][0]][k] = v
 
-    trainer = root.construct(value, model, dataset, **split[root_name])
+    trainer = root.construct(values, model, dataset, **split[root_name])
     for wrap_name, entry in zip(wrap_names, wraps):
         trainer = entry.build(trainer, dataset, **split[wrap_name])
     return trainer

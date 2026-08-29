@@ -1,11 +1,13 @@
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple, Type
 import torch
 import torch.nn as nn
 from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
-from gaussian_splatting.trainer import BaseTrainer
 
+from ..base import BaseTrainer
+from ..registry import TrainerRootEntry, trainer_root
 from .abc import AbstractDensifier
+from .registry import build_constructor
 
 
 def cat_tensors_to_optimizer(optimizer: torch.optim.Optimizer, tensors_dict: Dict[str, torch.Tensor]):
@@ -219,3 +221,18 @@ class DensificationTrainer(BaseTrainer):
             mask_mode=mask_mode,
             bg_color=bg_color,
         )
+
+
+class DensifyTrainerEntry(TrainerRootEntry):
+    cls: Type[DensificationTrainer]
+
+    def __init__(self, cls: Type[DensificationTrainer]):
+        if not issubclass(cls, DensificationTrainer):
+            raise TypeError(f"{cls.__name__} must be a subclass of DensificationTrainer")
+        super().__init__(cls)
+
+    def construct(self, values: list[str], model: GaussianModel, dataset: CameraDataset, **configs) -> DensificationTrainer:
+        return self.cls.from_densifier_constructor(build_constructor(values), model, dataset, **configs)
+
+
+trainer_root("densify", DensifyTrainerEntry)(DensificationTrainer)

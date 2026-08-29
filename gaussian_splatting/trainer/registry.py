@@ -101,17 +101,13 @@ class TrainerWrapEntry(TrainerEntry):
 TRAINERS: Dict[str, TrainerEntry] = {}
 
 
-def validate_name(name: str):
+def register(name: str, entry: TrainerEntry):
     if not isinstance(name, str):
-        raise TypeError("key must be a string")
+        raise TypeError("name must be a string")
     if NAME_RE.fullmatch(name) is None:
-        raise ValueError(f"key {name!r} must match {NAME_PATTERN}")
+        raise ValueError(f"name {name!r} must match {NAME_PATTERN}")
     if name in TRAINERS:
         raise ValueError(f"{name!r} is already registered as trainer: {TRAINERS[name]}")
-
-
-def register(name: str, entry: TrainerEntry):
-    validate_name(name)
     TRAINERS[name] = entry
 
 
@@ -141,6 +137,11 @@ def build_trainer(
     """Build a trainer from a fully resolved :class:`TrainerSpec`."""
     if not isinstance(spec, TrainerSpec):
         raise TypeError("spec must be a TrainerSpec; parse strings with parse_trainer_spec()")
+    seen_wrappers = set()
+    for name in spec.wrappers:
+        if name in seen_wrappers:
+            raise ValueError(f"duplicate trainer wrapper {name!r}")
+        seen_wrappers.add(name)
 
     root = TRAINERS.get(spec.root)
     if root is None:

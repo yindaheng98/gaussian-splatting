@@ -90,3 +90,19 @@ def register(entry: TrainerEntry):
         raise ValueError(f"trainer {entry.name!r} is already registered: {TRAINERS[entry.name]}")
     TRAINERS[entry.name] = entry
     return entry.cls
+
+
+def trainer(name: str, entry_cls: Type[TrainerEntry]):
+    assert issubclass(entry_cls, TrainerEntry)
+
+    def decorator(cls: Type[AbstractTrainer]) -> Type[AbstractTrainer]:
+        return register(entry_cls(name, cls))
+    return decorator
+
+
+def trainer_root(name: str):
+    return trainer(name, TrainerRootEntry)
+
+
+def trainer_wrap(name: str):
+    return trainer(name, TrainerWrapEntry)

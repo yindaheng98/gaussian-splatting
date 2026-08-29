@@ -1,7 +1,7 @@
 import inspect
 from abc import ABC
 from collections import defaultdict
-from typing import Callable, Dict, List, Tuple, Type
+from typing import Dict, List, Tuple, Type
 
 from gaussian_splatting import GaussianModel
 from gaussian_splatting.dataset import CameraDataset
@@ -62,7 +62,8 @@ class TrainerWrapEntry(TrainerEntry):
                 take_dataset = True
         self.take_dataset = take_dataset
 
-    def params_for(self) -> Tuple[str, ...]:
+    @property
+    def params(self) -> Tuple[str, ...]:
         return tuple(p.name for p in inspect.signature(self.cls.__init__).parameters.values())[3 if self.take_dataset else 2:]
 
     def build(self, trainer: AbstractTrainer, dataset: CameraDataset, **configs) -> AbstractTrainer:
@@ -97,3 +98,47 @@ def trainer_root(key: str):
 
 def trainer_wrap(key: str):
     return trainer(key, TrainerWrapEntry)
+
+
+def build_trainer(names: list[str], model: GaussianModel, dataset: CameraDataset, **configs) -> AbstractTrainer:
+    """Construct a nested trainer from registry names.
+
+    names[0] is a trainer_root, optionally `key:value`; names[1:] are trainer_wraps applied inside-out.
+    Each config key must belong to exactly one trainer in the list.
+    """
+    if not names:
+        raise ValueError("names must be a non-empty list")
+    root_name, *wrap_names = names
+    key, _, value = root_name.partition(":")
+    root = TRAINERS[key]
+    if not isinstance(root, TrainerRootEntry):
+        raise KeyError(f"first name {root_name!r} must be a trainer_root, got {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerRootEntry))}")
+    param_users: Dict[str, List[str]] = defaultdict(list)
+    for p in root.params_for(value):
+        param_users[p].append(root_name)
+
+    wraps: List[TrainerWrapEntry] = []
+    for wrap_name in wrap_names:
+        entry = TRAINERS[wrap_name]
+        if not isinstance(entry, TrainerWrapEntry):
+            raise KeyError(f"{wrap_name!r} must be a trainer_wrap, got {sorted(n for n, e in TRAINERS.items() if isinstance(e, TrainerWrapEntry))}")
+        for p in entry.params:
+            param_users[p].append(wrap_name)
+        wraps.append(entry)
+
+    duplicated = {p: users for p, users in param_users.items() if p in configs and len(users) > 1}
+    if duplicated:
+        raise ValueError(f"duplicate params: {duplicated}")
+
+    unused = [k for k in configs if k not in param_users]
+    if unused:
+        raise TypeError(f"unused input configs: {unused}; accepted: {sorted(param_users)}")
+
+    split = {name: {} for name in names}
+    for k, v in configs.items():
+        split[param_users[k][0]][k] = v
+
+    trainer = root.construct(value, model, dataset, **split[root_name])
+    for wrap_name, entry in zip(wrap_names, wraps):
+        trainer = entry.build(trainer, dataset, **split[wrap_name])
+    return trainer

@@ -13,15 +13,15 @@ class TrainerSpecSyntaxError(ValueError):
 
 @dataclass(frozen=True)
 class TrainerSpec:
-    root_name: str
+    root: str
     root_components: tuple[str, ...] = ()
     wrappers: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not isinstance(self.root_name, str):
+        if not isinstance(self.root, str):
             raise TypeError("root name must be a string")
-        if NAME_RE.fullmatch(self.root_name) is None:
-            raise ValueError(f"root name {self.root_name!r} must match {NAME_PATTERN}")
+        if NAME_RE.fullmatch(self.root) is None:
+            raise ValueError(f"root name {self.root!r} must match {NAME_PATTERN}")
         if not isinstance(self.root_components, tuple):
             raise TypeError("root components must be a tuple")
         for component in self.root_components:
@@ -78,7 +78,7 @@ def parse_trainer_spec(source: str) -> TrainerSpec:
         wrappers.append(wrapper_source)
 
     return TrainerSpec(
-        root_name=root_match.group("name"),
+        root=root_match.group("name"),
         root_components=root_components,
         wrappers=tuple(wrappers),
     )

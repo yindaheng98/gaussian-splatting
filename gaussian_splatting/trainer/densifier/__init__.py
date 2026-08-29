@@ -1,5 +1,6 @@
 from .abc import AbstractDensifier, DensificationInstruct, DensifierWrapper, NoopDensifier
-from .trainer import DensificationTrainer
+from .registry import DENSIFIERS, DensifierEntry, build_constructor, densifier
+from .trainer import DensificationTrainer, DensifyTrainerEntry
 from .densifier import SplitCloneDensifier, SplitCloneDensifierWrapper, SplitCloneDensifierTrainerWrapper
 from .bounded import BoundedSplitCloneDensifier, BoundedSplitCloneDensifierWrapper, BoundedSplitCloneDensifierTrainerWrapper
 from .pruner import OpacityPruner, OpacityPrunerDensifierWrapper, OpacityPrunerTrainerWrapper

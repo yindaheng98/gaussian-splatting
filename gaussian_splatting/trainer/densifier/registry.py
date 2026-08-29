@@ -18,9 +18,10 @@ class DensifierEntry:
 
 
 DENSIFIERS: Dict[str, DensifierEntry] = {}
+ALIASES: Dict[str, list[str]] = {}
 
 
-def register(key: str, entry: DensifierEntry):
+def validate_key(key: str):
     if not isinstance(key, str):
         raise TypeError("densifier key must be a string")
     if WRAPPER_SEP in key or ROOT_KEY_SEP in key or ROOT_VALUE_SEP in key:
@@ -29,7 +30,33 @@ def register(key: str, entry: DensifierEntry):
         )
     if key in DENSIFIERS:
         raise ValueError(f"densifier {key!r} is already registered: {DENSIFIERS[key]}")
+    if key in ALIASES:
+        raise ValueError(f"densifier {key!r} is already registered as alias: {ALIASES[key]}")
+
+
+def register(key: str, entry: DensifierEntry):
+    validate_key(key)
     DENSIFIERS[key] = entry
+
+
+def register_alias(key: str, keys: list[str]):
+    validate_key(key)
+    if not keys:
+        raise ValueError("alias names must be a non-empty list")
+    for k in keys:
+        if k not in DENSIFIERS and k not in ALIASES:
+            raise KeyError(f"{k!r} is not a registered densifier or alias")
+    ALIASES[key] = list(keys)
+
+
+def expand_alias(key: str) -> list[str]:
+    if key not in ALIASES:
+        return [key]
+    return [n for part in ALIASES[key] for n in expand_alias(part)]
+
+
+def parse_names(names: list[str]) -> list[str]:
+    return [n for name in names for n in expand_alias(name)]
 
 
 def densifier(key: str):
@@ -41,6 +68,6 @@ def densifier(key: str):
 
 def build_constructor(values: list[str]) -> DensifierConstructor:
     constructor: DensifierConstructor = NoopDensifier
-    for wrap_name in values:
+    for wrap_name in parse_names(values):
         constructor = partial(DENSIFIERS[wrap_name].fn, constructor)
     return constructor

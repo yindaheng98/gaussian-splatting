@@ -44,7 +44,7 @@ jobs:
       - name: Install Windows dependencies
         if: runner.os == 'Windows'
         run: >
-          python -m pip install --upgrade pip setuptools wheel &&
+          python -m pip install --upgrade pip "setuptools<=75.8.2" wheel &&
           pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
       - name: Setup Windows CUDA
         if: runner.os == 'Windows'

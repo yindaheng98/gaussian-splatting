@@ -123,7 +123,7 @@ class NoopDensifier(AbstractDensifier):
     It is used as the base of all densifier wrapper.
     '''
 
-    def __init__(self, model: GaussianModel, dataset: CameraDataset, *args, **configs):
+    def __init__(self, model: GaussianModel, dataset: CameraDataset):
         super().__init__()
         self._model = model
 

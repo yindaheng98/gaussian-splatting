@@ -105,18 +105,20 @@ python -m gaussian_splatting.render -s data/truck -d output/truck-camera -i 3000
 ```
 <data>/
   images/
-    <name>.jpg            # RGB image; the relative path must match the name stored in COLMAP
-    <name>_mask.tiff      # optional image mask; if missing, <name>_mask.png is used
-  depths/                 # optional; loaded unless --no_depth_data
-    <name>.tiff           # depth map; if missing, <name>.png is used
-    <name>_mask.tiff      # optional depth mask; if missing, <name>_mask.png is used
+    <name>.jpg                 # RGB image; the relative path must match the name stored in COLMAP
+  image_masks/                 # optional; skipped with --no_image_mask
+    <name>.jpg.tiff            # image mask; if missing, <name>.jpg.png is used
+  depths/                      # optional; skipped with --no_depth_data
+    <name>.jpg.tiff            # depth map; if missing, <name>.jpg.png is used
+  depth_masks/                 # optional; skipped with --no_depth_data
+    <name>.jpg.tiff            # depth mask; if missing, <name>.jpg.png is used
   sparse/0/
-    cameras.bin           # intrinsics; if unreadable, cameras.txt is used
-    images.bin            # extrinsics; if unreadable, images.txt is used
-    points3D.ply          # sparse points for Gaussian init; if missing, points3D.bin then points3D.txt
+    cameras.bin                # intrinsics; if unreadable, cameras.txt is used
+    images.bin                 # extrinsics; if unreadable, images.txt is used
+    points3D.ply               # sparse points for Gaussian init; if missing, points3D.bin then points3D.txt
 ```
 
-`<name>` is the COLMAP image name without its extension, including any subdirectory. `images/foo/bar.jpg` pairs with `images/foo/bar_mask.tiff` and `depths/foo/bar.tiff`.
+`<name>.jpg` is the full COLMAP image name, including its extension and any subdirectory. `images/foo/bar.jpg` pairs with `image_masks/foo/bar.jpg.tiff`, `depths/foo/bar.jpg.tiff`, and `depth_masks/foo/bar.jpg.tiff`.
 
 * The camera model must be undistorted `PINHOLE` or `SIMPLE_PINHOLE`.
 * A missing mask or depth file logs a warning and that map is skipped. `--no_image_mask` skips image masks. `--no_depth_data` skips depth maps and depth masks.
@@ -125,8 +127,8 @@ python -m gaussian_splatting.render -s data/truck -d output/truck-camera -i 3000
 | File | Contents |
 | --- | --- |
 | RGB image | Any image Pillow can open. RGB is scaled to `[0, 1]`. |
-| Image mask, depth mask | Single channel. `.tiff` is read as float and used as stored. `.png` is uint8 and divided by `255`. `1` keeps the pixel and `0` drops it. When both extensions exist, `.tiff` is used. |
-| Depth | Single channel. Store metric or relative depth as float `.tiff`. `.png` is cast to float as stored. When both extensions exist, `.tiff` is used. |
+| Image mask, depth mask | Single channel. `<name>.jpg.tiff` is read as float and used as stored. `<name>.jpg.png` is uint8 and divided by `255`. `1` keeps the pixel and `0` drops it. When both exist, `.tiff` is used. |
+| Depth | Single channel. Store metric or relative depth as float `<name>.jpg.tiff`. `<name>.jpg.png` is cast to float as stored. When both exist, `.tiff` is used. |
 
 See [(Optional) Generate depth maps](#optional-generate-depth-maps-before-training) for writing `depths/` with Depth-Anything-V2. Gaussian initialization reads `sparse/0/points3D.*` separately via `colmap_init`.
 
@@ -166,12 +168,9 @@ mkdir checkpoints
 wget -O checkpoints/depth_anything_v2_vitl.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth?download=true
 ```
 
-2. Generate depth maps
+2. Generate depth maps. `--source` is the COLMAP scene folder. Images are read from `source/images`. For `images/<name>.jpg`, this writes `source/depths/<name>.jpg.tiff` and `source/depth_masks/<name>.jpg.tiff`, plus a uint8 `<name>.jpg.png` beside each tiff. The loader uses the tiff when both exist.
 ```shell
-# (Recommanded) save depth map as floating-point tiff file
-python tools/run_depth_anything_v2.py --encoder vitl --img-path data/truck/images --outdir data/truck/depths
-# (not Recommanded) save depth map as uint8 png file
-python Depth-Anything-V2/run.py --encoder vitl --pred-only --grayscale --img-path data/truck/images --outdir data/truck/depths
+python tools/run_depth_anything_v2.py --encoder vitl --source data/truck
 ```
 
 ## API Usage

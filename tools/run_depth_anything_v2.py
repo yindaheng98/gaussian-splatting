@@ -13,10 +13,8 @@ if __name__ == '__main__':
     from depth_anything_v2.dpt import DepthAnythingV2
     parser = argparse.ArgumentParser(description='Depth Anything V2')
 
-    parser.add_argument('--img-path', type=str)
+    parser.add_argument('-s', '--source', type=str, required=True)
     parser.add_argument('--input-size', type=int, default=518)
-    parser.add_argument('--outdir', type=str, default='./vis_depth')
-
     parser.add_argument('--encoder', type=str, default='vitl', choices=['vits', 'vitb', 'vitl', 'vitg'])
 
     args = parser.parse_args()
@@ -34,16 +32,12 @@ if __name__ == '__main__':
     depth_anything.load_state_dict(torch.load(f'checkpoints/depth_anything_v2_{args.encoder}.pth', map_location='cpu'))
     depth_anything = depth_anything.to(DEVICE).eval()
 
-    if os.path.isfile(args.img_path):
-        if args.img_path.endswith('txt'):
-            with open(args.img_path, 'r') as f:
-                filenames = f.read().splitlines()
-        else:
-            filenames = [args.img_path]
-    else:
-        filenames = glob.glob(os.path.join(args.img_path, '**/*'), recursive=True)
-
-    os.makedirs(args.outdir, exist_ok=True)
+    image_dir = os.path.join(args.source, "images")
+    depth_dir = os.path.join(args.source, "depths")
+    depth_mask_dir = os.path.join(args.source, "depth_masks")
+    os.makedirs(depth_dir, exist_ok=True)
+    os.makedirs(depth_mask_dir, exist_ok=True)
+    filenames = [f for f in glob.glob(os.path.join(image_dir, '**/*'), recursive=True) if os.path.isfile(f)]
 
     for k, filename in enumerate(filenames):
         print(f'Progress {k+1}/{len(filenames)}: {filename}')
@@ -52,11 +46,18 @@ if __name__ == '__main__':
 
         depth = depth_anything.infer_image(raw_image, args.input_size)
 
-        tifffile.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '.tiff'), depth)
-        tifffile.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '_mask.tiff'), np.ones_like(depth))
+        rel = os.path.relpath(filename, image_dir)
+        depth_tiff = os.path.join(depth_dir, rel + '.tiff')
+        depth_png = os.path.join(depth_dir, rel + '.png')
+        mask_tiff = os.path.join(depth_mask_dir, rel + '.tiff')
+        mask_png = os.path.join(depth_mask_dir, rel + '.png')
+        os.makedirs(os.path.dirname(depth_tiff), exist_ok=True)
+        os.makedirs(os.path.dirname(mask_tiff), exist_ok=True)
+
+        tifffile.imwrite(depth_tiff, depth)
+        tifffile.imwrite(mask_tiff, np.ones_like(depth))
 
         depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
         depth = depth.astype(np.uint8)
-        depth = np.repeat(depth[..., np.newaxis], 3, axis=-1)
-        cv2.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '.png'), depth)
-        cv2.imwrite(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '_mask.png'), np.ones_like(depth) * 255)
+        cv2.imwrite(depth_png, depth)
+        cv2.imwrite(mask_png, np.full(depth.shape, 255, dtype=np.uint8))

@@ -29,7 +29,7 @@ class ColmapCamera(NamedTuple):
     depth_mask_path: str
 
 
-def parse_colmap_camera(cameras, images, image_dir, load_mask=True, depth_dir=None) -> List[ColmapCamera]:
+def parse_colmap_camera(cameras, images, image_dir, load_mask=True, image_mask_dir=None, depth_dir=None, depth_mask_dir=None) -> List[ColmapCamera]:
     parsed_cameras = []
     for _, key in enumerate(cameras):
         extr = cameras[key]
@@ -58,15 +58,15 @@ def parse_colmap_camera(cameras, images, image_dir, load_mask=True, depth_dir=No
                 width, height = width_file, height_file
         image_mask_path = None
         if load_mask:
-            image_mask_path = os.path.join(image_dir, os.path.splitext(extr.name)[0] + '_mask.tiff')
+            image_mask_path = os.path.join(image_mask_dir, extr.name + '.tiff')
             if not os.path.exists(image_mask_path):
                 image_mask_path = os.path.splitext(image_mask_path)[0] + '.png'
         depth_path, depth_mask_path = None, None
         if depth_dir is not None:
-            depth_path = os.path.join(depth_dir, os.path.splitext(extr.name)[0] + '.tiff')
+            depth_path = os.path.join(depth_dir, extr.name + '.tiff')
             if not os.path.exists(depth_path):
                 depth_path = os.path.splitext(depth_path)[0] + '.png'
-            depth_mask_path = os.path.join(depth_dir, os.path.splitext(extr.name)[0] + '_mask.tiff')
+            depth_mask_path = os.path.join(depth_mask_dir, extr.name + '.tiff')
             if not os.path.exists(depth_mask_path):
                 depth_mask_path = os.path.splitext(depth_mask_path)[0] + '.png'
         parsed_cameras.append(ColmapCamera(
@@ -84,6 +84,7 @@ def parse_colmap_camera(cameras, images, image_dir, load_mask=True, depth_dir=No
 def read_colmap_cameras(colmap_folder, load_mask=True, load_depth=True) -> List[ColmapCamera]:
     path = colmap_folder
     image_dir = os.path.join(path, "images")
+    image_mask_dir = os.path.join(path, "image_masks") if load_mask else None
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -95,7 +96,12 @@ def read_colmap_cameras(colmap_folder, load_mask=True, load_depth=True) -> List[
         cam_extrinsics = read_images_text(cameras_extrinsic_file)
         cam_intrinsics = read_cameras_text(cameras_intrinsic_file)
     depth_dir = os.path.join(path, "depths") if load_depth else None
-    return parse_colmap_camera(cam_extrinsics, cam_intrinsics, image_dir, load_mask=load_mask, depth_dir=depth_dir)
+    depth_mask_dir = os.path.join(path, "depth_masks") if load_depth else None
+    return parse_colmap_camera(
+        cam_extrinsics, cam_intrinsics, image_dir,
+        load_mask=load_mask, image_mask_dir=image_mask_dir,
+        depth_dir=depth_dir, depth_mask_dir=depth_mask_dir,
+    )
 
 
 class ColmapCameraDataset(CameraDataset):

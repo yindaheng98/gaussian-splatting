@@ -36,7 +36,11 @@ def read_colmap_points3D(colmap_folder: str):
     return xyz[pts_indices], rgb[pts_indices], error[pts_indices]
 
 
-def colmap_init(model: GaussianModel, colmap_folder: str):
+def colmap_init(model: GaussianModel, colmap_folder: str, limit: int = None):
     with torch.no_grad():
         xyz, rgb, _ = read_colmap_points3D(colmap_folder)
+        if limit is not None and xyz.shape[0] > limit:
+            indices = np.random.choice(xyz.shape[0], limit, replace=False)
+            xyz = xyz[indices]
+            rgb = rgb[indices]
         return model.create_from_pcd(torch.from_numpy(xyz).type(torch.float), torch.from_numpy(rgb).type(torch.float) / 255.0)

@@ -41,9 +41,9 @@ def get_gaussian_model_class(backend: str, trainable_camera: bool = False) -> Ca
             raise ValueError(f"Unknown backend: {backend}")
 
 
-def prepare_gaussians(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None, backend: str = "inria") -> GaussianModel:
+def prepare_gaussians(sh_degree: int, source: str, device: str, trainable_camera: bool = False, load_ply: str = None, backend: str = "inria", init_point_limit: int = None) -> GaussianModel:
     gaussians = get_gaussian_model_class(backend, trainable_camera=trainable_camera)(sh_degree).to(device)
-    gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source)
+    gaussians.load_ply(load_ply) if load_ply else colmap_init(gaussians, source, limit=init_point_limit)
     return gaussians
 
 

@@ -7,7 +7,8 @@ from PIL import Image
 import torch
 
 from gaussian_splatting.camera import Camera, build_camera
-from gaussian_splatting.dataset import LazyCameraDataset, TrainableCameraDataset
+from ..lazy import LazyCameraDataset
+from ..camera_trainable import TrainableCameraDataset
 from gaussian_splatting.utils import focal2fov
 from .read_write_model import (
     read_cameras_text, read_cameras_binary,

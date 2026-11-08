@@ -6,7 +6,8 @@ import torch.nn as nn
 
 from gaussian_splatting.camera import camera2dict
 from gaussian_splatting.utils import normalize_quaternion, quaternion_to_matrix
-from .dataset import CameraDataset, JSONCameraDataset
+from .dataset import CameraDataset
+from .json import JSONCameraDataset
 
 
 def exposure_postprocess(camera: Camera, x: torch.Tensor):

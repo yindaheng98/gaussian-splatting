@@ -6,8 +6,8 @@ from PIL import Image
 
 import torch
 
-from gaussian_splatting.camera import build_camera
-from gaussian_splatting.dataset import CameraDataset, TrainableCameraDataset
+from gaussian_splatting.camera import Camera, build_camera
+from gaussian_splatting.dataset import LazyCameraDataset, TrainableCameraDataset
 from gaussian_splatting.utils import focal2fov
 from .read_write_model import (
     read_cameras_text, read_cameras_binary,
@@ -27,6 +27,21 @@ class ColmapCamera(NamedTuple):
     image_mask_path: str
     depth_path: str
     depth_mask_path: str
+
+    def load(self, load_mask: bool, load_depth: bool, device) -> Camera:
+        return build_camera(
+            image_height=self.image_height,
+            image_width=self.image_width,
+            FoVx=self.FoVx,
+            FoVy=self.FoVy,
+            R=self.R,
+            T=self.T,
+            image_path=self.image_path,
+            image_mask_path=self.image_mask_path if load_mask else None,
+            depth_path=self.depth_path if load_depth else None,
+            depth_mask_path=self.depth_mask_path if load_depth else None,
+            device=device,
+        )
 
 
 def parse_colmap_camera(cameras, images, image_dir, load_mask=True, image_mask_dir=None, depth_dir=None, depth_mask_dir=None) -> List[ColmapCamera]:
@@ -104,22 +119,15 @@ def read_colmap_cameras(colmap_folder, load_mask=True, load_depth=True) -> List[
     )
 
 
-class ColmapCameraDataset(CameraDataset):
-    def __init__(self, colmap_folder, load_mask=True, load_depth=True):
-        super().__init__()
-        self.raw_cameras = read_colmap_cameras(colmap_folder, load_mask=load_mask, load_depth=load_depth)
-        self.cameras = [build_camera(**cam._asdict()) for cam in self.raw_cameras]
-
-    def to(self, device):
-        self.cameras = [build_camera(**cam._asdict(), device=device) for cam in self.raw_cameras]
-        return self
-
-    def __len__(self):
-        return len(self.cameras)
-
-    def __getitem__(self, idx):
-        return self.cameras[idx]
+class ColmapCameraDataset(LazyCameraDataset[ColmapCamera]):
+    def __init__(self, colmap_folder, load_mask=True, load_depth=True, cache_size: int = 2 ** 32):
+        super().__init__(
+            read_colmap_cameras(colmap_folder, load_mask=load_mask, load_depth=load_depth),
+            load_mask=load_mask,
+            load_depth=load_depth,
+            cache_size=cache_size,
+        )
 
 
-def ColmapTrainableCameraDataset(colmap_folder, load_mask=True, load_depth=True):
-    return TrainableCameraDataset(ColmapCameraDataset(colmap_folder, load_mask=load_mask, load_depth=load_depth))
+def ColmapTrainableCameraDataset(colmap_folder, load_mask=True, load_depth=True, cache_size: int = 2 ** 32):
+    return TrainableCameraDataset(ColmapCameraDataset(colmap_folder, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size))

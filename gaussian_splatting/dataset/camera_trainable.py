@@ -76,9 +76,9 @@ class TrainableCameraDataset(CameraDataset):
             json.dump(cameras, f, indent=2)
 
     @classmethod
-    def from_json(cls, path, load_mask=True, load_depth=True):
-        cameras = JSONCameraDataset(path, load_mask=load_mask, load_depth=load_depth)
-        exposures = [(torch.tensor(camera['exposure'], dtype=torch.float) if 'exposure' in camera else torch.eye(3, 4)) for camera in cameras.json_cameras]
+    def from_json(cls, path, load_mask=True, load_depth=True, cache_size: int = 2 ** 32):
+        cameras = JSONCameraDataset(path, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)
+        exposures = [(torch.tensor(camera['exposure'], dtype=torch.float) if 'exposure' in camera else torch.eye(3, 4)) for camera in cameras.camera_specs]
         return cls(cameras, exposures)
 
 
@@ -86,23 +86,17 @@ class FixedTrainableCameraDataset(JSONCameraDataset):
     # Same as TrainableCameraDataset, but is fixed
     # Used for loading cameras saved by TrainableCameraDataset
 
-    def __init__(self, path, load_mask=True, load_depth=True):
-        super().__init__(path, load_mask=load_mask, load_depth=load_depth)
-        self.load_exposures()
-
-    def to(self, device):
-        self = super().to(device)
-        return self.load_exposures(device=device)
-
-    def load_exposures(self, device=None):
-        self.cameras = [camera._replace(
+    def __getitem__(self, idx) -> Camera:
+        camera = super().__getitem__(idx)
+        json_camera = self.camera_specs[idx]
+        device = camera.K.device
+        return camera._replace(
             postprocess=exposure_postprocess,
             custom_data={
                 **camera.custom_data,
                 'exposures': (torch.tensor(json_camera['exposure'], dtype=torch.float, device=device) if 'exposure' in json_camera else torch.eye(3, 4, dtype=torch.float, device=device))
             }
-        ) for camera, json_camera in zip(self.cameras, self.json_cameras)]
-        return self
+        )
 
     def save_cameras(self, path):
         cameras = []

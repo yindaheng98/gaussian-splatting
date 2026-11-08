@@ -1,6 +1,7 @@
 from abc import abstractmethod
+from collections import OrderedDict
 import json
-from typing import List
+from typing import Generic, List, Protocol, TypeVar
 import torch
 
 from gaussian_splatting.utils import getWorld2View2
@@ -34,26 +35,61 @@ class CameraDataset:
         return scene_extent.item()
 
 
-class JSONCameraDataset(CameraDataset):
-    def __init__(self, path, load_mask=True, load_depth=True):
-        with open(path, 'r') as f:
-            self.json_cameras = json.load(f)
+class CameraSpec(Protocol):
+    def load(self, load_mask: bool, load_depth: bool, device) -> Camera:
+        ...
+
+
+CameraSpecType = TypeVar("CameraSpecType", bound=CameraSpec)
+
+
+class LazyCameraDataset(CameraDataset, Generic[CameraSpecType]):
+    def __init__(self, camera_specs: List[CameraSpecType], load_mask: bool = True, load_depth: bool = True, device=None, cache_size: int = 2 ** 32):
+        self.camera_specs = camera_specs
         self.load_mask = load_mask
         self.load_depth = load_depth
-        self.load_cameras()
+        self.device = device
+        self.cache_size = cache_size
+        self._cache: OrderedDict[int, Camera] = OrderedDict()
+        self._cache_state = (self.load_mask, self.load_depth, self.device)
 
-    def __len__(self):
-        return len(self.cameras)
+    def __len__(self) -> int:
+        return len(self.camera_specs)
 
-    def __getitem__(self, idx):
-        return self.cameras[idx]
+    def __getitem__(self, idx: int) -> Camera:
+        state = (self.load_mask, self.load_depth, self.device)
+        if state != self._cache_state:
+            self._cache.clear()
+            self._cache_state = state
+        if self.cache_size <= 0:
+            self._cache.clear()
+            return self.camera_specs[idx].load(load_mask=self.load_mask, load_depth=self.load_depth, device=self.device)
+        if idx in self._cache:
+            self._cache.move_to_end(idx)
+            return self._cache[idx]
+        camera = self.camera_specs[idx].load(load_mask=self.load_mask, load_depth=self.load_depth, device=self.device)
+        self._cache[idx] = camera
+        while len(self._cache) > self.cache_size:
+            self._cache.popitem(last=False)
+        return camera
 
-    def to(self, device):
-        return self.load_cameras(device=device)
-
-    def load_cameras(self, device=None):
-        self.cameras = [dict2camera(camera, load_mask=self.load_mask, load_depth=self.load_depth, device=device) for camera in self.json_cameras]
+    def to(self, device) -> 'LazyCameraDataset':
+        self.device = device
+        self._cache.clear()
+        self._cache_state = (self.load_mask, self.load_depth, self.device)
         return self
+
+
+class JSONCameraSpec(dict):
+    def load(self, load_mask: bool, load_depth: bool, device) -> Camera:
+        return dict2camera(self, load_mask=load_mask, load_depth=load_depth, device=device)
+
+
+class JSONCameraDataset(LazyCameraDataset[JSONCameraSpec]):
+    def __init__(self, path, load_mask=True, load_depth=True, cache_size: int = 2 ** 32):
+        with open(path, 'r') as f:
+            json_cameras = json.load(f)
+        super().__init__([JSONCameraSpec(camera) for camera in json_cameras], load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)
 
 
 def getNerfppNorm(cameras: List[Camera]):

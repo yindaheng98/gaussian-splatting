@@ -1,6 +1,6 @@
 from typing import Callable
 from .gaussian_model import GaussianModel
-from .dataset import CameraDataset, FixedTrainableCameraDataset, TrainableCameraDataset
+from .dataset import CameraDataset, JSONCameraDataset, TrainableCameraDataset
 from .dataset.colmap import ColmapCameraDataset, ColmapTrainableCameraDataset, colmap_init
 from .trainer import *
 from .trainer.extensions import ScaleRegularizeTrainerWrapper
@@ -15,7 +15,7 @@ def prepare_dataset(source: str, device: str, trainable_camera: bool = False, lo
         ).to(device)
     else:
         dataset = (
-            FixedTrainableCameraDataset(load_camera, load_mask=load_mask, load_depth=load_depth)
+            JSONCameraDataset(load_camera, load_mask=load_mask, load_depth=load_depth)
             if load_camera else
             ColmapCameraDataset(source, load_mask=load_mask, load_depth=load_depth)
         ).to(device)

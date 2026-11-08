@@ -7,12 +7,8 @@ import torch.nn as nn
 from gaussian_splatting.camera import camera2dict
 from gaussian_splatting.utils import normalize_quaternion, quaternion_to_matrix
 from .dataset import CameraDataset
+from .exposure import exposure_postprocess
 from .json import JSONCameraDataset
-
-
-def exposure_postprocess(camera: Camera, x: torch.Tensor):
-    exposure = camera.custom_data['exposures']
-    return torch.matmul(x.permute(1, 2, 0), exposure[:3, :3]).permute(2, 0, 1) + exposure[:3, 3, None, None]
 
 
 class TrainableCameraDataset(CameraDataset):
@@ -81,30 +77,3 @@ class TrainableCameraDataset(CameraDataset):
         cameras = JSONCameraDataset(path, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)
         exposures = [(torch.tensor(camera['exposure'], dtype=torch.float) if 'exposure' in camera else torch.eye(3, 4)) for camera in cameras.camera_specs]
         return cls(cameras, exposures)
-
-
-class FixedTrainableCameraDataset(JSONCameraDataset):
-    # Same as TrainableCameraDataset, but is fixed
-    # Used for loading cameras saved by TrainableCameraDataset
-
-    def __getitem__(self, idx) -> Camera:
-        camera = super().__getitem__(idx)
-        json_camera = self.camera_specs[idx]
-        device = camera.K.device
-        return camera._replace(
-            postprocess=exposure_postprocess,
-            custom_data={
-                **camera.custom_data,
-                'exposures': (torch.tensor(json_camera['exposure'], dtype=torch.float, device=device) if 'exposure' in json_camera else torch.eye(3, 4, dtype=torch.float, device=device))
-            }
-        )
-
-    def save_cameras(self, path):
-        cameras = []
-        for idx, camera in enumerate(self):
-            cameras.append({
-                **camera2dict(camera, idx),
-                "exposure": camera.custom_data['exposures'].detach().tolist(),
-            })
-        with open(path, 'w') as f:
-            json.dump(cameras, f, indent=2)

@@ -3,7 +3,7 @@ from typing import NamedTuple, Callable, Tuple
 import torch
 import torch.nn.functional as F
 import logging
-from .utils import focal2fov, getK, getProjectionMatrix, getWorld2View2, read_image, read_image_mask, read_depth, read_depth_mask, matrix_to_quaternion
+from .utils import focal2fov, fov2focal, getK, getProjectionMatrix, getWorld2View2, read_image, read_image_mask, read_depth, read_depth_mask, matrix_to_quaternion
 
 
 class Camera(NamedTuple):
@@ -56,6 +56,12 @@ def camera2dict(camera: Camera, id):
         'ground_truth_depth_mask_path': camera.ground_truth_depth_mask_path.replace("\\", "/") if camera.ground_truth_depth_mask_path else None,
         "img_name": os.path.basename(camera.ground_truth_image_path),  # necessary for SIBR_gaussianViewer_app
     }
+    cx = float(camera.K[0, 2].detach().cpu())
+    cy = float(camera.K[1, 2].detach().cpu())
+    if cx != camera.image_width / 2.0:
+        camera_entry['cx'] = cx
+    if cy != camera.image_height / 2.0:
+        camera_entry['cy'] = cy
     return camera_entry
 
 
@@ -67,6 +73,7 @@ def build_camera(
         image_height: int, image_width: int,
         FoVx: float, FoVy: float,
         R: torch.Tensor, T: torch.Tensor,
+        cx: float = None, cy: float = None,
         image_path: str = None, image_mask_path: str = None,
         depth_path: str = None, depth_mask_path: str = None,
         bg_color: Tuple[float, float, float] = (0., 0., 0.),
@@ -77,9 +84,20 @@ def build_camera(
     znear = 0.01
     trans = torch.zeros(3, device=R.device)
     scale = 1.0
-    K = getK(FoVx, FoVy, image_width, image_height).to(device=device, dtype=torch.float)
+    # Pixel coordinates of the principal point. None keeps the image center,
+    # which is the previous behavior.
+    if cx is None:
+        cx = image_width / 2.0
+    if cy is None:
+        cy = image_height / 2.0
+    fx = fov2focal(FoVx, image_width)
+    fy = fov2focal(FoVy, image_height)
+    K = getK(fx, fy, cx, cy).to(device=device, dtype=torch.float)
     world_view_transform = getWorld2View2(R, T, trans, scale).transpose(0, 1)
-    projection_matrix = getProjectionMatrix(znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy).to(device).transpose(0, 1)
+    projection_matrix = getProjectionMatrix(
+        znear=znear, zfar=zfar, fovX=FoVx, fovY=FoVy,
+        image_width=image_width, image_height=image_height, cx=cx, cy=cy,
+    ).to(device).transpose(0, 1)
     full_proj_transform = (world_view_transform.unsqueeze(0).bmm(projection_matrix.unsqueeze(0))).squeeze(0)
     camera_center = world_view_transform.inverse()[3, :3]
     quaternion = matrix_to_quaternion(R)
@@ -163,6 +181,8 @@ def dict2camera(camera_dict, load_mask=True, load_depth=True, device="cuda", cus
         image_height=camera_dict['height'],
         FoVx=focal2fov(camera_dict['fx'], camera_dict['width']),
         FoVy=focal2fov(camera_dict['fy'], camera_dict['height']),
+        cx=camera_dict.get('cx', camera_dict['width'] / 2.0),
+        cy=camera_dict.get('cy', camera_dict['height'] / 2.0),
         R=R,
         T=T,
         image_path=camera_dict['ground_truth_image_path'] if 'ground_truth_image_path' in camera_dict else None,

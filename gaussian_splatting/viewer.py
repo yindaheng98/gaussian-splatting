@@ -35,6 +35,8 @@ def viewer_render_fn(
     # Convert intrinsics to FoV
     fx = float(K[0, 0])
     fy = float(K[1, 1])
+    cx = float(K[0, 2])
+    cy = float(K[1, 2])
     FoVx = focal2fov(fx, width)
     FoVy = focal2fov(fy, height)
 
@@ -42,6 +44,7 @@ def viewer_render_fn(
     camera = build_camera(
         image_height=int(height), image_width=int(width),
         FoVx=FoVx, FoVy=FoVy,
+        cx=cx, cy=cy,
         R=R, T=T,
         bg_color=bg_color, device=device,
     )

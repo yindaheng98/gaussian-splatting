@@ -35,7 +35,7 @@ def getWorld2View2(R, t, translate=torch.zeros(3), scale=1.0):
     return Rt
 
 
-def getProjectionMatrix(znear, zfar, fovX, fovY):
+def getProjectionMatrix(znear, zfar, fovX, fovY, image_width, image_height, cx, cy):
     tanHalfFovY = math.tan((fovY / 2))
     tanHalfFovX = math.tan((fovX / 2))
 
@@ -50,8 +50,10 @@ def getProjectionMatrix(znear, zfar, fovX, fovY):
 
     P[0, 0] = 2.0 * znear / (right - left)
     P[1, 1] = 2.0 * znear / (top - bottom)
-    P[0, 2] = (right + left) / (right - left)
-    P[1, 2] = (top + bottom) / (top - bottom)
+    # ndc2Pix maps NDC 0 to pixel (S - 1) / 2. These offsets keep that
+    # half-pixel convention and are 0 when the principal point is centered.
+    P[0, 2] = 2.0 * cx / image_width - 1.0
+    P[1, 2] = 2.0 * cy / image_height - 1.0
     P[3, 2] = z_sign
     P[2, 2] = z_sign * zfar / (zfar - znear)
     P[2, 3] = -(zfar * znear) / (zfar - znear)
@@ -66,13 +68,11 @@ def focal2fov(focal, pixels):
     return 2*math.atan(pixels/(2*focal))
 
 
-def getK(fovX, fovY, width, height):
-    fx = fov2focal(fovX, width)
-    fy = fov2focal(fovY, height)
+def getK(fx, fy, cx, cy):
     K = torch.zeros((3, 3))
     K[0, 0] = fx
     K[1, 1] = fy
-    K[0, 2] = width / 2.0
-    K[1, 2] = height / 2.0
+    K[0, 2] = cx
+    K[1, 2] = cy
     K[2, 2] = 1.0
     return K

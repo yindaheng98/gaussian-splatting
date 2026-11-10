@@ -15,8 +15,8 @@ from gaussian_splatting.prepare import prepare_dataset, prepare_gaussians, backe
 def prepare_rendering(
         sh_degree: int, source: str, device: str,
         trainable_camera: bool = False, load_ply: str = None, load_camera: str = None,
-        load_mask=True, load_depth=True, backend: str = "inria") -> Tuple[CameraDataset, GaussianModel]:
-    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=load_mask, load_depth=load_depth)
+        load_mask=True, load_depth=True, cache_size: int = 2 ** 16, backend: str = "inria") -> Tuple[CameraDataset, GaussianModel]:
+    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)
     gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply, backend=backend)
     return dataset, gaussians
 
@@ -111,6 +111,7 @@ if __name__ == "__main__":
     parser.add_argument("--mode", choices=["base", "camera"], default="base")
     parser.add_argument("--device", default="cuda", type=str)
     parser.add_argument("--no_image_mask", action="store_true")
+    parser.add_argument("--cache_size", default=2 ** 16, type=int)
     parser.add_argument("--no_rescale_depth_gt", action="store_true")
     parser.add_argument("--save_depth_pcd", action="store_true")
     args = parser.parse_args()
@@ -120,5 +121,5 @@ if __name__ == "__main__":
         dataset, gaussians = prepare_rendering(
             sh_degree=args.sh_degree, source=args.source, device=args.device, trainable_camera=args.mode == "camera",
             load_ply=load_ply, load_camera=args.load_camera,
-            load_mask=not args.no_image_mask, load_depth=args.save_depth_pcd, backend=args.backend)
+            load_mask=not args.no_image_mask, load_depth=args.save_depth_pcd, cache_size=args.cache_size, backend=args.backend)
         rendering(dataset, gaussians, save, save_pcd=args.save_depth_pcd, rescale_depth_gt=not args.no_rescale_depth_gt)

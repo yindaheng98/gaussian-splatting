@@ -15,9 +15,9 @@ from gaussian_splatting.prepare import basemodes, shliftmodes, prepare_dataset, 
 def prepare_training(
         sh_degree: int, source: str, device: str, mode: str,
         trainable_camera: bool = False, load_ply: str = None, load_camera: str = None,
-        load_mask=True, load_depth=True, backend: str = "inria",
+        load_mask=True, load_depth=True, cache_size: int = 2 ** 16, backend: str = "inria",
         with_scale_reg=False, configs={}, init_point_limit: int = None) -> Tuple[CameraDataset, GaussianModel, AbstractTrainer]:
-    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=load_mask, load_depth=load_depth)
+    dataset = prepare_dataset(source=source, device=device, trainable_camera=trainable_camera, load_camera=load_camera, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)
     gaussians = prepare_gaussians(sh_degree=sh_degree, source=source, device=device, trainable_camera=trainable_camera, load_ply=load_ply, backend=backend, init_point_limit=init_point_limit)
     trainer = prepare_trainer(gaussians=gaussians, dataset=dataset, mode=mode, load_ply=load_ply, with_scale_reg=with_scale_reg, configs=configs)
     return dataset, gaussians, trainer
@@ -90,6 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("--load_camera", default=None, type=str)
     parser.add_argument("--no_image_mask", action="store_true")
     parser.add_argument("--no_depth_data", action="store_true")
+    parser.add_argument("--cache_size", default=2 ** 16, type=int)
     parser.add_argument("--with_scale_reg", action="store_true")
     parser.add_argument("--mode", choices=sorted(list(set(list(basemodes.keys()) + list(shliftmodes.keys())))), default="base")
     parser.add_argument("--save_iterations", nargs="+", type=int, default=[7000, 30000])
@@ -105,7 +106,7 @@ if __name__ == "__main__":
     dataset, gaussians, trainer = prepare_training(
         sh_degree=args.sh_degree, source=args.source, device=args.device, mode=args.mode, trainable_camera="camera" in args.mode,
         load_ply=args.load_ply, load_camera=args.load_camera,
-        load_mask=not args.no_image_mask, load_depth=not args.no_depth_data, backend=args.backend,
+        load_mask=not args.no_image_mask, load_depth=not args.no_depth_data, cache_size=args.cache_size, backend=args.backend,
         with_scale_reg=args.with_scale_reg, configs=configs, init_point_limit=args.init_point_limit)
     dataset.save_cameras(os.path.join(args.destination, "cameras.json"))
     torch.cuda.empty_cache()

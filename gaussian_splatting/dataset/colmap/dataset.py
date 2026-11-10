@@ -133,7 +133,7 @@ def read_colmap_cameras(colmap_folder, load_mask=True, load_depth=True) -> List[
 
 
 class ColmapCameraDataset(LazyCameraDataset[ColmapCamera]):
-    def __init__(self, colmap_folder, load_mask=True, load_depth=True, cache_size: int = 2 ** 32):
+    def __init__(self, colmap_folder, load_mask=True, load_depth=True, cache_size: int = 2 ** 16):
         super().__init__(
             read_colmap_cameras(colmap_folder, load_mask=load_mask, load_depth=load_depth),
             load_mask=load_mask,
@@ -142,5 +142,5 @@ class ColmapCameraDataset(LazyCameraDataset[ColmapCamera]):
         )
 
 
-def ColmapTrainableCameraDataset(colmap_folder, load_mask=True, load_depth=True, cache_size: int = 2 ** 32):
+def ColmapTrainableCameraDataset(colmap_folder, load_mask=True, load_depth=True, cache_size: int = 2 ** 16):
     return TrainableCameraDataset(ColmapCameraDataset(colmap_folder, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size))

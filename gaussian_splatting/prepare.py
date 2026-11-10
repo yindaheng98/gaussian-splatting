@@ -6,18 +6,18 @@ from .trainer import *
 from .trainer.extensions import ScaleRegularizeTrainerWrapper
 
 
-def prepare_dataset(source: str, device: str, trainable_camera: bool = False, load_camera: str = None, load_mask=True, load_depth=True) -> CameraDataset:
+def prepare_dataset(source: str, device: str, trainable_camera: bool = False, load_camera: str = None, load_mask=True, load_depth=True, cache_size: int = 2 ** 16) -> CameraDataset:
     if trainable_camera:
         dataset = (
-            TrainableCameraDataset.from_json(load_camera, load_mask=load_mask, load_depth=load_depth)
+            TrainableCameraDataset.from_json(load_camera, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)
             if load_camera else
-            ColmapTrainableCameraDataset(source, load_mask=load_mask, load_depth=load_depth)
+            ColmapTrainableCameraDataset(source, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)
         ).to(device)
     else:
         dataset = (
-            JSONCameraDataset(load_camera, load_mask=load_mask, load_depth=load_depth)
+            JSONCameraDataset(load_camera, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)
             if load_camera else
-            ColmapCameraDataset(source, load_mask=load_mask, load_depth=load_depth)
+            ColmapCameraDataset(source, load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)
         ).to(device)
     return dataset
 

@@ -13,7 +13,7 @@ class JSONCameraSpec(dict):
 
 
 class JSONCameraDataset(LazyCameraDataset[JSONCameraSpec]):
-    def __init__(self, path, load_mask=True, load_depth=True, cache_size: int = 2 ** 32):
+    def __init__(self, path, load_mask=True, load_depth=True, cache_size: int = 2 ** 16):
         with open(path, 'r') as f:
             json_cameras = json.load(f)
         super().__init__([JSONCameraSpec(camera) for camera in json_cameras], load_mask=load_mask, load_depth=load_depth, cache_size=cache_size)

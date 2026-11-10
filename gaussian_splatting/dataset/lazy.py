@@ -14,7 +14,7 @@ CameraSpecType = TypeVar("CameraSpecType", bound=CameraSpec)
 
 
 class LazyCameraDataset(CameraDataset, Generic[CameraSpecType]):
-    def __init__(self, camera_specs: List[CameraSpecType], load_mask: bool = True, load_depth: bool = True, device=None, cache_size: int = 2 ** 32):
+    def __init__(self, camera_specs: List[CameraSpecType], load_mask: bool = True, load_depth: bool = True, device=None, cache_size: int = 2 ** 16):
         self.camera_specs = camera_specs
         self.load_mask = load_mask
         self.load_depth = load_depth
